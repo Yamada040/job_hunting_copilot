@@ -273,7 +273,7 @@ backend/
 - `.github/workflows/test.yml`: `unit`（Vitest）+ `check-e2e-secrets`/`e2e`（Playwright。E2E用Secretsが未設定の間は自動スキップ）
 - `.github/workflows/go.yml`: `go`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）
 - `.github/workflows/migrate.yml`: dev へのマージで、本番の Supabase にマイグレーションを適用する
-- devブランチには必須ステータスチェック（`checks`/`build`/`unit`）を要求し、マージ前にブランチを最新化するルールセットが設定されている
+- devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`go`）を要求し、マージ前にブランチを最新化するルールセットが設定されている（`infra/github.tf`）
 
 ### ブランチ運用
 
@@ -369,7 +369,7 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 
 - **Vercel**（無料のHobbyプラン）でホスティング。`vercel.json` の Services で、`/v1/*` を Go、それ以外を Next.js に振り分ける。関数のリージョンは東京（`hnd1`、Supabase と同じ）
 - `dev` ブランチへのマージで自動デプロイ
-- 環境変数はVercelダッシュボードで設定する
+- 環境変数は `infra/vercel.tf`（Terraform）で設定する。変えたら Vercel で再デプロイするまで反映されない
 - ブランチごとにプレビューデプロイが作成される
 
 ### 既知のパターン・落とし穴
