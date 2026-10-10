@@ -1,31 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  companyFormSchema,
   esFormSchema,
   esQuestionSchema,
   esQuestionsSchema,
   webtestAnswerFormSchema,
   webtestQuestionFormSchema,
 } from "./forms";
-
-describe("companyFormSchema", () => {
-  const base = { name: "テスト株式会社" };
-
-  it("coerces a numeric string preference to a number", () => {
-    const result = companyFormSchema.parse({ ...base, preference: "12", favorite: "on" });
-    expect(result.preference).toBe(12);
-  });
-
-  it("converts an empty preference string to undefined", () => {
-    const result = companyFormSchema.parse({ ...base, preference: "", favorite: undefined });
-    expect(result.preference).toBeUndefined();
-  });
-
-  it('sets favorite to true only for "on"', () => {
-    expect(companyFormSchema.parse({ ...base, favorite: "on" }).favorite).toBe(true);
-    expect(companyFormSchema.parse({ ...base, favorite: undefined }).favorite).toBe(false);
-  });
-});
 
 describe("esQuestionSchema / esQuestionsSchema", () => {
   it("allows an empty array", () => {

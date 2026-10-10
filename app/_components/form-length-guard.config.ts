@@ -1,14 +1,5 @@
 export const MAX_TEXT_LEN = 100;
 
-export const COMPANY_FIELDS = [
-  { name: "name", label: "企業名" },
-  { name: "industry", label: "業界" },
-  { name: "url", label: "企業サイトURL" },
-  { name: "mypage_id", label: "マイページID" },
-  { name: "mypage_url", label: "マイページURL" },
-  { name: "stage", label: "選考状況" },
-] as const;
-
 export const ES_NEW_FIELDS = [
   { name: "company_name", label: "企業名" },
   { name: "title", label: "タイトル" },

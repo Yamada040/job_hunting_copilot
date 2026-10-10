@@ -2,25 +2,13 @@ import Link from "next/link";
 import { PlusIcon, ArrowUturnLeftIcon, HomeIcon } from "@heroicons/react/24/outline";
 import { AppLayout } from "@/app/_components/layout";
 import { ROUTES } from "@/lib/constants/routes";
-import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
 import { CompanyTable } from "./_components/company-table";
 
-export default async function CompaniesPage() {
-  const supabase = await createSupabaseReadonlyClient();
-  const { data: userData } = await supabase.auth.getUser();
-
-  const { data, error } = await supabase
-    .from("companies")
-    .select("id, name, industry, stage, preference, memo, updated_at")
-    .eq("user_id", userData.user!.id)
-    .order("updated_at", { ascending: false });
-
-  if (error) throw error;
-
+export default function CompaniesPage() {
   return (
     <AppLayout
       headerTitle="企業管理"
-      headerDescription="業界・ステータス・志望度を一覧で把握し、編集ページへ遷移できます"
+      headerDescription="業界・選考状況・志望度を一覧で把握し、編集ページへ遷移できます"
       headerActions={
         <div className="flex flex-wrap gap-3">
           <Link href={ROUTES.HOME} className="dq-button-secondary">
@@ -38,7 +26,7 @@ export default async function CompaniesPage() {
         </div>
       }
     >
-      <CompanyTable items={data ?? []} />
+      <CompanyTable />
     </AppLayout>
   );
 }
