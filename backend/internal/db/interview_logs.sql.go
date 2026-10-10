@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,7 +25,7 @@ type CreateInterviewLogParams struct {
 	Format        *InterviewFormat
 	Round         *string
 	InterviewDate *time.Time
-	Questions     []byte
+	Questions     json.RawMessage
 	Improvement   *string
 	Unexpected    *string
 }
@@ -196,7 +197,7 @@ type UpdateInterviewLogParams struct {
 	SetInterviewDate bool
 	InterviewDate    *time.Time
 	SetQuestions     bool
-	Questions        []byte
+	Questions        json.RawMessage
 	SetImprovement   bool
 	Improvement      *string
 	SetUnexpected    bool
