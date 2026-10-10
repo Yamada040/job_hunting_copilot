@@ -254,7 +254,7 @@ if (!parsed.success) return { error: "Invalid input" };
 - 質問と回答を追加
 - AI添削パネル
 - 保存でXP付与
-- 削除時、対応するカレンダーイベントがあれば併せて削除
+- 締切（`deadline`）はカレンダーに表示されるが、`calendar_events` には保存せず表示時にESから組み立てる。ESを削除すれば締切も表示されなくなる
 
 **企業管理**（`/companies`, `/companies/new`, `/companies/[id]`）:
 
