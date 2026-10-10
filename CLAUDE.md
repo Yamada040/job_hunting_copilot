@@ -277,7 +277,7 @@ backend/
 - `.github/workflows/test.yml`: `unit`（Vitest）+ `e2e`（Playwright。CIの中で Supabase を起動する）
 - `.github/workflows/go.yml`: `go`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）
 - `.github/workflows/migrate.yml`: dev へのマージで、本番の Supabase にマイグレーションを適用する
-- devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`go`）を要求し、マージ前にブランチを最新化するルールセットが設定されている（`infra/github.tf`）
+- devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`go`/`e2e`）を要求し、マージ前にブランチを最新化するルールセットが設定されている（`infra/github.tf`）
 
 ### ブランチ運用
 
