@@ -72,7 +72,7 @@ flowchart LR
 ```
 
 - 認証: Supabase Auth（Google OAuth）。認証後は `/dashboard` へ。未ログイン時は各ページで `/login` にリダイレクト。
-- ダッシュボード: ES/企業カード/XP のサマリー、フォーカス、カレンダー表示。カレンダーでは ES 締切・面接・インターンなどの予定を追加/更新して保存（`/api/calendar-events`）し、ES 締切も自動表示。
+- ダッシュボード: ES/企業カード/XP のサマリー、フォーカス、カレンダー表示。カレンダーでは ES 締切・面接・インターンなどの予定を追加/更新して保存し、ES 締切も自動表示。
 - ES 管理: 一覧・作成/編集・削除、Markdown 入力、タグ/ステータス、AI 添削パネル。
 - 企業管理: 企業カード作成/編集/削除、ステージ・志望度・メモ、AI 企業分析パネル。
 - 面接ログ: 面接質問・回答・振り返りの記録、AI活用前提のデータ整形。
@@ -86,24 +86,25 @@ flowchart LR
 
 個人開発の MVP であることを前提に、**コストをかけずに（無料枠だけで）素早く価値を検証する** ことを最優先に技術を選定しています。
 
-| 領域           | 採用技術                                    | 選定意図                                                                                                                                                                                                                  |
-| -------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| フレームワーク | **Next.js (App Router) + TypeScript**       | Server/Client Components で認証ガードやデータ取得をサーバー側に寄せられ、ページ単位の責務分離が明確。TypeScript で型安全を担保し、一人でも安全に開発・保守できる。                                                        |
-| スタイリング   | **Tailwind CSS v4**                         | ユーティリティファーストで UI を高速に実装でき、デザインの一貫性を保ちやすい。クエスト風 UI（`dq-*` クラス）もクラス単位で完結。                                                                                          |
-| バックエンド   | **Supabase (Auth/DB/Storage)**              | Auth・Postgres・Storage を 1 つのマネージドサービスで賄え、**無料枠** だけで運用コストをゼロに抑えられる。**RLS（Row Level Security）** で `user_id` スコープのデータ保護を DB 層で強制でき、MVP でもセキュリティを担保。 |
-| 認証           | **Supabase Auth（Google OAuth）**           | 学生にとって馴染みのある Google ログインで登録のハードルを下げる。`@supabase/ssr` で Server Component / Route Handler 双方の Cookie ベース認証を統一。                                                                    |
-| AI             | **provider-agnostic ラッパー（`lib/ai/`）** | Gemini / GPT を環境変数（`AI_PROVIDER`）で差し替え可能にし、特定ベンダーへのロックインを回避。料金・性能の変化に応じて切替でき、キー未設定時は安全に失敗させる設計。                                                      |
-| バリデーション | **Zod**                                     | フォーム・API リクエストボディの入力検証を型と一体で行い、未検証の値を DB / 外部 API に渡さない。                                                                                                                         |
-| メール送信     | **Nodemailer (SMTP)**                       | お問い合わせ機能を外部サービスに依存せず SMTP で完結。設定が環境変数のみで済み、MVP の運用が容易。                                                                                                                        |
-| アニメーション | **Framer Motion**                           | ゲーミフィケーション体験を支える滑らかな UI 演出を、宣言的かつ軽量に実装。                                                                                                                                                |
-| ホスティング   | **Vercel**                                  | Next.js との親和性が高く、Git 連携で CI/CD・プレビュー環境を即時に得られる。**無料枠（Hobby プラン）** でデプロイでき、インフラ管理も不要。                                                                               |
+| 領域           | 採用技術                                  | 選定意図                                                                                                                                           |
+| -------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| フロントエンド | **Next.js (App Router) + TypeScript**     | 画面だけを担当する（SPA型）。TanStack Query でデータをブラウザに保持し、画面を移動しても取り直さずに済む。                                         |
+| バックエンド   | **Go**                                    | DBアクセス・外部API・ビジネスロジックを Next.js から切り離す。単一のバイナリで起動が速く、Vercel の無料枠でもコールドスタートが軽い。              |
+| API の契約     | **OpenAPI（スキーマファースト）**         | `openapi.yaml` から Go のサーバーと TypeScript の型を生成し、フロントとバックエンドの型がずれないようにする。                                      |
+| DB・認証       | **Supabase（Postgres / Auth）**           | 無料枠で Postgres と Google ログインを賄える。データの読み書きは Go に集め、Supabase は DB と認証の基盤としてだけ使う。                            |
+| DB アクセス    | **sqlc + pgx**                            | SQL を書いて型付きの Go のコードを生成する。XP の付与のような同時実行で正しさが必要な処理を、SQL として正確に書ける。                              |
+| AI             | **Gemini / GPT（`backend/internal/ai`）** | 環境変数（`AI_PROVIDER`）でプロバイダーを切り替え、特定ベンダーへのロックインを避ける。企業分析では AI が Web 検索（Tavily）を呼びながら分析する。 |
+| スタイリング   | **Tailwind CSS v4**                       | ユーティリティファーストで UI を高速に実装でき、デザインの一貫性を保ちやすい。クエスト風 UI（`dq-*` クラス）もクラス単位で完結。                   |
+| アニメーション | **Framer Motion**                         | ゲーミフィケーション体験を支える滑らかな UI 演出を、宣言的かつ軽量に実装。                                                                         |
+| ホスティング   | **Vercel**                                | Next.js と Go を同じプロジェクト・同じドメインで動かせる（Services）。**無料枠（Hobby プラン）** でデプロイでき、インフラ管理も不要。              |
 
 > いずれも「**無料枠だけで完結させ運用コストをゼロにする**」「マネージド/サーバーレスで個人開発でも運用負荷を下げる」「ベンダーロックインを避ける」「型安全と入力検証でデータを守る」という方針に沿って選んでいます。Supabase・Vercel・AI（Gemini 無料枠）・SMTP（Gmail）とも無料の範囲で運用でき、**追加コストなしで公開・運用** できます。
 
 ## ドキュメント
 
+- [docs/backend-design.md](docs/backend-design.md) — バックエンド（Go）の設計と、各判断で採らなかった案
 - [docs/architecture.md](docs/architecture.md) — 全体構成・認証フロー・AI連携・XPフロー・CIの図解
-- [docs/database-schema.md](docs/database-schema.md) — DBスキーマの全テーブルリファレンス（ER図・未使用カラムの注記付き）
+- [docs/database-schema.md](docs/database-schema.md) — DBスキーマのリファレンス（ER図付き）
 - [docs/testing/unit-test-plan.md](docs/testing/unit-test-plan.md) — 単体テスト（Vitest）の設計
 - [docs/testing/e2e-test-plan.md](docs/testing/e2e-test-plan.md) — E2Eテスト（Playwright）の設計
 - [CLAUDE.md](CLAUDE.md) — AIエージェント（Claude Code）向けの開発ガイド。アーキテクチャ規約の要点はこちらにも集約
@@ -111,29 +112,21 @@ flowchart LR
 ## セットアップ
 
 ```bash
+# DB（Docker が必要）
+supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta
+
+# Go の API（localhost:8080）
+cd backend
+SUPABASE_URL=... DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres go run ./cmd/server
+
+# Next.js（localhost:3000。/v1 は localhost:8080 の Go に転送される）
 npm install
 npm run dev
-# http://localhost:3000
 ```
 
-## 環境変数 (.env.local)
+## 環境変数
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-NEXT_PUBLIC_SITE_URL=https://job-seeker-gray.vercel.app
-# AI
-AI_PROVIDER=gemini|openai
-AI_PROVIDER_API_KEY=...
-# Contact (SMTP)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=465
-SMTP_USER=your-mail@example.com
-SMTP_PASS=your-app-password
-CONTACT_TO_EMAIL=contact-destination@example.com
-SMTP_SECURE=true
-```
+必要な環境変数の一覧と説明は [CLAUDE.md](CLAUDE.md) の「環境変数」を参照。Vercel では Next.js と Go が同じ環境変数を共有する。
 
 ## 認証設定 (Supabase)
 
@@ -152,31 +145,16 @@ Next.js 認証コールバック: `app/auth/callback/route.ts` で `exchangeCode
 
 ## DB スキーマ概要
 
-`supabase/migrations/` に定義（Supabase CLI で管理。すべて RLS 有効）。全テーブルの詳細・ER図・未使用カラムの注記は [docs/database-schema.md](docs/database-schema.md) を参照。
-
-- `profiles`: ユーザープロフィール
-- `es_entries`: ES 本文/ステータス/締切など
-- `companies`: 企業カード
-- `xp_logs`: XP ログ
-- `calendar_events`: カレンダー予定（ES締切/面接/インターンなど）
-- `interview_logs`: 面接ログ
-- `aptitude_results` / `self_analysis_results`: 適性チェック/自己分析結果（ユーザー1人につき1件）
-- `webtest_questions` / `webtest_attempts`: Webテスト練習用の問題バンク
-- `api_rate_limits`: AIエンドポイントのレート制限状態
-
-カレンダー予定 API:
-
-- `GET /api/calendar-events` （ログインユーザーの予定取得）
-- `POST /api/calendar-events` （予定追加）
-- `PUT /api/calendar-events/:id` （予定更新）
+`supabase/migrations/` に定義（Supabase CLI で管理）。全テーブルの説明は [docs/database-schema.md](docs/database-schema.md) を参照。企業を中心に、ES・面接ログ・予定が企業にひも付く。
 
 ## 開発ルール
 
 - YAGNI/DRY を徹底、MVP 以外の過剰実装は避ける。
-- サーバー側で Cookie 書き込みが必要な場合は Route Handler / Server Action で `createSupabaseActionClient` を使用。Server Component では `createSupabaseReadonlyClient` を使用し Cookie 書き込みは禁止。
-- 認証が必要なデータ取得は `user_id` でスコープする。未ログインはリダイレクト。
+- データの読み書きとビジネスロジックは Go に置き、Next.js には置かない。API は `backend/api/openapi.yaml` から書く。
+- Go のすべての問い合わせは `user_id` で絞り込む（RLS のポリシーには頼らない）。
 - Tailwind は推奨クラス（`bg-linear-to-*` など）を優先して警告を回避。
-- AI 呼び出しは `lib/ai/` の薄いラッパー経由。キー未設定時は安全に失敗させる。
+- AI 呼び出しは `backend/internal/ai` 経由。キー未設定時は AI 機能だけが 503 を返す。
+- 詳細は [CLAUDE.md](CLAUDE.md) を参照。
 
 ## ページ一覧
 
@@ -195,7 +173,7 @@ Next.js 認証コールバック: `app/auth/callback/route.ts` で `exchangeCode
 
 ## 必要なキー
 
-- Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- AI: `AI_PROVIDER_API_KEY`（Gemini/GPT に応じて設定）, `AI_PROVIDER`
-- Contact: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `CONTACT_TO_EMAIL`（必要なら `SMTP_SECURE`）
+- Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`（Next.js）、`SUPABASE_URL`, `DATABASE_URL`（Go）
+- AI: `AI_PROVIDER`, `AI_PROVIDER_API_KEY`, `TAVILY_API_KEY`（Go）
+- Contact: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `CONTACT_TO_EMAIL`（Go）
 - SEO: `NEXT_PUBLIC_SITE_URL`

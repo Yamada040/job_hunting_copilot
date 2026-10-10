@@ -4,210 +4,154 @@
 
 ## プロジェクト概要
 
-**就活copilot** は、日本の就活生向けのNext.js + Supabase製MVP。ES（エントリーシート）作成、企業管理、面接ログ、自己分析ツールを1つのダッシュボードに集約し、AIによる添削とゲーミフィケーション（XP/レベリング）を提供する。
+**就活copilot** は、日本の就活生向けのMVP（Next.js の画面 + Go のAPI + Supabase）。ES（エントリーシート）作成、企業管理、面接ログ、自己分析ツールを1つのダッシュボードに集約し、AIによる添削とゲーミフィケーション（XP/レベリング）を提供する。
 
 **中核の目的**: 分断された就活タスクを1つの統合されたインターフェースに集約し、摩擦（フリクション）を取り除くこと。このアプリの価値は「もっと頑張らせること」ではなく、進捗を妨げる「フリクションタイム」を取り除くことにある。
 
 ## 技術スタック
 
-- **フレームワーク**: Next.js 16（App Router）+ TypeScript + React 19
+- **フロントエンド**: Next.js 16（App Router）+ TypeScript + React 19。画面だけを担当する（SPA型）
+- **バックエンド**: Go（`backend/`）。DBアクセス・外部API（AI・Tavily・SMTP）・ビジネスロジックのすべてを担当する
+- **API契約**: OpenAPI（`backend/api/openapi.yaml` が唯一の正）。Go のサーバー（oapi-codegen）と TypeScript の型（openapi-typescript）を生成する
+- **DB・認証**: Supabase（Postgres と Auth のみ。Google OAuth）。スキーマは Supabase CLI のマイグレーションで管理する
+- **データ取得**: TanStack Query + openapi-fetch（`lib/api/`）
+- **DBアクセス（Go）**: sqlc + pgx
 - **スタイリング**: Tailwind CSS v4（`bg-linear-to-*` など推奨クラスを優先）
-- **バックエンド**: Supabase（Auth/Postgres/Storage、RLS有効）
-- **認証**: Supabase Auth（Google OAuth）
-- **AI**: プロバイダー非依存のラッパー（`lib/ai/client.ts`）— `AI_PROVIDER` 環境変数でGemini/GPTを切り替え
-- **バリデーション**: Zod（DB/APIへ渡す前にすべての入力を検証）
 - **アニメーション**: Framer Motion
-- **ホスティング**: Vercel（無料プラン）
-- **メール送信**: Nodemailer（SMTP）
+- **ホスティング**: Vercel（無料プラン）。Next.js と Go を同じプロジェクトの Services で動かす（`vercel.json`）
 
-すべての依存サービスは**無料プラン**で運用している（有料インフラなし）。
+すべての依存サービスは**無料プラン**で運用している（有料インフラなし）。設計の詳細と、各判断で採らなかった案は [docs/backend-design.md](./docs/backend-design.md) を参照。
 
 ## 開発コマンド
 
+**フロントエンド（リポジトリのルート）**:
+
 ```bash
-npm run dev           # Next.js開発サーバーを起動 (localhost:3000)
+npm run dev           # Next.js開発サーバーを起動 (localhost:3000)。/v1 は手元の Go に転送する
 npm run build         # 本番ビルド
-npm run start         # 本番サーバーを起動
 npm run lint          # ESLintを実行
 npm run type-check    # TypeScriptの型チェック（変更後は必ず実行）
 npm run format        # Prettierで整形
 npm run format:check  # フォーマットをチェック
+npm run generate:api  # openapi.yaml から lib/api/schema.d.ts を生成する（openapi.yaml を変えたら必ず実行）
 npm run test          # Vitestで単体テストを実行
-npm run test:watch    # Vitestをwatchモードで実行
-npm run test:coverage # カバレッジ計測付きでVitestを実行
 npm run test:e2e      # PlaywrightでE2Eテストを実行
-npm run test:e2e:ui   # PlaywrightをUIモードで実行
+```
+
+**バックエンド（`backend/`）**:
+
+```bash
+supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta  # ローカルのDB（リポジトリのルートで実行）
+go generate ./...     # openapi.yaml と SQL（internal/db/queries）からGoのコードを生成する
+go run ./cmd/server   # Goのサーバーを起動 (localhost:8080)。SUPABASE_URL と DATABASE_URL が必要
+TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres go test ./...  # DBを使うテストも含めて実行
+golangci-lint run ./...
 ```
 
 **コミット前には必ず以下を実行する**:
 
 ```bash
-npm run type-check
-npm run lint
-npm run format:check
-npm run test
+npm run type-check && npm run lint && npm run format:check && npm run test
+(cd backend && go generate ./... && golangci-lint run ./... && go test ./...)
 ```
+
+`openapi.yaml` を変えたら `go generate`（Go側）と `npm run generate:api`（TypeScript側）の両方を実行する。生成コードが古いと CI が失敗する。
 
 ## コアアーキテクチャ
 
 ```mermaid
-flowchart TB
-    subgraph Client["ブラウザ"]
-        UI["Client Components"]
-    end
-    subgraph Next["Next.js (App Router, Vercel)"]
-        SC["Server Components<br/>(読み取り専用)"]
-        SA["Server Actions / Route Handlers<br/>(書き込み可)"]
-        Proxy["proxy.ts (Middleware)<br/>認証ガード"]
-    end
-    subgraph External["外部サービス"]
-        Supabase["Supabase<br/>(Auth / Postgres+RLS)"]
-        AI["Gemini / GPT"]
-    end
+flowchart LR
+    Browser["ブラウザ<br/>(Next.js の画面 + TanStack Query)"]
+    Go["Go API /v1<br/>(Vercel Services)"]
+    Supabase["Supabase<br/>(Postgres / Auth)"]
+    AI["Gemini / GPT / Tavily"]
+    SMTP["SMTP"]
 
-    UI -->|"fetch() POST"| SA
-    UI -.->|画面表示| SC
-    Proxy --> SC
-    Proxy --> SA
-    SC -->|readonly client| Supabase
-    SA -->|action client| Supabase
-    SA -->|createAiClient| AI
+    Browser -->|"Authorization: Bearer (Supabase JWT)"| Go
+    Browser -->|ログイン| Supabase
+    Go --> Supabase
+    Go --> AI
+    Go --> SMTP
 ```
 
-詳細な図解（認証フロー・AI連携フロー・XPフロー・CI）は [docs/architecture.md](./docs/architecture.md) を参照。
+詳細な図解は [docs/architecture.md](./docs/architecture.md) を参照。
 
 ### 認証・認可
 
-- **Server Component**（`createSupabaseReadonlyClient`）: 読み取り専用。セッションを変更しない
-- **Route Handler / Server Action**（`createSupabaseServerActionClient`）: セッションCookieを変更できる
-- **認証ガード**: 未認証リクエストは `/login` へリダイレクトする。ユーザー情報は `supabase.auth.getUser()` で取得
-- **RLSの徹底**: すべてのクエリはDB層で `user_id` にスコープされる。SupabaseのRLSポリシーが他ユーザーのデータへのアクセスを防ぐ
+- **ログイン**: Supabase Auth（Google OAuth）。Next.js の `proxy.ts` がページへのアクセス時にセッションを確かめ、未ログインなら `/login` へリダイレクトする
+- **Go の認証**: ブラウザが Supabase のアクセストークンを `Authorization: Bearer` で送り、Go が Supabase の公開鍵（JWKS）で検証する（`backend/internal/auth`）。ユーザーIDは検証したトークンからだけ取り出し、リクエストの本文やURLのIDは信用しない
+- **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける
+- **認可**: Go がすべての問い合わせを `user_id` で絞り込む。DBにアクセスする関数は `userID` を必須の引数にする。他人のデータは存在しないデータと同じく 404 にする
+- **RLS**: 全テーブルで有効だが、ポリシーは1つも作らない。Supabase が公開している Data API を塞ぐためだけに使い、Go はRLSの対象外のロールで接続する
+- **Next.js の Supabase クライアント**: 認証（セッション・ログイン・ログアウト・メールアドレスの表示）にだけ使い、データの読み書きには使わない
 
-```mermaid
-sequenceDiagram
-    participant User as ユーザー
-    participant Google as Google OAuth
-    participant Supabase as Supabase Auth
-    participant Proxy as proxy.ts
+### データ取得・状態管理
 
-    User->>Supabase: signInWithOAuth() → Google
-    Google-->>Supabase: 認可コード
-    Supabase-->>User: セッションCookie発行、/dashboardへ
-
-    Note over Proxy: 以降の全リクエストで実行
-    User->>Proxy: 任意のページへアクセス
-    Proxy->>Supabase: auth.getUser()（Cookie検証）
-    alt 未ログイン かつ 保護ルート
-        Proxy-->>User: /login へリダイレクト
-    else ログイン済み かつ /login
-        Proxy-->>User: /dashboard へリダイレクト
-    end
-```
-
-**例**:
-
-```typescript
-// Server Component（読み取り専用）
-const supabase = await createSupabaseReadonlyClient();
-const { data: userData } = await supabase.auth.getUser();
-
-// Route Handler または Server Action（セッションの書き込み可）
-const supabase = await createSupabaseServerActionClient();
-```
-
-### データフェッチ・状態管理
-
-> Go移行中（[docs/backend-design.md](./docs/backend-design.md)）。移行済みの機能は下の新方式、未移行の機能は旧方式（Server Component で Supabase から取得、Route Handler へ POST）のまま。
-
-- **ブラウザから Go のAPIを直接呼ぶ**（SPA型）: Go のAPIは `/v1/...` で Next.js と同じドメインに置かれている。`lib/api/client.ts` の生成クライアント（`backend/api/openapi.yaml` から `npm run generate:api` で型を生成）経由で呼び、`fetch()` を直接書かない
-- **サーバーのデータのキャッシュには TanStack Query を使う**（`lib/api/` のフック）。更新のレスポンスで関連するキャッシュを書き換える。画面だけの状態は props と hooks で扱い、Redux・Zustand などの汎用の状態管理ライブラリは使わない
+- **ブラウザから Go のAPIを直接呼ぶ**（SPA型）: Go のAPIは `/v1/...` で Next.js と同じドメインに置かれている。`lib/api/client.ts` の生成クライアント経由で呼び、`fetch()` を直接書かない
+- **サーバーのデータのキャッシュには TanStack Query を使う**（`lib/api/<機能>.ts` のフック）。更新のレスポンスで関連するキャッシュを書き換える。XPが付く操作は、レスポンスの `xp` で `applyXpResult` を呼びヘッダーの表示を更新する
+- 画面だけの状態は props と hooks で扱い、Redux・Zustand などの汎用の状態管理ライブラリは使わない
 - **ローカル開発**: `next dev` は `/v1` を `API_ORIGIN`（既定 `http://localhost:8080`）の Go に転送する
 
-### AI連携
+### バックエンド（Go）の構成
 
-すべてのAI呼び出しは `lib/ai/client.ts` を経由する:
-
-```typescript
-const client = createAiClient();
-const result = await client.call(
-  input,
-  "es_review" | "company_analysis" | "aptitude_analysis" | "self_analysis" | "interview_review",
-);
+```
+backend/
+├── api/openapi.yaml          # API仕様（唯一の正）
+├── cmd/server/               # 起動・設定の読み込み・依存の組み立て
+└── internal/
+    ├── <機能>/               # company, es, interview, calendar, assessment, webtest, profile, contact, admin, health
+    │   ├── service.go        # ドメインのルール
+    │   └── handler.go        # HTTPの入出力（生成された StrictServerInterface を実装）
+    ├── db/                   # sqlc が internal/db/queries/*.sql から生成した問い合わせ
+    ├── xp/                   # XPの付与（各機能のサービスが、元の操作と同じトランザクションで呼ぶ）
+    ├── ai/                   # Gemini / GPT / Tavily とプロンプト
+    ├── ratelimit/            # AIの回数制限（短時間の連打と1日の上限）
+    ├── auth/                 # JWTの検証
+    └── platform/             # エラーの形式、ミドルウェア、トランザクション、DB接続
 ```
 
-**特徴**:
+- **エラー**: service は `platform.Error`（`Kind` と日本語のメッセージ）を返し、RFC 9457（Problem Details）への変換は `platform.WriteError` の1か所で行う。想定外のエラーは利用者に詳細を見せずログにだけ出す
+- **入力の検証**: 形式（必須・文字数・enum）は `openapi.yaml` で定義し、ミドルウェアが仕様と照らし合わせて弾く。ドメインのルール（空白だけの企業名など）は service で確かめる
+- **トランザクション**: 複数の書き込みは `platform.InTx` でまとめる。XPの付与は元の操作と同じトランザクションで行う
+- **企業へのひも付け**: ES・面接ログ・予定を企業にひも付けるときは、`company.EnsureOwned` で本人の企業かを確かめる
 
-- プロバイダーの切り替え: `AI_PROVIDER=gemini|gpt`
-- プロンプトテンプレート: `AiPromptKind` ごとにロケール別（日本語）のシステムプロンプトを持つ
-- 安全なフェイルオーバー: `AI_PROVIDER_API_KEY` が未設定の場合はプレースホルダー応答を返す
-- レート制限: ユーザーごとに60秒間で12リクエストまで（`/api/ai/route.ts` で強制）。永続化ストア（`api_rate_limits` テーブル、`lib/rate-limit.ts`）を使用しており、サーバーレス環境の複数インスタンス間でも一貫して機能する。コストの高い企業分析（agentic）エンドポイント `/api/ai/company/analyze` にも別枠のレート制限（10分間に5回）がある
+### AI
 
-**利用可能なプロンプト種別**:
+すべてのAI呼び出しは `backend/internal/ai` を経由する。AIへの入力は画面から受け取らず、Go が保存済みのデータから組み立て、結果の保存まで1つの操作で行う。
 
-- `es_review`: ESの構成・明瞭性・訴求力をレビューする
-- `company_analysis`: 企業とのマッチ度・求める人物像を分析する
-- `aptitude_analysis`: 自己診断結果から業界・職種を推薦する
-- `self_analysis`: 強みとキャリアの軸を抽出する
-- `interview_review`: 面接パフォーマンスへのフィードバックを行う
+| 機能                      | API                                      | 再実行                   |
+| ------------------------- | ---------------------------------------- | ------------------------ |
+| AI添削（ES）              | `POST /v1/es-entries/{id}/review`        | 何度でも（結果を上書き） |
+| AI振り返り（面接ログ）    | `POST /v1/interview-logs/{id}/review`    | 何度でも（結果を上書き） |
+| AI企業分析（Web検索あり） | `POST /v1/companies/{id}/analysis`       | 企業ごとに1回            |
+| AI適性診断                | `POST /v1/aptitude-result/diagnosis`     | 1回                      |
+| AI自己分析                | `POST /v1/self-analysis-result/analysis` | 1回                      |
 
-### データベーススキーマ・RLS
+- **回数制限**（`internal/ratelimit`）: 汎用のAIは1分12回・1日20回、企業分析は10分5回・1日3回（1人あたり、1日は日本時間）
+- **プロバイダー**: `AI_PROVIDER=gemini|gpt`。キーが無いときはAI機能だけが 503 を返す（仮の文章は保存されてしまうので返さない）
+- **用語**: 添削結果・振り返り結果・分析結果・診断結果。「サマリー」「要約」「AI回答」は使わない。DBの列名はすべて `ai_result`
 
-**主要テーブル**（すべてRLS有効）:
+### データベース
 
-- `profiles`: ユーザープロフィール、XP、レベル、目標
-- `es_entries`: Markdown・タグ・AIサマリー付きのES下書き/提出済みデータ
-- `companies`: 選考ステージ・志望度・AIサマリー付きの企業カード
-- `calendar_events`: 締切・面接・インターン日程を統合したカレンダー
-- `xp_logs`: ゲーミフィケーションの履歴
-- `interview_logs`: 面接記録＋AIサマリー
-- `aptitude_results`: ユーザー1人につき1件（ユニークインデックス）、AI診断結果を保存
-- `self_analysis_results`: ユーザー1人につき1件（ユニークインデックス）、AIサマリーを保存
-- `webtest_questions` / `webtest_attempts`: Webテスト練習用の問題バンク（ユーザーが自ら問題を作成する自己入力方式。共有/シード済みの問題集は無い）
-- `api_rate_limits`: AIエンドポイントのレート制限状態を永続化するテーブル（`lib/rate-limit.ts` が使用）
+スキーマは `supabase/migrations/` が正。dev へのマージで GitHub Actions（`migrate.yml`）が本番に適用する。**マイグレーションは1つ前のバージョンのコードでも動く形で書く**（列の追加が先、不要な列の削除は次のリリース）。
 
-**RLSパターン**: すべてのテーブルがSELECT/INSERT/UPDATE/DELETEに対して `auth.uid() = user_id` を強制する。RLSを迂回するのは `createSupabaseAdminClient`（service roleキー）経由のクエリのみ（`/developer` ページや管理系スクリプトで限定的に使用）。
+- `profiles`: プロフィール、XP、レベル
+- `companies`: 企業（中心のエンティティ）。正規化した企業名（`normalized_name`）はユーザーごとに一意
+- `es_entries` / `interview_logs`: ES・面接ログ。`company_id` は必須
+- `calendar_events`: ユーザーが登録した予定（`company_id` は任意）。カレンダーにはESの締切も混ぜて表示する（Goが組み立てる）
+- `xp_logs`: XPの獲得履歴。`(user_id, action, ref_id)` がユニークで、同じ対象への二重付与をDBが防ぐ
+- `aptitude_results` / `self_analysis_results`: 1人1件
+- `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録
+- `api_rate_limits`: AIの回数制限の状態
 
-**RLSポリシーの例**:
-
-```sql
-CREATE POLICY "Enable read own es" ON es_entries
-  FOR SELECT USING (auth.uid() = user_id);
-```
-
-### 入力バリデーション
-
-**すべての入力をDB/APIへ渡す前にZodで検証する**:
-
-- `lib/validation/schemas/forms.ts`: フォーム入力スキーマ
-- `lib/validation/schemas/api.ts`: APIリクエストボディのスキーマ
-- `lib/validation/schemas/ai.ts`: AIリクエストのスキーマ
-- `lib/validation/schemas/contact.ts`: 問い合わせフォームのスキーマ
-
-**パターン**:
-
-```typescript
-const schema = z.object({
-  /* ... */
-});
-const parsed = schema.safeParse(formData);
-if (!parsed.success) return { error: "Invalid input" };
-// parsed.data は安全に使用できる
-```
+企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
 
 ### APIルート
 
-- `POST /api/ai`: レート制限＋認証付きでAIを呼び出す
-- `POST /api/ai/company/analyze`: 企業分析（agentic、Tavily検索連携、SSEストリーミング）。専用のレート制限あり
-- `POST /api/contact`: 問い合わせフォームの送信（SMTP）
-- `GET /api/developer/me`: 開発者判定用エンドポイント
+Go のAPIの一覧は `backend/api/openapi.yaml` を参照する。Next.js に残っている Route Handler は次だけ:
+
+- `/auth/callback`, `/auth/signout`: ログイン・ログアウト（Supabase Auth）
 - `POST /api/test-support/login`: **E2Eテスト専用**。`E2E_TEST_MODE` と共有シークレットの多重ガード付きで、本番以外では絶対に有効化しない（後述の「テスト」セクション参照）
-
-すべてのRoute Handlerは以下を行う:
-
-1. ユーザー認証を検証する
-2. リクエストボディをZodで検証する
-3. クエリを `user_id` にスコープする
-4. JSONまたはエラーを返す
 
 ### UIパターン・スタイリング
 
@@ -226,40 +170,49 @@ if (!parsed.success) return { error: "Invalid input" };
 
 **コンポーネント構成**:
 
-- ページレベルのレイアウト: `app/_components/layout.tsx`（`AppLayout`）
+- ページレベルのレイアウト: `app/_components/layout/`（`AppLayout`）
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
-- 共有ユーティリティ: `lib/`（Zodスキーマ、Supabaseクライアント、AIクライアント、定数）
+- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: Goのエラーの表示、`ai-result/`: AIの結果の表示）
+- APIのフック・型: `lib/api/`（生成した `schema.d.ts` とクライアント）
 
 ### ゲーミフィケーション（XPシステム）
 
-- ユーザーはアクション（ES作成、企業追加、面接ログ記録など）でXPを獲得する
-- レベル = `Math.floor(xp / 25) + 1`
-- XPは `action` と任意の `ref_id` とともに `xp_logs` テーブルに記録される
-- ダッシュボードに現在のXP・レベル・直近のログを表示する
-- 付与ロジックは `lib/xp/award-xp.ts` を参照（重複防止・日次上限・クールダウンあり）
+- レベル = XP ÷ 25（切り捨て）＋ 1。合計XPとレベルは `profiles` に保存する
+- 付与のルールは `backend/internal/xp`（画面ではなく操作に結び付ける）
+
+| 操作                         | XP  | 制限                      |
+| ---------------------------- | --- | ------------------------- |
+| ESを提出する                 | 25  | 同じESには1回、1日5回まで |
+| 面接ログを作る               | 20  | 同じログには1回           |
+| 企業を登録する               | 5   | 1日5回まで                |
+| 適性診断・自己分析に回答する | 15  | 初回だけ                  |
+| Webテストの問題を作る        | 5   | 1日3回まで                |
+| Webテストに解答する          | 15  | 1日2回まで                |
+
+- 付与はプロフィールの行をロックしてから行い、同時にリクエストが来ても上限を超えない（1日は日本時間）
 
 ### よくあるページフロー
 
 **ダッシュボード（`/dashboard`）**:
 
-- 取得データ: ESエントリー、プロフィール、カレンダーイベント、面接ログ、XPログ
+- 専用のAPIは作らず、プロフィール・カレンダー・ES・面接ログ・XP履歴の一覧APIを組み合わせる
 - 表示内容: サマリーカード、カレンダー、目標/軸エディタ、直近のアクティビティ
 - 保護ルート: 未ログインならリダイレクト
 
 **ES管理**（`/es`, `/es/new`, `/es/[id]`）:
 
-- Markdownエディタで作成/編集/削除
-- 質問と回答を追加
-- AI添削パネル
-- 保存でXP付与
-- 締切（`deadline`）はカレンダーに表示されるが、`calendar_events` には保存せず表示時にESから組み立てる。ESを削除すれば締切も表示されなくなる
+- 企業を選んで作成（常に下書き）、設問と回答・本文を編集、削除
+- 提出は取り消せない（提出でXP付与）
+- AI添削
+- 締切（`deadline`）はカレンダーに表示されるが、`calendar_events` には保存せずGoがESから組み立てる
 
 **企業管理**（`/companies`, `/companies/new`, `/companies/[id]`）:
 
-- 選考ステージを追跡（未エントリー → 面接 → 内定 など）
-- マイページIDを保存して追跡
-- AI企業分析パネル
-- 志望度/お気に入りフラグ（`favorite`カラムは存在するがUI未実装 — Issue #114参照）
+- 選考状況（未エントリー／エントリー済み／書類選考／面接中／内定／不合格／辞退）を追跡
+- マイページID・URLを保存し、一覧からマイページを開ける
+- 志望度・お気に入り（一覧で絞り込める）
+- AI企業分析（企業ごとに1回）
+- 削除すると、ひも付くES・面接ログ・予定も消える
 
 **ログイン（`/login`）**:
 
@@ -273,17 +226,15 @@ if (!parsed.success) return { error: "Invalid input" };
 - **YAGNI**: 今必要なものだけ実装する。投機的な機能追加はしない
 - **KISS**: 複雑な解決策よりシンプルな解決策を優先する
 - **DRY**: 重複したロジックは共有のutils/componentsへ抽出する
-- **型安全性**: 変更後は必ず `npm run type-check` を実行する
-- **バリデーション**: ユーザー入力を信用せず、常にZodで検証する
+- **型安全性**: 変更後は必ず `npm run type-check`（Goは `go vet`）を実行する
+- **バリデーション**: ユーザー入力を信用せず、必ずGoで検証する（`openapi.yaml` の制約と service のルール）。フロントの検証は使い勝手のためだけ
 
 **実装上の注意**:
 
-- Server/Client Componentの責務境界を尊重する（関心を混在させない）
-- すべてのフォーム/APIの入力をDBアクセス前に検証する
-- Server Componentでは `createSupabaseReadonlyClient` を使う（Cookieを変更しない）
-- Route Handlerでは `createSupabaseServerActionClient` を使う（Cookie変更可）
-- AI呼び出しは必ず `lib/ai/client.ts` を経由する
-- AIキー未設定時は安全に失敗する（クラッシュしない）
+- データの読み書きとビジネスロジックは Go に置き、Next.js には置かない
+- API を足すときは `openapi.yaml` から書き、生成したインターフェースを Go で実装する
+- AI呼び出しは必ず `backend/internal/ai` を経由する
+- AIキーやSMTPの設定が無くても、その機能だけが 503 を返し、サーバーは止めない
 - コンポーネントは最大200行程度。それを超えたら分割する
 - ディレクトリ構造: 種類別ではなく機能/責務別にグルーピングする
 
@@ -295,11 +246,16 @@ if (!parsed.success) return { error: "Invalid input" };
 
 ### テスト
 
+**Goのテスト**:
+
+- テストはテスト対象と同じパッケージに `*_test.go` で置く
+- DBを使うテストは `internal/dbtest` で実際のDB（`supabase start` のもの）につなぐ。`TEST_DATABASE_URL` が無いと手元ではスキップし、CIでは失敗させる
+- ユーザー間でデータが混ざらないこと（他人のIDで取得・更新・削除できないこと）と、同時実行（XPの日次上限・回数制限）は、実際のDBで確かめる
+- テスト用の偽物: `internal/auth/authtest`（Supabase Auth の代わりにJWTを発行）、`internal/ai/aitest`（AIの代わり）
+
 **単体テスト（Vitest）**:
 
 - テストファイルはテスト対象と同一ディレクトリにコロケーションし、`*.test.ts` サフィックスを使う
-- `test/helpers/supabase-mock.ts`: Supabaseクエリビルダーの手製フェイク（`from().select().eq().maybeSingle()` 等をチェーン可能）
-- `test/stubs/server-only.ts`: `server-only` パッケージ用の空スタブ（`vitest.config.ts` でエイリアス）
 - 詳細な設計は `docs/testing/unit-test-plan.md` を参照
 
 **E2Eテスト（Playwright）**:
@@ -307,14 +263,17 @@ if (!parsed.success) return { error: "Invalid input" };
 - テストは `e2e/` ディレクトリに配置する
 - 認証は「本番Supabaseに固定のテストユーザーA/Bを作成して流用」する方式。`POST /api/test-support/login` が `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致という多重ガードの下でのみ、固定ユーザーのセッションを発行する
 - `e2e/global-setup.ts` がテストユーザーの作成〜ログイン〜`storageState` 保存までを行い、`e2e/global-teardown.ts` が全テスト終了後にテストユーザーの `es_entries` を一括削除する（本番Supabase流用に伴う安全策）
+- E2Eは本番ビルドの Next.js だけを起動しており、`/v1` を受ける Go がいない。Go に移した画面（ESなど）のE2Eは、E2EでGoを起動する方法を決めるまで `test.fixme` で止めている
 - 本番Vercel環境変数には **`E2E_TEST_MODE` を絶対に設定しない**
 - 詳細な設計・セキュリティ上の注意点は `docs/testing/e2e-test-plan.md` を参照
 
 **CI（GitHub Actions）**:
 
-- `.github/workflows/checks.yml`: 静的チェック（`checks` = lint/type-check/format:checkを1ジョブに集約）+ `build`（本番ビルド確認）
+- `.github/workflows/checks.yml`: 静的チェック（`checks` = lint/type-check/format:check/APIの型の鮮度）+ `build`（本番ビルド確認）
 - `.github/workflows/test.yml`: `unit`（Vitest）+ `check-e2e-secrets`/`e2e`（Playwright。E2E用Secretsが未設定の間は自動スキップ）
-- devブランチには必須ステータスチェック（`checks`/`build`/`unit`）を要求するルールセットが設定されている
+- `.github/workflows/go.yml`: `go`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）
+- `.github/workflows/migrate.yml`: dev へのマージで、本番の Supabase にマイグレーションを適用する
+- devブランチには必須ステータスチェック（`checks`/`build`/`unit`）を要求し、マージ前にブランチを最新化するルールセットが設定されている
 
 ### ブランチ運用
 
@@ -325,35 +284,45 @@ if (!parsed.success) return { error: "Invalid input" };
 
 ### 環境変数
 
-**必須**:
+Vercel の環境変数は Next.js と Go で共有される。
+
+**Next.js**:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
 NEXT_PUBLIC_SITE_URL=https://job-seeker-gray.vercel.app (ローカルは localhost:3000)
+API_ORIGIN=http://localhost:8080 (ローカル開発のみ。/v1 の転送先)
+```
 
-# AI
+**Go（必須）**:
+
+```env
+SUPABASE_URL=https://<プロジェクトID>.supabase.co   # JWTの公開鍵（JWKS）の取得元
+DATABASE_URL=postgresql://...:6543/postgres         # Supabase の接続プーラー（トランザクションモード）
+```
+
+**Go（任意。無ければその機能だけが 503 を返す）**:
+
+```env
 AI_PROVIDER=gemini|gpt
 AI_PROVIDER_API_KEY=...
-
-# AIの追加設定（任意）
-AI_MODEL=gemini-1.5-flash-latest (Geminiの場合) または gpt-4o-mini (GPTの場合)
+AI_MODEL=gemini-2.5-flash (Geminiの場合) または gpt-4o-mini (GPTの場合)
 AI_ENDPOINT=https://api.openai.com/v1/chat/completions (カスタムOpenAIエンドポイントを使う場合)
 AI_API_VERSION=v1beta (Geminiの場合)
-
-# 問い合わせフォーム（SMTP）
-SMTP_HOST=smtp.gmail.com
+TAVILY_API_KEY=...          # AI企業分析のWeb検索
+SMTP_HOST=smtp.gmail.com    # 問い合わせ（ポート465は最初からTLS、それ以外はSTARTTLS）
 SMTP_PORT=465
 SMTP_USER=your-mail@example.com
 SMTP_PASS=your-app-password
 CONTACT_TO_EMAIL=contact-destination@example.com
-SMTP_SECURE=true
+DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザー
 ```
 
 **E2Eテスト用（任意。ローカルは `.env.test.local` に設定。CIはGitHub Secretsから注入）**:
 
 ```env
+SUPABASE_SERVICE_ROLE_KEY=...
 E2E_TEST_MODE=true
 E2E_TEST_SECRET=...
 E2E_TEST_USER_EMAIL=...
@@ -361,6 +330,8 @@ E2E_TEST_USER_PASSWORD=...
 E2E_TEST_USER2_EMAIL=...
 E2E_TEST_USER2_PASSWORD=...
 ```
+
+**GitHub Actions（マイグレーションの適用）**: `SUPABASE_ACCESS_TOKEN`（Project Settings・API Keys・API Key Secrets・Connection Pooling の Read 権限）、`SUPABASE_DB_PASSWORD`、`SUPABASE_PROJECT_ID`
 
 ### Supabase Auth設定
 
@@ -387,24 +358,24 @@ Supabaseダッシュボード → Authentication → URL Configuration で設定
 - `/es`, `/es/new`, `/es/[id]` — ES管理
 - `/companies`, `/companies/new`, `/companies/[id]` — 企業管理
 - `/interviews`, `/interviews/new`, `/interviews/[id]` — 面接ログ
-- `/self-analysis` — 自己分析アンケート＋AIサマリー
+- `/self-analysis` — 自己分析アンケート＋AI自己分析
 - `/aptitude` — 適性チェック＋AI診断
 - `/webtests`, `/webtests/new`, `/webtests/[id]` — Webテスト練習
 - `/profile` — プロフィール/目標の編集
 - `/contact` — フィードバックフォーム（ログイン済みユーザー向け）
-- `/developer` — 開発者向け管理ページ（`isDeveloperUserId` でゲート。ナビゲーションリンクは無く、URL直打ちでのみアクセス）
+- `/developer` — 開発者向け管理ページ（Go が `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけサイドバーにリンクが出る）
 
-すべての保護ページ: `auth.getUser()` が失敗したら `/login` へリダイレクトする。
+すべての保護ページ: 未ログインなら `proxy.ts` が `/login` へリダイレクトする。
 
 ### 型定義
 
-- `lib/database.types.ts`: Supabaseの型定義（Supabase CLIからの自動生成、または手動同期）
-- DBの行の型: 例 `Database["public"]["Tables"]["es_entries"]["Row"]`
-- クエリの型チェックと、DB変更のTypeScriptへの反映に使用する
+- フロントのAPIの型: `lib/api/schema.d.ts`（`openapi.yaml` から生成。手で編集しない）
+- GoのAPIの型: `backend/internal/openapi/openapi.gen.go`（生成）
+- GoのDBの型: `backend/internal/db/`（sqlc が生成）
 
 ### デプロイ
 
-- **Vercel**（無料のHobbyプラン）でホスティング
+- **Vercel**（無料のHobbyプラン）でホスティング。`vercel.json` の Services で、`/v1/*` を Go、それ以外を Next.js に振り分ける。関数のリージョンは東京（`hnd1`、Supabase と同じ）
 - `dev` ブランチへのマージで自動デプロイ
 - 環境変数はVercelダッシュボードで設定する
 - ブランチごとにプレビューデプロイが作成される
@@ -413,20 +384,17 @@ Supabaseダッシュボード → Authentication → URL Configuration で設定
 
 **避けるべきこと**:
 
-- Server Component内で認証ロジックを書く（セッション変更にはRoute Handlerを使う）
-- Supabaseクライアントの混同（Server Componentではreadonly、Route Handlerではaction client）
-- ユーザー入力のZodバリデーションを省略する
-- AIプロンプトを `lib/ai/client.ts` の外にハードコードする
-- `user_id` スコープなしでクエリする（RLSの意図が崩れる）
+- Next.js から Supabase のデータを直接読み書きする（RLSのポリシーが無いので読めない。データは必ず Go のAPI経由）
+- `user_id` で絞り込まない問い合わせを書く（RLSは守ってくれない）
+- 画面から受け取った文章をAIに渡す・AIの結果として保存する
+- `openapi.yaml` を変えて、生成コードを更新し忘れる
+- マイグレーションで、今動いているコードが使っている列をいきなり削除する
 
 **やるべきこと**:
 
-- 編集後は必ず `npm run type-check` を実行する
-- Route Handlerでのasync/awaitを正しく検証する（`supabase.auth.getUser()` を await する）
-- すべてのDBクエリを `.eq("user_id", userId)` で `user_id` にスコープする
-- AIキー未設定時の安全なフェイルオーバーをテストする
-- 並列クエリには `Promise.all()` を使う
-- 型付きのSupabase行をコンポーネントへ渡し、型安全性を保つ
+- 他人のデータを取得・更新・削除できないことを、実際のDBのテストで確かめる
+- 複数の書き込みは `platform.InTx` で1つのトランザクションにまとめる
+- 更新のレスポンスで TanStack Query のキャッシュを書き換え、取り直しの通信を減らす
 
 ## 他ツール向けの参照
 
