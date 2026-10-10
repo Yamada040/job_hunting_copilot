@@ -2,19 +2,22 @@
 
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
+import { useQueryClient } from "@tanstack/react-query";
 import { useActionState, useMemo, useOptimistic, useReducer, useState, useTransition } from "react";
 
+import { calendarKeys, createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from "@/lib/api/calendar";
+import { CompanyPicker } from "@/app/_components/company-picker";
 import { TYPE_LABEL } from "./calendar/constants";
 import { CalendarDayCell, CalendarEvent, CalendarFormState } from "./calendar/types";
 import { formatDateKey } from "./calendar/utils";
 
 type Props = {
-  initialEvents?: CalendarEvent[];
+  events: CalendarEvent[];
 };
 
 const emptyForm: CalendarFormState = {
   title: "",
-  company: "",
+  company: null,
   type: "es" as CalendarEvent["type"],
   time: "",
 };
@@ -59,7 +62,10 @@ function modalReducer(state: ModalState, action: ModalAction): ModalState {
         selectedDate: action.event.date,
         formState: {
           title: action.event.title,
-          company: action.event.company || "",
+          company:
+            action.event.companyId && action.event.company
+              ? { id: action.event.companyId, name: action.event.company }
+              : null,
           type: action.event.type,
           time: action.event.time || "",
         },
@@ -99,12 +105,12 @@ function optimisticEventsReducer(current: CalendarEvent[], action: OptimisticEve
   }
 }
 
-export function InteractiveCalendar({ initialEvents = [] }: Props) {
+export function InteractiveCalendar({ events }: Props) {
+  const queryClient = useQueryClient();
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
   // 保存・削除を楽観的に即時反映し、API失敗時はeventsへ自動ロールバックする
   const [optimisticEvents, applyOptimisticEvents] = useOptimistic(events, optimisticEventsReducer);
   const [, startDeleteTransition] = useTransition();
@@ -218,44 +224,33 @@ export function InteractiveCalendar({ initialEvents = [] }: Props) {
         id: editingId ?? `optimistic-${Date.now()}`,
         date: selectedDate,
         title: formState.title || "予定",
-        company: formState.company || null,
+        company: formState.company?.name ?? null,
+        companyId: formState.company?.id ?? null,
         type: formState.type,
         time: formState.time || null,
       },
     });
     try {
-      const payload = {
-        date: selectedDate,
-        title: formState.title || "予定",
-        company: formState.company || undefined,
-        type: formState.type,
-        time: formState.time || null,
-      };
-
-      const res = await fetch(editingId ? `/api/calendar-events/${editingId}` : "/api/calendar-events", {
-        method: editingId ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok || !json?.data) {
-        throw new Error(json?.error ?? "保存に失敗しました");
+      const title = formState.title || "予定";
+      const time = formState.time || null;
+      if (editingId) {
+        await updateCalendarEvent(editingId, {
+          date: selectedDate,
+          title,
+          type: formState.type,
+          time,
+          companyId: formState.company?.id ?? null,
+        });
+      } else {
+        await createCalendarEvent({
+          date: selectedDate,
+          title,
+          type: formState.type,
+          time: time ?? undefined,
+          companyId: formState.company?.id,
+        });
       }
-
-      const saved: CalendarEvent = {
-        id: json.data.id,
-        date: json.data.date,
-        title: json.data.title,
-        company: json.data.company,
-        type: json.data.type,
-        time: json.data.time,
-      };
-
-      setEvents((prev) => {
-        const exists = prev.some((evt) => evt.id === saved.id);
-        if (exists) return prev.map((evt) => (evt.id === saved.id ? saved : evt));
-        return [...prev, saved];
-      });
+      await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
       dispatch({ type: "saveSuccess" });
     } catch (err) {
       console.error(err);
@@ -277,13 +272,8 @@ export function InteractiveCalendar({ initialEvents = [] }: Props) {
       applyOptimisticEvents({ type: "delete", id: evt.id });
       dispatch({ type: "deleteStart", id: evt.id });
       try {
-        const res = await fetch(`/api/calendar-events/${evt.id}`, { method: "DELETE" });
-        const json = await res.json().catch(() => null);
-        if (!res.ok || !json?.data?.id) {
-          throw new Error(json?.error ?? "削除に失敗しました");
-        }
-
-        setEvents((prev) => prev.filter((item) => item.id !== evt.id));
+        await deleteCalendarEvent(evt.id);
+        await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
         dispatch({ type: "deleteSuccess", id: evt.id });
       } catch (err) {
         console.error(err);
@@ -568,13 +558,10 @@ export function InteractiveCalendar({ initialEvents = [] }: Props) {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-white/70">企業名</label>
-                <input
-                  type="text"
+                <label className="text-xs text-white/70">企業（任意）</label>
+                <CompanyPicker
                   value={formState.company}
-                  onChange={(e) => dispatch({ type: "updateForm", patch: { company: e.target.value } })}
-                  className="dq-input text-sm"
-                  placeholder="例）テック株式会社"
+                  onChange={(company) => dispatch({ type: "updateForm", patch: { company } })}
                 />
               </div>
               <div className="space-y-1">

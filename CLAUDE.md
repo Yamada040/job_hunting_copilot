@@ -198,7 +198,6 @@ if (!parsed.success) return { error: "Invalid input" };
 
 - `POST /api/ai`: レート制限＋認証付きでAIを呼び出す
 - `POST /api/ai/company/analyze`: 企業分析（agentic、Tavily検索連携、SSEストリーミング）。専用のレート制限あり
-- `GET|POST|PUT /api/calendar-events`: カレンダーイベントのCRUD
 - `POST /api/contact`: 問い合わせフォームの送信（SMTP）
 - `GET /api/developer/me`: 開発者判定用エンドポイント
 - `POST /api/test-support/login`: **E2Eテスト専用**。`E2E_TEST_MODE` と共有シークレットの多重ガード付きで、本番以外では絶対に有効化しない（後述の「テスト」セクション参照）
