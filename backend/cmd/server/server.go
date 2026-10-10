@@ -8,16 +8,30 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/health"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
+)
+
+// 機能ごとの handler はどれも Handler という名前なので、別名を付けて埋め込む（同じ名前のフィールドを2つ埋め込めないため）
+type (
+	healthHandler  = health.Handler
+	profileHandler = profile.Handler
 )
 
 // server は、機能ごとの handler を埋め込んで、生成された StrictServerInterface をまとめて満たす。
 type server struct {
-	health.Handler
+	healthHandler
+	profileHandler
+}
+
+// deps は、handler が使う依存。main で組み立て、テストでは偽物に差し替える。
+type deps struct {
+	db      health.Pinger
+	profile *profile.Service
 }
 
 var _ openapi.StrictServerInterface = server{}
 
-func newHandler(verifier *auth.Verifier, db health.Pinger) (http.Handler, error) {
+func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 	spec, err := openapi.GetSpec()
 	if err != nil {
 		return nil, fmt.Errorf("load openapi spec: %w", err)
@@ -26,7 +40,8 @@ func newHandler(verifier *auth.Verifier, db health.Pinger) (http.Handler, error)
 	spec.Servers = nil
 
 	srv := server{
-		Handler: health.Handler{DB: db},
+		healthHandler:  health.Handler{DB: d.db},
+		profileHandler: profile.Handler{Service: d.profile},
 	}
 	strict := openapi.NewStrictHandlerWithOptions(srv, nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  writeRequestError,

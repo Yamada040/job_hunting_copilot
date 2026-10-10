@@ -8,11 +8,14 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth/authtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 )
+
+const userID = "6f1c2a7e-3b4d-4c5e-8f90-a1b2c3d4e5f6"
 
 func newVerifier(t *testing.T, issuer *authtest.Issuer) *auth.Verifier {
 	t.Helper()
@@ -27,12 +30,12 @@ func TestUserIDAcceptsValidToken(t *testing.T) {
 	issuer := authtest.NewIssuer(t)
 	v := newVerifier(t, issuer)
 
-	got, err := v.UserID(issuer.Sign(t, issuer.Claims("user-1")))
+	got, err := v.UserID(issuer.Sign(t, issuer.Claims(userID)))
 	if err != nil {
 		t.Fatalf("UserID: %v", err)
 	}
-	if got != "user-1" {
-		t.Errorf("UserID = %q, want user-1", got)
+	if got != uuid.MustParse(userID) {
+		t.Errorf("UserID = %s, want %s", got, userID)
 	}
 }
 
@@ -43,22 +46,23 @@ func TestUserIDRejectsInvalidTokens(t *testing.T) {
 
 	cases := map[string]string{
 		"expired": issuer.Sign(t, func() jwt.RegisteredClaims {
-			c := issuer.Claims("user-1")
+			c := issuer.Claims(userID)
 			c.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-time.Minute))
 			return c
 		}()),
 		"wrong audience": issuer.Sign(t, func() jwt.RegisteredClaims {
-			c := issuer.Claims("user-1")
+			c := issuer.Claims(userID)
 			c.Audience = jwt.ClaimStrings{"anon"}
 			return c
 		}()),
 		"wrong issuer": issuer.Sign(t, func() jwt.RegisteredClaims {
-			c := issuer.Claims("user-1")
+			c := issuer.Claims(userID)
 			c.Issuer = "https://evil.example.com/auth/v1"
 			return c
 		}()),
 		"no subject":            issuer.Sign(t, issuer.Claims("")),
-		"signed by another key": otherIssuer.Sign(t, issuer.Claims("user-1")),
+		"subject is not a uuid": issuer.Sign(t, issuer.Claims("user-1")),
+		"signed by another key": otherIssuer.Sign(t, issuer.Claims(userID)),
 		"not a jwt":             "garbage",
 	}
 	for name, token := range cases {
@@ -73,7 +77,7 @@ func TestUserIDRejectsInvalidTokens(t *testing.T) {
 func TestUserIDRejectsSharedSecretToken(t *testing.T) {
 	issuer := authtest.NewIssuer(t)
 	v := newVerifier(t, issuer)
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, issuer.Claims("user-1")).SignedString([]byte("legacy-secret"))
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, issuer.Claims(userID)).SignedString([]byte("legacy-secret"))
 	if err != nil {
 		t.Fatalf("sign: %v", err)
 	}
@@ -102,13 +106,13 @@ components:
     bearerAuth: {type: http, scheme: bearer}
 `
 
-func serve(t *testing.T, issuer *authtest.Issuer, path, token string) (*httptest.ResponseRecorder, string) {
+func serve(t *testing.T, issuer *authtest.Issuer, path, token string) (*httptest.ResponseRecorder, uuid.UUID) {
 	t.Helper()
 	doc, err := openapi3.NewLoader().LoadFromData([]byte(spec))
 	if err != nil {
 		t.Fatalf("load spec: %v", err)
 	}
-	var seenUser string
+	var seenUser uuid.UUID
 	h := platform.Chain(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		seenUser, _ = auth.UserID(r.Context())
 	}), newVerifier(t, issuer).Authenticate, platform.Validate(doc, auth.RequireUser))
@@ -125,10 +129,10 @@ func serve(t *testing.T, issuer *authtest.Issuer, path, token string) (*httptest
 func TestPrivateAPIPassesUserIDWithValidToken(t *testing.T) {
 	issuer := authtest.NewIssuer(t)
 
-	rec, user := serve(t, issuer, "/private", issuer.Sign(t, issuer.Claims("user-1")))
+	rec, user := serve(t, issuer, "/private", issuer.Sign(t, issuer.Claims(userID)))
 
-	if rec.Code != http.StatusOK || user != "user-1" {
-		t.Errorf("got status %d user %q, want 200 user-1", rec.Code, user)
+	if rec.Code != http.StatusOK || user != uuid.MustParse(userID) {
+		t.Errorf("got status %d user %s, want 200 %s", rec.Code, user, userID)
 	}
 }
 
@@ -157,7 +161,7 @@ func TestPublicAPIAllowsMissingToken(t *testing.T) {
 
 	rec, user := serve(t, issuer, "/public", "")
 
-	if rec.Code != http.StatusOK || user != "" {
-		t.Errorf("got status %d user %q, want 200 without user", rec.Code, user)
+	if rec.Code != http.StatusOK || user != uuid.Nil {
+		t.Errorf("got status %d user %s, want 200 without user", rec.Code, user)
 	}
 }

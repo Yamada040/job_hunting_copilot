@@ -3,19 +3,25 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
 )
 
 type config struct {
 	port        string
 	supabaseURL string
 	databaseURL string
+	developers  []uuid.UUID
 }
 
 // loadConfig は、環境変数から設定を読む。必須の値が無ければ、誤った状態で動き出さないようエラーにする。
@@ -34,7 +40,29 @@ func loadConfig() (config, error) {
 	if cfg.databaseURL == "" {
 		return config{}, errors.New("DATABASE_URL is required")
 	}
+	developers, err := parseUserIDs(os.Getenv("DEV_ADMIN_USER_IDS"))
+	if err != nil {
+		return config{}, fmt.Errorf("DEV_ADMIN_USER_IDS: %w", err)
+	}
+	cfg.developers = developers
 	return cfg, nil
+}
+
+// parseUserIDs は、カンマ区切りのユーザーIDを読む。空なら開発者はいない。
+func parseUserIDs(raw string) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	for part := range strings.SplitSeq(raw, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		id, err := uuid.Parse(part)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
 }
 
 func main() {
@@ -60,7 +88,10 @@ func run() error {
 		return err
 	}
 	defer db.Close()
-	handler, err := newHandler(verifier, db)
+	handler, err := newHandler(verifier, deps{
+		db:      db,
+		profile: profile.NewService(profile.NewRepository(db), cfg.developers),
+	})
 	if err != nil {
 		return err
 	}
