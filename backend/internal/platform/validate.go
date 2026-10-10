@@ -13,11 +13,11 @@ import (
 )
 
 // Validate は、リクエストを OpenAPI の仕様と照らし合わせ、仕様に合わないものを handler に届く前に弾く。
-func Validate(spec *openapi3.T) Middleware {
+// 仕様で security が付いた操作では authenticate を呼び、ログインが必要なAPIかどうかの判断を仕様に一本化する。
+func Validate(spec *openapi3.T, authenticate openapi3filter.AuthenticationFunc) Middleware {
 	return middleware.OapiRequestValidatorWithOptions(spec, &middleware.Options{
 		Options: openapi3filter.Options{
-			// 認証は JWT を検証するミドルウェアが受け持つので、ここでは仕様上の security を見ない
-			AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
+			AuthenticationFunc: authenticate,
 		},
 		ErrorHandlerWithOpts: writeValidationError,
 	})
@@ -27,6 +27,8 @@ func writeValidationError(_ context.Context, err error, w http.ResponseWriter, r
 	switch {
 	case errors.Is(err, routers.ErrMethodNotAllowed):
 		writeProblem(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "このAPIはそのメソッドに対応していません", nil)
+	case opts.StatusCode == http.StatusUnauthorized:
+		WriteError(w, r, &Error{Kind: KindUnauthorized, Message: "ログインが必要です"})
 	case opts.StatusCode == http.StatusNotFound:
 		WriteError(w, r, &Error{Kind: KindNotFound, Message: "指定されたAPIは存在しません"})
 	case opts.StatusCode == http.StatusBadRequest:
