@@ -1,0 +1,6 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+# 秘密の値と、state の接続先（README.md 参照）
+terraform.tfvars
+backend.hcl

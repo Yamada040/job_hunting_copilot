@@ -284,7 +284,7 @@ backend/
 
 ### 環境変数
 
-Vercel の環境変数は Next.js と バックエンドで共有される。
+Vercel の環境変数は Next.js と バックエンドで共有される。Vercel の環境変数・GitHub Actions の Secrets・Supabase Auth の設定は `infra/`（Terraform）で管理しており、画面から直接変えない（`infra/README.md` 参照）。
 
 **Next.js**:
 
@@ -335,17 +335,9 @@ E2E_TEST_USER2_PASSWORD=...
 
 ### Supabase Auth設定
 
-**ローカル開発**（`http://localhost:3000`）:
+`infra/supabase.tf` で管理する。Site URL は本番のURL、Redirect URL は本番と `http://localhost:3000` の `/auth/callback`・`/dashboard`。Google ログインの OAuth クライアントも同じファイルで設定する。
 
-- Site URL: `http://localhost:3000`
-- Redirect URL: `http://localhost:3000/auth/callback`, `http://localhost:3000/dashboard`
-
-**本番**（`https://job-seeker-gray.vercel.app`）:
-
-- Site URL: `https://job-seeker-gray.vercel.app`
-- Redirect URL: `https://job-seeker-gray.vercel.app/auth/callback`, `https://job-seeker-gray.vercel.app/dashboard`
-
-Supabaseダッシュボード → Authentication → URL Configuration で設定する。
+Data API（PostgREST）は使わないため、公開するスキーマを `graphql_public` だけにして `public` を外している。
 
 ### ページ構成
 

@@ -157,6 +157,5 @@ flowchart TB
 ## 既知の技術的負債（アーキテクチャ観点）
 
 - E2E がバックエンドを起動しておらず、バックエンドに移した画面をE2Eで確かめられない
-- Vercel の Preview 環境に `DATABASE_URL` が無く、プレビューではバックエンドが起動しない（Issue #134 で Terraform 化とあわせて対応）
 - `error.tsx` / `loading.tsx` / `not-found.tsx` がリポジトリ全体に1つも無く、例外がNext標準のクラッシュ画面になる（Issue #109）
 - ライトテーマは `globals.css` の属性セレクタによるハードコード色の力技上書きで、脆弱な構造（Issue #116、#91で本格対応予定）

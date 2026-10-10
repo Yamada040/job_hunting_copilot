@@ -261,7 +261,7 @@ flowchart LR
 - **RLSは有効のまま残す**。Supabase がインターネットに公開している Data API を守るため（RLSを外すと `anon` キーで全データを読める）。ポリシーは1つも作らず、`anon` / `authenticated` ロールからは一切読み書きできないようにする
 - バックエンドはRLSを通らないロールで接続し、すべての問い合わせを `userID` で絞り込む。DBにアクセスする関数は `userID` を必須の引数にし、他人のIDでは取得できないことをテストで確かめる
   - 採らなかった案: RLSを二層目の防御として効かせる。堅いが、トランザクションごとにユーザーをDBに伝える仕組みが複雑になる
-- 使われなくなった Data API を無効にするかは、移行後に検討する
+- 使われなくなった Data API は、公開するスキーマを `graphql_public` だけにして閉じる（`infra/supabase.tf`）。Data API 自体を止める設定は Management API に無いため
 
 ### コードの構成
 
@@ -391,5 +391,4 @@ GitHub Actions に次のGo用のチェックを追加し、devブランチの必
 - Supabase の一時停止（7日間アクセスなし）を防ぐ定期アクセス（GitHub Actions から `/v1/health` を叩く）
 - 外部の企業データベースからの企業候補
 - 利用者が増えたら、AIのサービス全体の上限
-- Vercel・GitHub・Supabase の設定の Terraform 化（Issue #134）。Preview に `DATABASE_URL` が無い件もここで解消する
 - E2Eでバックエンドを起動する仕組みを作り、一時停止しているESのE2Eを新しい画面に合わせて書き直す
