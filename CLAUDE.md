@@ -261,9 +261,9 @@ backend/
 **E2Eテスト（Playwright）**:
 
 - テストは `e2e/` ディレクトリに配置する
-- 認証は「本番Supabaseに固定のテストユーザーA/Bを作成して流用」する方式。`POST /api/test-support/login` が `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致という多重ガードの下でのみ、固定ユーザーのセッションを発行する
-- `e2e/global-setup.ts` がテストユーザーの作成〜ログイン〜`storageState` 保存までを行い、`e2e/global-teardown.ts` が全テスト終了後にテストユーザーの `es_entries` を一括削除する（本番Supabase流用に伴う安全策）
-- E2Eは本番ビルドの Next.js だけを起動しており、`/v1` を受けるバックエンドがいない。バックエンドに移した画面（ESなど）のE2Eは、E2Eでバックエンドを起動する方法を決めるまで `test.fixme` で止めている
+- 認証は「本番Supabaseに固定のテストユーザーA/Bを作成して流用」する方式。テストユーザーは Supabase の画面であらかじめ作っておく（全権限の secret キーをCIに置かないため）。`POST /api/test-support/login` が `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致という多重ガードの下でのみ、固定ユーザーのセッションを発行する
+- `e2e/global-setup.ts` がテストユーザーA/Bでログインし、`storageState` を保存する
+- E2Eは本番ビルドの Next.js だけを起動しており、`/v1` を受けるバックエンドがいない。バックエンドに移した画面（ESなど）のE2Eは、E2Eでバックエンドを起動する方法を決めてから書き直す
 - 本番Vercel環境変数には **`E2E_TEST_MODE` を絶対に設定しない**
 - 詳細な設計・セキュリティ上の注意点は `docs/testing/e2e-test-plan.md` を参照
 
@@ -290,7 +290,7 @@ Vercel の環境変数は Next.js と バックエンドで共有される。Ver
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...   # sb_publishable_ で始まるキー
 NEXT_PUBLIC_SITE_URL=https://job-seeker-gray.vercel.app (ローカルは localhost:3000)
 API_ORIGIN=http://localhost:8080 (ローカル開発のみ。/v1 の転送先)
 ```
@@ -322,7 +322,6 @@ DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザ
 **E2Eテスト用（任意。ローカルは `.env.test.local` に設定。CIはGitHub Secretsから注入）**:
 
 ```env
-SUPABASE_SERVICE_ROLE_KEY=...
 E2E_TEST_MODE=true
 E2E_TEST_SECRET=...
 E2E_TEST_USER_EMAIL=...

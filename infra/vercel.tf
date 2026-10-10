@@ -8,12 +8,12 @@ locals {
   # ブラウザに公開される値・秘密でない設定。手元の開発（vercel env pull）でも使えるよう development にも置く。
   # どちらも空の値は登録しない（Vercel が空の値を受け付けないため。未設定の機能は 503 を返す）
   public_env = { for k, v in {
-    NEXT_PUBLIC_SUPABASE_URL      = local.supabase_url
-    NEXT_PUBLIC_SUPABASE_ANON_KEY = var.supabase_anon_key
-    NEXT_PUBLIC_SITE_URL          = var.site_url
-    SUPABASE_URL                  = local.supabase_url
-    AI_PROVIDER                   = var.ai_provider
-    DEV_ADMIN_USER_IDS            = var.dev_admin_user_ids
+    NEXT_PUBLIC_SUPABASE_URL             = local.supabase_url
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = var.supabase_publishable_key
+    NEXT_PUBLIC_SITE_URL                 = var.site_url
+    SUPABASE_URL                         = local.supabase_url
+    AI_PROVIDER                          = var.ai_provider
+    DEV_ADMIN_USER_IDS                   = var.dev_admin_user_ids
   } : k => v if v != "" }
 
   # 秘密の値。Vercel の画面でも読めないようにする（sensitive は development に置けない）

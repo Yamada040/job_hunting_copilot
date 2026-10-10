@@ -6,3 +6,6 @@ coverage
 # Supabase generated files
 supabase/.branches
 supabase/.temp
+
+# Terraform が手元に作るファイル
+infra/.terraform

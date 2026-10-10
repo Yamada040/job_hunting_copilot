@@ -8,8 +8,7 @@ supabase_access_token = ""
 supabase_project_ref = ""
 supabase_pooler_host = "aws-0-ap-northeast-1.pooler.supabase.com"
 
-supabase_anon_key               = ""
-supabase_service_role_key       = ""
+supabase_publishable_key        = ""
 supabase_db_password            = ""
 supabase_migration_access_token = ""
 

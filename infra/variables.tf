@@ -48,16 +48,9 @@ variable "site_url" {
 
 # ---- アプリが使う値 ----
 
-variable "supabase_anon_key" {
-  description = "Supabase の anon キー（ブラウザに公開される値だが、まとめて管理する）"
+variable "supabase_publishable_key" {
+  description = "Supabase の publishable キー（sb_publishable_）。ブラウザに公開される値"
   type        = string
-  sensitive   = true
-}
-
-variable "supabase_service_role_key" {
-  description = "Supabase の service_role キー。E2E のテストユーザーの作成にだけ使う（Vercel には置かない）"
-  type        = string
-  sensitive   = true
 }
 
 variable "supabase_db_password" {
