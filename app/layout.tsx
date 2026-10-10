@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SITE_NAME, getSiteUrl } from "@/lib/constants/site";
 import "./globals.css";
+import { Providers } from "./_components/providers";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -58,7 +59,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className="theme-light">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

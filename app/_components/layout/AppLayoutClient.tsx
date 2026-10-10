@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs, Header } from "./Header";
-import { XpBadge, type ProfileLite } from "../xp-badge";
+import { XpBadge } from "../xp-badge";
 
 export interface AppLayoutProps {
   children: React.ReactNode;
@@ -19,11 +19,6 @@ export interface AppLayoutProps {
   actionsPlacement?: "left" | "right";
 }
 
-interface AppLayoutClientProps extends AppLayoutProps {
-  profilePromise: Promise<ProfileLite | null>;
-  isDeveloperPromise: Promise<boolean>;
-}
-
 export function AppLayoutClient({
   children,
   headerTitle,
@@ -34,9 +29,7 @@ export function AppLayoutClient({
   showSidebar = true,
   className,
   actionsPlacement,
-  profilePromise,
-  isDeveloperPromise,
-}: AppLayoutClientProps) {
+}: AppLayoutProps) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -54,14 +47,14 @@ export function AppLayoutClient({
     return <>{children}</>;
   }
 
-  const leftContent = headerLeftContent ?? <XpBadge profilePromise={profilePromise} />;
+  const leftContent = headerLeftContent ?? <XpBadge />;
   const shouldShowSidebar = showSidebar && isSidebarOpen;
 
   return (
     <div className="relative min-h-screen overflow-hidden text-slate-900">
       <div className="pointer-events-none absolute inset-0 -z-10" />
 
-      {shouldShowSidebar && <Sidebar isDeveloperPromise={isDeveloperPromise} />}
+      {shouldShowSidebar && <Sidebar />}
       {showSidebar ? (
         <button
           type="button"
