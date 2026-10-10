@@ -71,6 +71,41 @@ func (q *Queries) InsertXPLog(ctx context.Context, arg InsertXPLogParams) (int64
 	return result.RowsAffected(), nil
 }
 
+const listXPLogs = `-- name: ListXPLogs :many
+select xp, action, created_at from xp_logs where user_id = $1 order by created_at desc limit $2
+`
+
+type ListXPLogsParams struct {
+	UserID  uuid.UUID
+	MaxRows int32
+}
+
+type ListXPLogsRow struct {
+	Xp        int32
+	Action    XpAction
+	CreatedAt time.Time
+}
+
+func (q *Queries) ListXPLogs(ctx context.Context, arg ListXPLogsParams) ([]ListXPLogsRow, error) {
+	rows, err := q.db.Query(ctx, listXPLogs, arg.UserID, arg.MaxRows)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListXPLogsRow
+	for rows.Next() {
+		var i ListXPLogsRow
+		if err := rows.Scan(&i.Xp, &i.Action, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockProfileXP = `-- name: LockProfileXP :one
 select xp from profiles where id = $1 for update
 `

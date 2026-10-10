@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/calendar"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/es"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/health"
@@ -12,6 +13,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
 // 機能ごとの handler はどれも Handler という名前なので、別名を付けて埋め込む（同じ名前のフィールドを2つ埋め込めないため）
@@ -21,6 +23,8 @@ type (
 	companyHandler   = company.Handler
 	esHandler        = es.Handler
 	interviewHandler = interview.Handler
+	calendarHandler  = calendar.Handler
+	xpHandler        = xp.Handler
 )
 
 // server は、機能ごとの handler を埋め込んで、生成された StrictServerInterface をまとめて満たす。
@@ -30,6 +34,8 @@ type server struct {
 	companyHandler
 	esHandler
 	interviewHandler
+	calendarHandler
+	xpHandler
 }
 
 // deps は、handler が使う依存。main で組み立て、テストでは偽物に差し替える。
@@ -39,6 +45,8 @@ type deps struct {
 	company   *company.Service
 	es        *es.Service
 	interview *interview.Service
+	calendar  *calendar.Service
+	xpLogs    xp.Handler
 }
 
 var _ openapi.StrictServerInterface = server{}
@@ -57,6 +65,8 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 		companyHandler:   company.Handler{Service: d.company},
 		esHandler:        es.Handler{Service: d.es},
 		interviewHandler: interview.Handler{Service: d.interview},
+		calendarHandler:  calendar.Handler{Service: d.calendar},
+		xpHandler:        d.xpLogs,
 	}
 	strict := openapi.NewStrictHandlerWithOptions(srv, nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  writeRequestError,

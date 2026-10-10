@@ -348,8 +348,119 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/calendar-events:
+    get:
+      operationId: listCalendarItems
+      summary: カレンダーに表示する予定を取得する
+      description: ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる。
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: 予定とESの締切
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalendarItem"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createCalendarEvent
+      summary: 予定を登録する
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarEventCreate"
+      responses:
+        "201":
+          description: 登録した予定
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarItem"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/calendar-events/{calendarEventId}:
+    parameters:
+      - $ref: "#/components/parameters/CalendarEventId"
+    patch:
+      operationId: updateCalendarEvent
+      summary: 予定を更新する
+      description: 送った項目だけを更新する。時刻と企業は null で空にできる。ESの締切はESの画面で変える。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarEventUpdate"
+      responses:
+        "200":
+          description: 更新後の予定
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarItem"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteCalendarEvent
+      summary: 予定を削除する
+      responses:
+        "204":
+          description: 削除した
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/xp-logs:
+    get:
+      operationId: listXpLogs
+      summary: XPの獲得履歴を取得する
+      description: 新しい順。
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: XPの獲得履歴
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/XpLog"
+        default:
+          $ref: "#/components/responses/Problem"
+
 components:
   parameters:
+    CalendarEventId:
+      name: calendarEventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     InterviewLogId:
       name: interviewLogId
       in: path
@@ -947,6 +1058,118 @@ components:
           $ref: "#/components/schemas/InterviewLog"
         xp:
           $ref: "#/components/schemas/XpResult"
+
+    CalendarEventType:
+      type: string
+      description: 予定の種類。日本語の表示名はフロントエンドが持つ
+      enum: [es, interview, intern, other]
+
+    CalendarItem:
+      type: object
+      description: カレンダーの1件。source が event ならユーザーが登録した予定（id は予定のID）、es_deadline ならESの締切（id はESのID）
+      required: [id, source, title, type, date, time, company]
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          type: string
+          enum: [event, es_deadline]
+        title:
+          type: string
+        type:
+          $ref: "#/components/schemas/CalendarEventType"
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          nullable: true
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          description: 時刻（HH:MM）
+        company:
+          allOf:
+            - $ref: "#/components/schemas/CompanySummary"
+          nullable: true
+
+    CalendarEventCreate:
+      type: object
+      additionalProperties: false
+      required: [title, date]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          $ref: "#/components/schemas/CalendarEventType"
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        companyId:
+          type: string
+          format: uuid
+
+    CalendarEventUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          $ref: "#/components/schemas/CalendarEventType"
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          nullable: true
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          # 「送られていない（変更しない）」と「null（時刻を消す）」を区別するため nullable.Nullable にする
+          x-go-type: nullable.Nullable[string]
+          x-go-type-import:
+            path: github.com/oapi-codegen/nullable
+          x-go-type-skip-optional-pointer: true
+        companyId:
+          type: string
+          format: uuid
+          nullable: true
+          # 時刻と同じく、null で企業とのひも付けを外せるようにする
+          x-go-type: nullable.Nullable[string]
+          x-go-type-import:
+            path: github.com/oapi-codegen/nullable
+          x-go-type-skip-optional-pointer: true
+
+    XpAction:
+      type: string
+      description: XPが付いた操作。日本語の表示名はフロントエンドが持つ
+      enum:
+        [
+          es_submitted,
+          interview_log,
+          company_new,
+          aptitude_complete,
+          self_analysis_complete,
+          webtest_question_create,
+          webtest_attempt_complete,
+        ]
+
+    XpLog:
+      type: object
+      required: [xp, action, createdAt]
+      properties:
+        xp:
+          type: integer
+        action:
+          $ref: "#/components/schemas/XpAction"
+        createdAt:
+          type: string
+          format: date-time
 
     Problem:
       type: object

@@ -211,6 +211,70 @@ export interface paths {
     patch: operations["updateInterviewLog"];
     trace?: never;
   };
+  "/v1/calendar-events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * カレンダーに表示する予定を取得する
+     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる。
+     */
+    get: operations["listCalendarItems"];
+    put?: never;
+    /** 予定を登録する */
+    post: operations["createCalendarEvent"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/calendar-events/{calendarEventId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        calendarEventId: components["parameters"]["CalendarEventId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** 予定を削除する */
+    delete: operations["deleteCalendarEvent"];
+    options?: never;
+    head?: never;
+    /**
+     * 予定を更新する
+     * @description 送った項目だけを更新する。時刻と企業は null で空にできる。ESの締切はESの画面で変える。
+     */
+    patch: operations["updateCalendarEvent"];
+    trace?: never;
+  };
+  "/v1/xp-logs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * XPの獲得履歴を取得する
+     * @description 新しい順。
+     */
+    get: operations["listXpLogs"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -443,6 +507,61 @@ export interface components {
       interviewLog: components["schemas"]["InterviewLog"];
       xp: components["schemas"]["XpResult"];
     };
+    /**
+     * @description 予定の種類。日本語の表示名はフロントエンドが持つ
+     * @enum {string}
+     */
+    CalendarEventType: "es" | "interview" | "intern" | "other";
+    /** @description カレンダーの1件。source が event ならユーザーが登録した予定（id は予定のID）、es_deadline ならESの締切（id はESのID） */
+    CalendarItem: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      source: "event" | "es_deadline";
+      title: string;
+      type: components["schemas"]["CalendarEventType"];
+      /** Format: date */
+      date: string;
+      /** @description 時刻（HH:MM） */
+      time: string | null;
+      company: components["schemas"]["CompanySummary"] | null;
+    };
+    CalendarEventCreate: {
+      title: string;
+      type?: components["schemas"]["CalendarEventType"];
+      /** Format: date */
+      date: string;
+      time?: string;
+      /** Format: uuid */
+      companyId?: string;
+    };
+    CalendarEventUpdate: {
+      title?: string;
+      type?: components["schemas"]["CalendarEventType"];
+      /** Format: date */
+      date?: string;
+      time?: string | null;
+      /** Format: uuid */
+      companyId?: string | null;
+    };
+    /**
+     * @description XPが付いた操作。日本語の表示名はフロントエンドが持つ
+     * @enum {string}
+     */
+    XpAction:
+      | "es_submitted"
+      | "interview_log"
+      | "company_new"
+      | "aptitude_complete"
+      | "self_analysis_complete"
+      | "webtest_question_create"
+      | "webtest_attempt_complete";
+    XpLog: {
+      xp: number;
+      action: components["schemas"]["XpAction"];
+      /** Format: date-time */
+      createdAt: string;
+    };
     /** @description RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの */
     Problem: {
       /**
@@ -491,6 +610,7 @@ export interface components {
     };
   };
   parameters: {
+    CalendarEventId: string;
     InterviewLogId: string;
     EsEntryId: string;
     CompanyId: string;
@@ -945,6 +1065,126 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["InterviewLog"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  listCalendarItems: {
+    parameters: {
+      query?: {
+        from?: string;
+        to?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 予定とESの締切 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarItem"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  createCalendarEvent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalendarEventCreate"];
+      };
+    };
+    responses: {
+      /** @description 登録した予定 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarItem"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteCalendarEvent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        calendarEventId: components["parameters"]["CalendarEventId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 削除した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  updateCalendarEvent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        calendarEventId: components["parameters"]["CalendarEventId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalendarEventUpdate"];
+      };
+    };
+    responses: {
+      /** @description 更新後の予定 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarItem"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  listXpLogs: {
+    parameters: {
+      query?: {
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description XPの獲得履歴 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["XpLog"][];
         };
       };
       default: components["responses"]["Problem"];
