@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -48,18 +49,39 @@ func fieldErrors(err error) []FieldError {
 		return nil
 	}
 
+	var schemaErr *openapi3.SchemaError
+	hasSchemaErr := errors.As(reqErr.Err, &schemaErr)
+
 	field := ""
 	switch {
 	case reqErr.Parameter != nil:
 		field = reqErr.Parameter.Name
-	default:
-		var schemaErr *openapi3.SchemaError
-		if errors.As(reqErr.Err, &schemaErr) {
-			field = strings.Join(schemaErr.JSONPointer(), ".")
-		}
+	case hasSchemaErr:
+		field = strings.Join(schemaErr.JSONPointer(), ".")
 	}
 	if field == "" {
 		return nil
 	}
-	return []FieldError{{Field: field, Message: "値が正しくありません"}}
+	message := "値が正しくありません"
+	if hasSchemaErr {
+		message = schemaMessage(schemaErr)
+	}
+	return []FieldError{{Field: field, Message: message}}
+}
+
+// schemaMessage は、仕様のどの制約に違反したかに応じて、利用者向けの日本語のメッセージを返す。
+func schemaMessage(e *openapi3.SchemaError) string {
+	switch e.SchemaField {
+	case "maxLength":
+		if e.Schema != nil && e.Schema.MaxLength != nil {
+			return fmt.Sprintf("%d文字以内で入力してください", *e.Schema.MaxLength)
+		}
+	case "minLength":
+		return "入力してください"
+	case "required":
+		return "必須の項目です"
+	case "additionalProperties":
+		return "この項目は指定できません"
+	}
+	return "値が正しくありません"
 }

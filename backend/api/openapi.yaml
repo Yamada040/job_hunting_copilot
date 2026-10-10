@@ -25,6 +25,40 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/me:
+    get:
+      operationId: getMe
+      summary: 自分のプロフィールとXP・レベルを取得する
+      description: プロフィールの行がまだ無いユーザーは、このときに作られる。
+      responses:
+        "200":
+          description: 自分のプロフィール
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateMe
+      summary: 自分のプロフィールを更新する
+      description: 送った項目だけを更新する。空文字を送るとその項目を空にする（氏名は空にできない）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: 更新後のプロフィール
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        default:
+          $ref: "#/components/responses/Problem"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -49,6 +83,78 @@ components:
         status:
           type: string
           enum: [ok]
+
+    Me:
+      type: object
+      required:
+        [id, fullName, university, faculty, avatarId, targetIndustry, careerAxis, goalState, xp, level, isDeveloper]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+          nullable: true
+          description: 氏名
+        university:
+          type: string
+          nullable: true
+          description: 大学
+        faculty:
+          type: string
+          nullable: true
+          description: 学部・学科
+        avatarId:
+          type: string
+          nullable: true
+          description: アバター
+        targetIndustry:
+          type: string
+          nullable: true
+          description: 志望業界
+        careerAxis:
+          type: string
+          nullable: true
+          description: 就活の軸
+        goalState:
+          type: string
+          nullable: true
+          description: 就活で達成したい状態
+        xp:
+          type: integer
+          description: 合計XP
+        level:
+          type: integer
+          description: レベル（XP ÷ 25 の切り捨て ＋ 1）
+        isDeveloper:
+          type: boolean
+          description: 開発者向けの画面を使えるか
+
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        fullName:
+          type: string
+          maxLength: 100
+        university:
+          type: string
+          maxLength: 100
+        faculty:
+          type: string
+          maxLength: 100
+        avatarId:
+          type: string
+          maxLength: 100
+        targetIndustry:
+          type: string
+          maxLength: 100
+        careerAxis:
+          type: string
+          maxLength: 100
+        goalState:
+          type: string
+          maxLength: 100
 
     Problem:
       type: object

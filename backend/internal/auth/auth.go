@@ -11,6 +11,7 @@ import (
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 )
@@ -39,7 +40,7 @@ func NewVerifier(ctx context.Context, supabaseURL string) (*Verifier, error) {
 }
 
 // UserID は、トークンを検証してユーザーID（sub）を返す。
-func (v *Verifier) UserID(token string) (string, error) {
+func (v *Verifier) UserID(token string) (uuid.UUID, error) {
 	claims := jwt.RegisteredClaims{}
 	_, err := jwt.ParseWithClaims(token, &claims, v.keys,
 		jwt.WithValidMethods([]string{"ES256", "RS256"}),
@@ -48,12 +49,13 @@ func (v *Verifier) UserID(token string) (string, error) {
 		jwt.WithExpirationRequired(),
 	)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
-	if claims.Subject == "" {
-		return "", errors.New("token has no subject")
+	id, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("token subject is not a user id: %w", err)
 	}
-	return claims.Subject, nil
+	return id, nil
 }
 
 type userIDKey struct{}
@@ -80,9 +82,19 @@ func (v *Verifier) Authenticate(next http.Handler) http.Handler {
 }
 
 // UserID は、Authenticate が検証したユーザーIDを返す。ログインしていなければ ok は false。
-func UserID(ctx context.Context) (string, bool) {
-	id, ok := ctx.Value(userIDKey{}).(string)
+func UserID(ctx context.Context) (uuid.UUID, bool) {
+	id, ok := ctx.Value(userIDKey{}).(uuid.UUID)
 	return id, ok
+}
+
+// RequireUserID は、ログインが必要な操作の handler でユーザーIDを取り出す。
+// ログインの確認は RequireUser が先に済ませているので、ここで見つからないのは配線の誤りであり、401 として扱う。
+func RequireUserID(ctx context.Context) (uuid.UUID, error) {
+	id, ok := UserID(ctx)
+	if !ok {
+		return uuid.Nil, &platform.Error{Kind: platform.KindUnauthorized, Message: "ログインが必要です"}
+	}
+	return id, nil
 }
 
 // RequireUser は、OpenAPI で bearerAuth が必要とされている操作について、ログイン済みかを確かめる。

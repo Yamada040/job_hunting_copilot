@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for HealthStatus.
@@ -52,6 +53,40 @@ type Health struct {
 // HealthStatus defines model for Health.Status.
 type HealthStatus string
 
+// Me defines model for Me.
+type Me struct {
+	// AvatarId アバター
+	AvatarId *string `json:"avatarId"`
+
+	// CareerAxis 就活の軸
+	CareerAxis *string `json:"careerAxis"`
+
+	// Faculty 学部・学科
+	Faculty *string `json:"faculty"`
+
+	// FullName 氏名
+	FullName *string `json:"fullName"`
+
+	// GoalState 就活で達成したい状態
+	GoalState *string            `json:"goalState"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// IsDeveloper 開発者向けの画面を使えるか
+	IsDeveloper bool `json:"isDeveloper"`
+
+	// Level レベル（XP ÷ 25 の切り捨て ＋ 1）
+	Level int `json:"level"`
+
+	// TargetIndustry 志望業界
+	TargetIndustry *string `json:"targetIndustry"`
+
+	// University 大学
+	University *string `json:"university"`
+
+	// Xp 合計XP
+	Xp int `json:"xp"`
+}
+
 // Problem RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの
 type Problem struct {
 	// Code 機械が判定するための英語のコード
@@ -84,11 +119,31 @@ type Problem struct {
 	Type string `json:"type"`
 }
 
+// ProfileUpdate defines model for ProfileUpdate.
+type ProfileUpdate struct {
+	AvatarId       *string `json:"avatarId,omitempty"`
+	CareerAxis     *string `json:"careerAxis,omitempty"`
+	Faculty        *string `json:"faculty,omitempty"`
+	FullName       *string `json:"fullName,omitempty"`
+	GoalState      *string `json:"goalState,omitempty"`
+	TargetIndustry *string `json:"targetIndustry,omitempty"`
+	University     *string `json:"university,omitempty"`
+}
+
+// UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
+type UpdateMeJSONRequestBody = ProfileUpdate
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// GetHealth 稼働確認
 	// (GET /v1/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// GetMe 自分のプロフィールとXP・レベルを取得する
+	// (GET /v1/me)
+	GetMe(w http.ResponseWriter, r *http.Request)
+	// UpdateMe 自分のプロフィールを更新する
+	// (PATCH /v1/me)
+	UpdateMe(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -105,6 +160,34 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMe operation middleware
+func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateMe operation middleware
+func (siw *ServerInterfaceWrapper) UpdateMe(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateMe(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -235,6 +318,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/health", wrapper.GetHealth)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/me", wrapper.GetMe)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/me", wrapper.UpdateMe)
 
 	return m
 }
@@ -279,11 +364,94 @@ func (response GetHealthdefaultApplicationProblemPlusJSONResponse) VisitGetHealt
 	return err
 }
 
+type GetMeRequestObject struct {
+}
+
+type GetMeResponseObject interface {
+	VisitGetMeResponse(w http.ResponseWriter) error
+}
+
+type GetMe200JSONResponse Me
+
+func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMedefaultApplicationProblemPlusJSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMeRequestObject struct {
+	Body *UpdateMeJSONRequestBody
+}
+
+type UpdateMeResponseObject interface {
+	VisitUpdateMeResponse(w http.ResponseWriter) error
+}
+
+type UpdateMe200JSONResponse Me
+
+func (response UpdateMe200JSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateMedefaultApplicationProblemPlusJSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetHealth 稼働確認
 	// (GET /v1/health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// GetMe 自分のプロフィールとXP・レベルを取得する
+	// (GET /v1/me)
+	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+	// UpdateMe 自分のプロフィールを更新する
+	// (PATCH /v1/me)
+	UpdateMe(ctx context.Context, request UpdateMeRequestObject) (UpdateMeResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -349,30 +517,95 @@ func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetMe operation middleware
+func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
+	var request GetMeRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMe(ctx, request.(GetMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMe")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMeResponseObject); ok {
+		if err := validResponse.VisitGetMeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateMe operation middleware
+func (sh *strictHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
+	var request UpdateMeRequestObject
+
+	var body UpdateMeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateMe(ctx, request.(UpdateMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateMe")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateMeResponseObject); ok {
+		if err := validResponse.VisitUpdateMeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"lFbdThtHFH6V1bR33WKnSVXVd6gtCb1CgaoXFFXj3QFvWO9ud8eoCFnyzMaR+VMgoYooKGACYoFiJyKp",
-	"+LGahzmsba54hWpmFxtjE5Qba2Zn5vvOz3fO8QzS7KxjW8SiHkrNIJd4jm15RG6GXDttkqxYarZFiUXF",
-	"EjuOaWiYGraVcKIbXz3xbEuceVqGZLFYfemScZRCXyTa+Ino1Etc4ebzeRXpxNNcwxFwKIWAB+DvgV+7",
-	"rJUeD/ygfP/g2++U+L7yI6HYML3L2iwSL2M4wTZgEFP/yXVtV+wc13aIS43Ii3FxJhbkT5x1TIJSiBrU",
-	"JEhFdNoRW4+6hjWB8irKEs/DE6TzNvCPwLfBL4F/AKwafixebJaA7QJb7cbIq8glf+QMl+goNRqTt4HH",
-	"Wg/s9BOiUUH6iGCTZroN9yimObkiVi4r0OxJNHYXY/yqF9G1fHZG/bZIK8AOoMDq8+Ww9uFis9hYqyia",
-	"rRMFWKAQEW5PAf4inNsEVgK2AZwDqyD1hiPiSTdpfW+jvvUW2EJY2g4rfwNbBT4vQRiwSnP+XXP/NbAK",
-	"8CPwa+DPIvVaTqawaehSg7+PY8Mkeq9s6tKLbmZgL4FVGqunjZUNYAfh2ml9fVZwvllv/nt0WSudn53V",
-	"nz4XOuuBGvndjRrFB9gKsEDa3VZyWNwJ59bAZ8B3wfeBV8UFcW0xIjEoyXp3lc01kedbdmHXxdNib1ge",
-	"xZbWI9BXjr4SwfX3BTsPgJ8IRbMK+MvAT+5yuq3FTuxHIyNDEuqZSJIolJOeCXuQTLZQDYuSCRI5IQux",
-	"CzUs7TVWgmahGC4tA1sGVqm/2qmv/xMrwi/LIJ5JyuPrNCiKdPisGFZOgB0097eBzwFbAMbl4r+eRXv1",
-	"Yea2biTkElQuyq+Bv2iWA2CrvzwehAJvfQwXTsPSjozxPrCn4eb7cKkErKrgtJ2jqbSJrckOQzu/f7qk",
-	"5ana6lpxLtSorroLXaSLaDnXoNPDQjpREaYJdonbn6OZ9m7AdrOYohT6+dcRdLMVD+ccnMYeUcQbBdhC",
-	"Y/W0WV6IdcS3pI7OYh2JTFTBP0JxWxb2RBxt7zKUOlHPN6xxu0fW376rvz/TbMcwbarIRC/F1SLycAT+",
-	"bP+QiHozOGwGMrq6rXmJNNYmiaV/rRPPmLD6srrsSc95o7gLBf6bFZU7+H8BL8tGfiCazkr1/LgglHX4",
-	"RvZyqY8Ce2hLZv5BanhJ/LJAGZl2yLA0NTqtClnwbREFYZewRbK8BDYPfLaxslEvLcUdTZjQyt5NL/uH",
-	"BpGKpojrRTG415fsSwpB2g6xsGOgFLrfl+y7j1TkYJqRmUxM3UtkWjNjgsipLPqt7IeDOkqhh4TGU0Xt",
-	"HOnfJJOfGOefN8Zjhh5TvBHUQn/x/Pgw6sLjOGfS29Ba5l37W9AWMEqNjqnIy2Wz2J1uITe2Tpv7iyh/",
-	"42anyEfH8mP5/wcA",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
