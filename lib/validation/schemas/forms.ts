@@ -19,18 +19,6 @@ export const profileFormSchema = z.object({
   goal_state: optionalTrimmedString,
 });
 
-export const dashboardEsEntrySchema = z.object({
-  title: requiredTrimmedString,
-  status: optionalString.default("下書き"),
-  content_md: optionalString.default(""),
-});
-
-export const dashboardCompanySchema = z.object({
-  name: requiredTrimmedString,
-  url: optionalString.default(""),
-  stage: optionalString.default("未エントリー"),
-});
-
 export const companyFormSchema = z.object({
   name: requiredTrimmedString,
   industry: optionalTrimmedString,
