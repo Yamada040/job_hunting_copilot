@@ -15,6 +15,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/es"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/interview"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
@@ -93,10 +94,11 @@ func run() error {
 	defer db.Close()
 	xpService := xp.NewService()
 	handler, err := newHandler(verifier, deps{
-		db:      db,
-		profile: profile.NewService(profile.NewRepository(db), cfg.developers),
-		company: company.NewService(db, xpService),
-		es:      es.NewService(db, xpService),
+		db:        db,
+		profile:   profile.NewService(profile.NewRepository(db), cfg.developers),
+		company:   company.NewService(db, xpService),
+		es:        es.NewService(db, xpService),
+		interview: interview.NewService(db, xpService),
 	})
 	if err != nil {
 		return err

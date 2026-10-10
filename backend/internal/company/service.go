@@ -198,3 +198,21 @@ func duplicated() *platform.Error {
 		Fields:  []platform.FieldError{{Field: "name", Message: "同じ名前の企業がすでに登録されています"}},
 	}
 }
+
+// EnsureOwned は、ESや面接ログを企業にひも付ける前に、その企業が本人のものかを確かめる。
+// 他人の企業IDを指定された場合も「存在しない企業」として扱い、ひも付けさせない（ひも付けると企業名が見えてしまうため）。
+// q には、ひも付ける操作と同じトランザクションのものを渡す。
+func EnsureOwned(ctx context.Context, q *db.Queries, userID, companyID uuid.UUID) error {
+	ok, err := q.CompanyExists(ctx, db.CompanyExistsParams{ID: companyID, UserID: userID})
+	if err != nil {
+		return fmt.Errorf("check company: %w", err)
+	}
+	if !ok {
+		return &platform.Error{
+			Kind:    platform.KindInvalid,
+			Message: "入力内容に誤りがあります",
+			Fields:  []platform.FieldError{{Field: "companyId", Message: "企業が見つかりません"}},
+		}
+	}
+	return nil
+}
