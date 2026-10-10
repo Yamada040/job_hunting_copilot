@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/assessment"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/calendar"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
@@ -117,6 +118,10 @@ func run() error {
 		interview: interview.NewService(db, xpService, aiClient, limiter),
 		calendar:  calendar.NewService(db),
 		xpLogs:    xp.Handler{Pool: db},
+		assessment: assessment.Handler{
+			Aptitude:     assessment.NewAptitudeService(db, xpService, aiClient, limiter),
+			SelfAnalysis: assessment.NewSelfAnalysisService(db, xpService, aiClient, limiter),
+		},
 	})
 	if err != nil {
 		return err

@@ -503,6 +503,114 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/aptitude-result:
+    get:
+      operationId: getAptitudeResult
+      summary: 自分の適性診断の回答と診断結果を取得する
+      description: まだ回答していなければ 404。
+      responses:
+        "200":
+          description: 適性診断
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AptitudeResult"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: submitAptitudeAnswers
+      summary: 適性診断の回答を保存する
+      description: 1人1回だけで、2回目は 409。初回はXPが付く。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [answers]
+              properties:
+                answers:
+                  $ref: "#/components/schemas/AptitudeAnswers"
+      responses:
+        "201":
+          description: 保存した回答と、付与されたXP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AptitudeSubmitted"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/aptitude-result/diagnosis:
+    post:
+      operationId: diagnoseAptitude
+      summary: AI適性診断を行う
+      description: 保存済みの回答をもとにAI適性診断を行い、診断結果を保存して返す。1回だけで、2回目は 409。
+      responses:
+        "200":
+          description: 診断結果を保存した適性診断
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AptitudeResult"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/self-analysis-result:
+    get:
+      operationId: getSelfAnalysisResult
+      summary: 自分の自己分析の回答と分析結果を取得する
+      description: まだ回答していなければ 404。
+      responses:
+        "200":
+          description: 自己分析
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SelfAnalysisResult"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: submitSelfAnalysisAnswers
+      summary: 自己分析の回答を保存する
+      description: 1人1回だけで、2回目は 409。初回はXPが付く。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [answers]
+              properties:
+                answers:
+                  $ref: "#/components/schemas/SelfAnalysisAnswers"
+      responses:
+        "201":
+          description: 保存した回答と、付与されたXP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SelfAnalysisSubmitted"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/self-analysis-result/analysis:
+    post:
+      operationId: analyzeSelf
+      summary: AI自己分析を行う
+      description: 保存済みの回答をもとにAI自己分析を行い、分析結果を保存して返す。1回だけで、2回目は 409。
+      responses:
+        "200":
+          description: 分析結果を保存した自己分析
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SelfAnalysisResult"
+        default:
+          $ref: "#/components/responses/Problem"
+
 components:
   parameters:
     CalendarEventId:
@@ -1221,6 +1329,171 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    AptitudeAnswers:
+      type: object
+      additionalProperties: false
+      description: 適性診断の回答
+      required:
+        [
+          interests,
+          strengths,
+          values,
+          enjoy,
+          achievements,
+          dislike,
+          workStyle,
+          location,
+          industryWish,
+          roleWish,
+          otherNotes,
+          mbti,
+        ]
+      properties:
+        interests:
+          type: array
+          maxItems: 20
+          description: 興味のある領域
+          items:
+            type: string
+            maxLength: 50
+        strengths:
+          type: array
+          maxItems: 20
+          description: 強み
+          items:
+            type: string
+            maxLength: 50
+        values:
+          type: array
+          maxItems: 20
+          description: 価値観
+          items:
+            type: string
+            maxLength: 50
+        enjoy:
+          type: string
+          maxLength: 2000
+          description: 好きな業務・没頭できること
+        achievements:
+          type: string
+          maxLength: 2000
+          description: 誇りに思う達成
+        dislike:
+          type: string
+          maxLength: 2000
+          description: 苦手・避けたいこと
+        workStyle:
+          type: string
+          maxLength: 2000
+          description: 働き方の希望
+        location:
+          type: string
+          maxLength: 2000
+          description: 希望勤務地・働き方
+        industryWish:
+          type: string
+          maxLength: 2000
+          description: 興味のある業界
+        roleWish:
+          type: string
+          maxLength: 2000
+          description: 興味のある職種
+        otherNotes:
+          type: string
+          maxLength: 2000
+          description: 補足メモ
+        mbti:
+          type: string
+          maxLength: 20
+          description: MBTI
+
+    AptitudeResult:
+      type: object
+      required: [id, answers, aiResult, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        answers:
+          $ref: "#/components/schemas/AptitudeAnswers"
+        aiResult:
+          type: string
+          nullable: true
+          description: AI適性診断の診断結果
+        createdAt:
+          type: string
+          format: date-time
+
+    AptitudeSubmitted:
+      type: object
+      required: [result, xp]
+      properties:
+        result:
+          $ref: "#/components/schemas/AptitudeResult"
+        xp:
+          $ref: "#/components/schemas/XpResult"
+
+    SelfAnalysisAnswers:
+      type: object
+      additionalProperties: false
+      description: 自己分析の回答
+      required: [strengths, values, motivation, successes, failures, workStyle, future]
+      properties:
+        strengths:
+          type: string
+          maxLength: 2000
+          description: 強み・得意なこと
+        values:
+          type: string
+          maxLength: 2000
+          description: 価値観
+        motivation:
+          type: string
+          maxLength: 2000
+          description: モチベーションの源泉
+        successes:
+          type: string
+          maxLength: 2000
+          description: 成功体験
+        failures:
+          type: string
+          maxLength: 2000
+          description: 失敗体験と学び
+        workStyle:
+          type: string
+          maxLength: 2000
+          description: 働き方の好み
+        future:
+          type: string
+          maxLength: 2000
+          description: 将来像（3〜5年後）
+
+    SelfAnalysisResult:
+      type: object
+      required: [id, answers, aiResult, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        answers:
+          $ref: "#/components/schemas/SelfAnalysisAnswers"
+        aiResult:
+          type: string
+          nullable: true
+          description: AI自己分析の分析結果
+        createdAt:
+          type: string
+          format: date-time
+
+    SelfAnalysisSubmitted:
+      type: object
+      required: [result, xp]
+      properties:
+        result:
+          $ref: "#/components/schemas/SelfAnalysisResult"
+        xp:
+          $ref: "#/components/schemas/XpResult"
 
     Problem:
       type: object

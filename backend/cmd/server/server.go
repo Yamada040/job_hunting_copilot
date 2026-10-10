@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/assessment"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/calendar"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
@@ -18,13 +19,14 @@ import (
 
 // 機能ごとの handler はどれも Handler という名前なので、別名を付けて埋め込む（同じ名前のフィールドを2つ埋め込めないため）
 type (
-	healthHandler    = health.Handler
-	profileHandler   = profile.Handler
-	companyHandler   = company.Handler
-	esHandler        = es.Handler
-	interviewHandler = interview.Handler
-	calendarHandler  = calendar.Handler
-	xpHandler        = xp.Handler
+	healthHandler     = health.Handler
+	profileHandler    = profile.Handler
+	companyHandler    = company.Handler
+	esHandler         = es.Handler
+	interviewHandler  = interview.Handler
+	calendarHandler   = calendar.Handler
+	xpHandler         = xp.Handler
+	assessmentHandler = assessment.Handler
 )
 
 // server は、機能ごとの handler を埋め込んで、生成された StrictServerInterface をまとめて満たす。
@@ -36,17 +38,19 @@ type server struct {
 	interviewHandler
 	calendarHandler
 	xpHandler
+	assessmentHandler
 }
 
 // deps は、handler が使う依存。main で組み立て、テストでは偽物に差し替える。
 type deps struct {
-	db        health.Pinger
-	profile   *profile.Service
-	company   *company.Service
-	es        *es.Service
-	interview *interview.Service
-	calendar  *calendar.Service
-	xpLogs    xp.Handler
+	db         health.Pinger
+	profile    *profile.Service
+	company    *company.Service
+	es         *es.Service
+	interview  *interview.Service
+	calendar   *calendar.Service
+	xpLogs     xp.Handler
+	assessment assessment.Handler
 }
 
 var _ openapi.StrictServerInterface = server{}
@@ -60,13 +64,14 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 	spec.Servers = nil
 
 	srv := server{
-		healthHandler:    health.Handler{DB: d.db},
-		profileHandler:   profile.Handler{Service: d.profile},
-		companyHandler:   company.Handler{Service: d.company},
-		esHandler:        es.Handler{Service: d.es},
-		interviewHandler: interview.Handler{Service: d.interview},
-		calendarHandler:  calendar.Handler{Service: d.calendar},
-		xpHandler:        d.xpLogs,
+		healthHandler:     health.Handler{DB: d.db},
+		profileHandler:    profile.Handler{Service: d.profile},
+		companyHandler:    company.Handler{Service: d.company},
+		esHandler:         es.Handler{Service: d.es},
+		interviewHandler:  interview.Handler{Service: d.interview},
+		calendarHandler:   calendar.Handler{Service: d.calendar},
+		xpHandler:         d.xpLogs,
+		assessmentHandler: d.assessment,
 	}
 	strict := openapi.NewStrictHandlerWithOptions(srv, nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  writeRequestError,

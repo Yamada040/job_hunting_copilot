@@ -341,6 +341,94 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/aptitude-result": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 自分の適性診断の回答と診断結果を取得する
+     * @description まだ回答していなければ 404。
+     */
+    get: operations["getAptitudeResult"];
+    put?: never;
+    /**
+     * 適性診断の回答を保存する
+     * @description 1人1回だけで、2回目は 409。初回はXPが付く。
+     */
+    post: operations["submitAptitudeAnswers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/aptitude-result/diagnosis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI適性診断を行う
+     * @description 保存済みの回答をもとにAI適性診断を行い、診断結果を保存して返す。1回だけで、2回目は 409。
+     */
+    post: operations["diagnoseAptitude"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/self-analysis-result": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 自分の自己分析の回答と分析結果を取得する
+     * @description まだ回答していなければ 404。
+     */
+    get: operations["getSelfAnalysisResult"];
+    put?: never;
+    /**
+     * 自己分析の回答を保存する
+     * @description 1人1回だけで、2回目は 409。初回はXPが付く。
+     */
+    post: operations["submitSelfAnalysisAnswers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/self-analysis-result/analysis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI自己分析を行う
+     * @description 保存済みの回答をもとにAI自己分析を行い、分析結果を保存して返す。1回だけで、2回目は 409。
+     */
+    post: operations["analyzeSelf"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -627,6 +715,76 @@ export interface components {
       action: components["schemas"]["XpAction"];
       /** Format: date-time */
       createdAt: string;
+    };
+    /** @description 適性診断の回答 */
+    AptitudeAnswers: {
+      /** @description 興味のある領域 */
+      interests: string[];
+      /** @description 強み */
+      strengths: string[];
+      /** @description 価値観 */
+      values: string[];
+      /** @description 好きな業務・没頭できること */
+      enjoy: string;
+      /** @description 誇りに思う達成 */
+      achievements: string;
+      /** @description 苦手・避けたいこと */
+      dislike: string;
+      /** @description 働き方の希望 */
+      workStyle: string;
+      /** @description 希望勤務地・働き方 */
+      location: string;
+      /** @description 興味のある業界 */
+      industryWish: string;
+      /** @description 興味のある職種 */
+      roleWish: string;
+      /** @description 補足メモ */
+      otherNotes: string;
+      /** @description MBTI */
+      mbti: string;
+    };
+    AptitudeResult: {
+      /** Format: uuid */
+      id: string;
+      answers: components["schemas"]["AptitudeAnswers"];
+      /** @description AI適性診断の診断結果 */
+      aiResult: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    AptitudeSubmitted: {
+      result: components["schemas"]["AptitudeResult"];
+      xp: components["schemas"]["XpResult"];
+    };
+    /** @description 自己分析の回答 */
+    SelfAnalysisAnswers: {
+      /** @description 強み・得意なこと */
+      strengths: string;
+      /** @description 価値観 */
+      values: string;
+      /** @description モチベーションの源泉 */
+      motivation: string;
+      /** @description 成功体験 */
+      successes: string;
+      /** @description 失敗体験と学び */
+      failures: string;
+      /** @description 働き方の好み */
+      workStyle: string;
+      /** @description 将来像（3〜5年後） */
+      future: string;
+    };
+    SelfAnalysisResult: {
+      /** Format: uuid */
+      id: string;
+      answers: components["schemas"]["SelfAnalysisAnswers"];
+      /** @description AI自己分析の分析結果 */
+      aiResult: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    SelfAnalysisSubmitted: {
+      result: components["schemas"]["SelfAnalysisResult"];
+      xp: components["schemas"]["XpResult"];
     };
     /** @description RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの */
     Problem: {
@@ -1320,6 +1478,144 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["XpLog"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getAptitudeResult: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 適性診断 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AptitudeResult"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  submitAptitudeAnswers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          answers: components["schemas"]["AptitudeAnswers"];
+        };
+      };
+    };
+    responses: {
+      /** @description 保存した回答と、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AptitudeSubmitted"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  diagnoseAptitude: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 診断結果を保存した適性診断 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AptitudeResult"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getSelfAnalysisResult: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 自己分析 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SelfAnalysisResult"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  submitSelfAnalysisAnswers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          answers: components["schemas"]["SelfAnalysisAnswers"];
+        };
+      };
+    };
+    responses: {
+      /** @description 保存した回答と、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SelfAnalysisSubmitted"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  analyzeSelf: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 分析結果を保存した自己分析 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SelfAnalysisResult"];
         };
       };
       default: components["responses"]["Problem"];

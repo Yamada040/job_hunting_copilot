@@ -208,6 +208,64 @@ func (e XpAction) Valid() bool {
 	}
 }
 
+// AptitudeAnswers 適性診断の回答
+type AptitudeAnswers struct {
+	// Achievements 誇りに思う達成
+	Achievements string `json:"achievements"`
+
+	// Dislike 苦手・避けたいこと
+	Dislike string `json:"dislike"`
+
+	// Enjoy 好きな業務・没頭できること
+	Enjoy string `json:"enjoy"`
+
+	// IndustryWish 興味のある業界
+	IndustryWish string `json:"industryWish"`
+
+	// Interests 興味のある領域
+	Interests []string `json:"interests"`
+
+	// Location 希望勤務地・働き方
+	Location string `json:"location"`
+
+	// Mbti MBTI
+	Mbti string `json:"mbti"`
+
+	// OtherNotes 補足メモ
+	OtherNotes string `json:"otherNotes"`
+
+	// RoleWish 興味のある職種
+	RoleWish string `json:"roleWish"`
+
+	// Strengths 強み
+	Strengths []string `json:"strengths"`
+
+	// Values 価値観
+	Values []string `json:"values"`
+
+	// WorkStyle 働き方の希望
+	WorkStyle string `json:"workStyle"`
+}
+
+// AptitudeResult defines model for AptitudeResult.
+type AptitudeResult struct {
+	// AiResult AI適性診断の診断結果
+	AiResult *string `json:"aiResult"`
+
+	// Answers 適性診断の回答
+	Answers   AptitudeAnswers    `json:"answers"`
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+}
+
+// AptitudeSubmitted defines model for AptitudeSubmitted.
+type AptitudeSubmitted struct {
+	Result AptitudeResult `json:"result"`
+
+	// Xp XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+	Xp XpResult `json:"xp"`
+}
+
 // CalendarEventCreate defines model for CalendarEventCreate.
 type CalendarEventCreate struct {
 	CompanyId *openapi_types.UUID `json:"companyId,omitempty"`
@@ -557,6 +615,49 @@ type ProfileUpdate struct {
 	University     *string `json:"university,omitempty"`
 }
 
+// SelfAnalysisAnswers 自己分析の回答
+type SelfAnalysisAnswers struct {
+	// Failures 失敗体験と学び
+	Failures string `json:"failures"`
+
+	// Future 将来像（3〜5年後）
+	Future string `json:"future"`
+
+	// Motivation モチベーションの源泉
+	Motivation string `json:"motivation"`
+
+	// Strengths 強み・得意なこと
+	Strengths string `json:"strengths"`
+
+	// Successes 成功体験
+	Successes string `json:"successes"`
+
+	// Values 価値観
+	Values string `json:"values"`
+
+	// WorkStyle 働き方の好み
+	WorkStyle string `json:"workStyle"`
+}
+
+// SelfAnalysisResult defines model for SelfAnalysisResult.
+type SelfAnalysisResult struct {
+	// AiResult AI自己分析の分析結果
+	AiResult *string `json:"aiResult"`
+
+	// Answers 自己分析の回答
+	Answers   SelfAnalysisAnswers `json:"answers"`
+	CreatedAt time.Time           `json:"createdAt"`
+	Id        openapi_types.UUID  `json:"id"`
+}
+
+// SelfAnalysisSubmitted defines model for SelfAnalysisSubmitted.
+type SelfAnalysisSubmitted struct {
+	Result SelfAnalysisResult `json:"result"`
+
+	// Xp XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+	Xp XpResult `json:"xp"`
+}
+
 // XpAction XPが付いた操作。日本語の表示名はフロントエンドが持つ
 type XpAction string
 
@@ -595,6 +696,12 @@ type EsEntryId = openapi_types.UUID
 // InterviewLogId defines model for InterviewLogId.
 type InterviewLogId = openapi_types.UUID
 
+// SubmitAptitudeAnswersJSONBody defines parameters for SubmitAptitudeAnswers.
+type SubmitAptitudeAnswersJSONBody struct {
+	// Answers 適性診断の回答
+	Answers AptitudeAnswers `json:"answers"`
+}
+
 // ListCalendarItemsParams defines parameters for ListCalendarItems.
 type ListCalendarItemsParams struct {
 	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
@@ -618,10 +725,19 @@ type ListInterviewLogsParams struct {
 	Limit     *int                `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// SubmitSelfAnalysisAnswersJSONBody defines parameters for SubmitSelfAnalysisAnswers.
+type SubmitSelfAnalysisAnswersJSONBody struct {
+	// Answers 自己分析の回答
+	Answers SelfAnalysisAnswers `json:"answers"`
+}
+
 // ListXpLogsParams defines parameters for ListXpLogs.
 type ListXpLogsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
+
+// SubmitAptitudeAnswersJSONRequestBody defines body for SubmitAptitudeAnswers for application/json ContentType.
+type SubmitAptitudeAnswersJSONRequestBody SubmitAptitudeAnswersJSONBody
 
 // CreateCalendarEventJSONRequestBody defines body for CreateCalendarEvent for application/json ContentType.
 type CreateCalendarEventJSONRequestBody = CalendarEventCreate
@@ -650,8 +766,20 @@ type UpdateInterviewLogJSONRequestBody = InterviewLogUpdate
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = ProfileUpdate
 
+// SubmitSelfAnalysisAnswersJSONRequestBody defines body for SubmitSelfAnalysisAnswers for application/json ContentType.
+type SubmitSelfAnalysisAnswersJSONRequestBody SubmitSelfAnalysisAnswersJSONBody
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetAptitudeResult 自分の適性診断の回答と診断結果を取得する
+	// (GET /v1/aptitude-result)
+	GetAptitudeResult(w http.ResponseWriter, r *http.Request)
+	// SubmitAptitudeAnswers 適性診断の回答を保存する
+	// (POST /v1/aptitude-result)
+	SubmitAptitudeAnswers(w http.ResponseWriter, r *http.Request)
+	// DiagnoseAptitude AI適性診断を行う
+	// (POST /v1/aptitude-result/diagnosis)
+	DiagnoseAptitude(w http.ResponseWriter, r *http.Request)
 	// ListCalendarItems カレンダーに表示する予定を取得する
 	// (GET /v1/calendar-events)
 	ListCalendarItems(w http.ResponseWriter, r *http.Request, params ListCalendarItemsParams)
@@ -730,6 +858,15 @@ type ServerInterface interface {
 	// UpdateMe 自分のプロフィールを更新する
 	// (PATCH /v1/me)
 	UpdateMe(w http.ResponseWriter, r *http.Request)
+	// GetSelfAnalysisResult 自分の自己分析の回答と分析結果を取得する
+	// (GET /v1/self-analysis-result)
+	GetSelfAnalysisResult(w http.ResponseWriter, r *http.Request)
+	// SubmitSelfAnalysisAnswers 自己分析の回答を保存する
+	// (POST /v1/self-analysis-result)
+	SubmitSelfAnalysisAnswers(w http.ResponseWriter, r *http.Request)
+	// AnalyzeSelf AI自己分析を行う
+	// (POST /v1/self-analysis-result/analysis)
+	AnalyzeSelf(w http.ResponseWriter, r *http.Request)
 	// ListXpLogs XPの獲得履歴を取得する
 	// (GET /v1/xp-logs)
 	ListXpLogs(w http.ResponseWriter, r *http.Request, params ListXpLogsParams)
@@ -743,6 +880,48 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetAptitudeResult operation middleware
+func (siw *ServerInterfaceWrapper) GetAptitudeResult(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAptitudeResult(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitAptitudeAnswers operation middleware
+func (siw *ServerInterfaceWrapper) SubmitAptitudeAnswers(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitAptitudeAnswers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiagnoseAptitude operation middleware
+func (siw *ServerInterfaceWrapper) DiagnoseAptitude(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiagnoseAptitude(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListCalendarItems operation middleware
 func (siw *ServerInterfaceWrapper) ListCalendarItems(w http.ResponseWriter, r *http.Request) {
@@ -1403,6 +1582,48 @@ func (siw *ServerInterfaceWrapper) UpdateMe(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// GetSelfAnalysisResult operation middleware
+func (siw *ServerInterfaceWrapper) GetSelfAnalysisResult(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSelfAnalysisResult(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitSelfAnalysisAnswers operation middleware
+func (siw *ServerInterfaceWrapper) SubmitSelfAnalysisAnswers(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitSelfAnalysisAnswers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnalyzeSelf operation middleware
+func (siw *ServerInterfaceWrapper) AnalyzeSelf(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnalyzeSelf(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListXpLogs operation middleware
 func (siw *ServerInterfaceWrapper) ListXpLogs(w http.ResponseWriter, r *http.Request) {
 
@@ -1583,11 +1804,132 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/calendar-events/{calendarEventId}", wrapper.DeleteCalendarEvent)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/calendar-events/{calendarEventId}", wrapper.UpdateCalendarEvent)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/xp-logs", wrapper.ListXpLogs)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/aptitude-result", wrapper.GetAptitudeResult)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/aptitude-result", wrapper.SubmitAptitudeAnswers)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/aptitude-result/diagnosis", wrapper.DiagnoseAptitude)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/self-analysis-result", wrapper.GetSelfAnalysisResult)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/self-analysis-result", wrapper.SubmitSelfAnalysisAnswers)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/self-analysis-result/analysis", wrapper.AnalyzeSelf)
 
 	return m
 }
 
 type ProblemApplicationProblemPlusJSONResponse Problem
+
+type GetAptitudeResultRequestObject struct {
+}
+
+type GetAptitudeResultResponseObject interface {
+	VisitGetAptitudeResultResponse(w http.ResponseWriter) error
+}
+
+type GetAptitudeResult200JSONResponse AptitudeResult
+
+func (response GetAptitudeResult200JSONResponse) VisitGetAptitudeResultResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAptitudeResultdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAptitudeResultdefaultApplicationProblemPlusJSONResponse) VisitGetAptitudeResultResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitAptitudeAnswersRequestObject struct {
+	Body *SubmitAptitudeAnswersJSONRequestBody
+}
+
+type SubmitAptitudeAnswersResponseObject interface {
+	VisitSubmitAptitudeAnswersResponse(w http.ResponseWriter) error
+}
+
+type SubmitAptitudeAnswers201JSONResponse AptitudeSubmitted
+
+func (response SubmitAptitudeAnswers201JSONResponse) VisitSubmitAptitudeAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitAptitudeAnswersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SubmitAptitudeAnswersdefaultApplicationProblemPlusJSONResponse) VisitSubmitAptitudeAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DiagnoseAptitudeRequestObject struct {
+}
+
+type DiagnoseAptitudeResponseObject interface {
+	VisitDiagnoseAptitudeResponse(w http.ResponseWriter) error
+}
+
+type DiagnoseAptitude200JSONResponse AptitudeResult
+
+func (response DiagnoseAptitude200JSONResponse) VisitDiagnoseAptitudeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DiagnoseAptitudedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DiagnoseAptitudedefaultApplicationProblemPlusJSONResponse) VisitDiagnoseAptitudeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListCalendarItemsRequestObject struct {
 	Params ListCalendarItemsParams
@@ -2581,6 +2923,121 @@ func (response UpdateMedefaultApplicationProblemPlusJSONResponse) VisitUpdateMeR
 	return err
 }
 
+type GetSelfAnalysisResultRequestObject struct {
+}
+
+type GetSelfAnalysisResultResponseObject interface {
+	VisitGetSelfAnalysisResultResponse(w http.ResponseWriter) error
+}
+
+type GetSelfAnalysisResult200JSONResponse SelfAnalysisResult
+
+func (response GetSelfAnalysisResult200JSONResponse) VisitGetSelfAnalysisResultResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSelfAnalysisResultdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetSelfAnalysisResultdefaultApplicationProblemPlusJSONResponse) VisitGetSelfAnalysisResultResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitSelfAnalysisAnswersRequestObject struct {
+	Body *SubmitSelfAnalysisAnswersJSONRequestBody
+}
+
+type SubmitSelfAnalysisAnswersResponseObject interface {
+	VisitSubmitSelfAnalysisAnswersResponse(w http.ResponseWriter) error
+}
+
+type SubmitSelfAnalysisAnswers201JSONResponse SelfAnalysisSubmitted
+
+func (response SubmitSelfAnalysisAnswers201JSONResponse) VisitSubmitSelfAnalysisAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitSelfAnalysisAnswersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SubmitSelfAnalysisAnswersdefaultApplicationProblemPlusJSONResponse) VisitSubmitSelfAnalysisAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeSelfRequestObject struct {
+}
+
+type AnalyzeSelfResponseObject interface {
+	VisitAnalyzeSelfResponse(w http.ResponseWriter) error
+}
+
+type AnalyzeSelf200JSONResponse SelfAnalysisResult
+
+func (response AnalyzeSelf200JSONResponse) VisitAnalyzeSelfResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeSelfdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AnalyzeSelfdefaultApplicationProblemPlusJSONResponse) VisitAnalyzeSelfResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListXpLogsRequestObject struct {
 	Params ListXpLogsParams
 }
@@ -2622,6 +3079,15 @@ func (response ListXpLogsdefaultApplicationProblemPlusJSONResponse) VisitListXpL
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetAptitudeResult 自分の適性診断の回答と診断結果を取得する
+	// (GET /v1/aptitude-result)
+	GetAptitudeResult(ctx context.Context, request GetAptitudeResultRequestObject) (GetAptitudeResultResponseObject, error)
+	// SubmitAptitudeAnswers 適性診断の回答を保存する
+	// (POST /v1/aptitude-result)
+	SubmitAptitudeAnswers(ctx context.Context, request SubmitAptitudeAnswersRequestObject) (SubmitAptitudeAnswersResponseObject, error)
+	// DiagnoseAptitude AI適性診断を行う
+	// (POST /v1/aptitude-result/diagnosis)
+	DiagnoseAptitude(ctx context.Context, request DiagnoseAptitudeRequestObject) (DiagnoseAptitudeResponseObject, error)
 	// ListCalendarItems カレンダーに表示する予定を取得する
 	// (GET /v1/calendar-events)
 	ListCalendarItems(ctx context.Context, request ListCalendarItemsRequestObject) (ListCalendarItemsResponseObject, error)
@@ -2700,6 +3166,15 @@ type StrictServerInterface interface {
 	// UpdateMe 自分のプロフィールを更新する
 	// (PATCH /v1/me)
 	UpdateMe(ctx context.Context, request UpdateMeRequestObject) (UpdateMeResponseObject, error)
+	// GetSelfAnalysisResult 自分の自己分析の回答と分析結果を取得する
+	// (GET /v1/self-analysis-result)
+	GetSelfAnalysisResult(ctx context.Context, request GetSelfAnalysisResultRequestObject) (GetSelfAnalysisResultResponseObject, error)
+	// SubmitSelfAnalysisAnswers 自己分析の回答を保存する
+	// (POST /v1/self-analysis-result)
+	SubmitSelfAnalysisAnswers(ctx context.Context, request SubmitSelfAnalysisAnswersRequestObject) (SubmitSelfAnalysisAnswersResponseObject, error)
+	// AnalyzeSelf AI自己分析を行う
+	// (POST /v1/self-analysis-result/analysis)
+	AnalyzeSelf(ctx context.Context, request AnalyzeSelfRequestObject) (AnalyzeSelfResponseObject, error)
 	// ListXpLogs XPの獲得履歴を取得する
 	// (GET /v1/xp-logs)
 	ListXpLogs(ctx context.Context, request ListXpLogsRequestObject) (ListXpLogsResponseObject, error)
@@ -2742,6 +3217,85 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetAptitudeResult operation middleware
+func (sh *strictHandler) GetAptitudeResult(w http.ResponseWriter, r *http.Request) {
+	var request GetAptitudeResultRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAptitudeResult(ctx, request.(GetAptitudeResultRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAptitudeResult")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAptitudeResultResponseObject); ok {
+		if err := validResponse.VisitGetAptitudeResultResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitAptitudeAnswers operation middleware
+func (sh *strictHandler) SubmitAptitudeAnswers(w http.ResponseWriter, r *http.Request) {
+	var request SubmitAptitudeAnswersRequestObject
+
+	var body SubmitAptitudeAnswersJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitAptitudeAnswers(ctx, request.(SubmitAptitudeAnswersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitAptitudeAnswers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitAptitudeAnswersResponseObject); ok {
+		if err := validResponse.VisitSubmitAptitudeAnswersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DiagnoseAptitude operation middleware
+func (sh *strictHandler) DiagnoseAptitude(w http.ResponseWriter, r *http.Request) {
+	var request DiagnoseAptitudeRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DiagnoseAptitude(ctx, request.(DiagnoseAptitudeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DiagnoseAptitude")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DiagnoseAptitudeResponseObject); ok {
+		if err := validResponse.VisitDiagnoseAptitudeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListCalendarItems operation middleware
@@ -3469,6 +4023,85 @@ func (sh *strictHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetSelfAnalysisResult operation middleware
+func (sh *strictHandler) GetSelfAnalysisResult(w http.ResponseWriter, r *http.Request) {
+	var request GetSelfAnalysisResultRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSelfAnalysisResult(ctx, request.(GetSelfAnalysisResultRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSelfAnalysisResult")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSelfAnalysisResultResponseObject); ok {
+		if err := validResponse.VisitGetSelfAnalysisResultResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitSelfAnalysisAnswers operation middleware
+func (sh *strictHandler) SubmitSelfAnalysisAnswers(w http.ResponseWriter, r *http.Request) {
+	var request SubmitSelfAnalysisAnswersRequestObject
+
+	var body SubmitSelfAnalysisAnswersJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitSelfAnalysisAnswers(ctx, request.(SubmitSelfAnalysisAnswersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitSelfAnalysisAnswers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitSelfAnalysisAnswersResponseObject); ok {
+		if err := validResponse.VisitSubmitSelfAnalysisAnswersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AnalyzeSelf operation middleware
+func (sh *strictHandler) AnalyzeSelf(w http.ResponseWriter, r *http.Request) {
+	var request AnalyzeSelfRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AnalyzeSelf(ctx, request.(AnalyzeSelfRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AnalyzeSelf")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AnalyzeSelfResponseObject); ok {
+		if err := validResponse.VisitAnalyzeSelfResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListXpLogs operation middleware
 func (sh *strictHandler) ListXpLogs(w http.ResponseWriter, r *http.Request, params ListXpLogsParams) {
 	var request ListXpLogsRequestObject
@@ -3500,94 +4133,109 @@ func (sh *strictHandler) ListXpLogs(w http.ResponseWriter, r *http.Request, para
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
