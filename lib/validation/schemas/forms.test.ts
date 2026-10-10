@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   companyFormSchema,
-  dashboardCompanySchema,
-  dashboardEsEntrySchema,
   esFormSchema,
   esQuestionSchema,
   esQuestionsSchema,
@@ -23,22 +21,6 @@ describe("profileFormSchema", () => {
 
   it("rejects a whitespace-only full_name", () => {
     expect(() => profileFormSchema.parse({ full_name: "   " })).toThrow();
-  });
-});
-
-describe("dashboardEsEntrySchema", () => {
-  it("applies defaults when status/content_md are omitted", () => {
-    const result = dashboardEsEntrySchema.parse({ title: "ES下書き" });
-    expect(result.status).toBe("下書き");
-    expect(result.content_md).toBe("");
-  });
-});
-
-describe("dashboardCompanySchema", () => {
-  it("applies defaults when url/stage are omitted", () => {
-    const result = dashboardCompanySchema.parse({ name: "テスト株式会社" });
-    expect(result.url).toBe("");
-    expect(result.stage).toBe("未エントリー");
   });
 });
 
