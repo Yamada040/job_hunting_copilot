@@ -1,7 +1,8 @@
 # データベーススキーマ リファレンス
 
-- 実体: `supabase/schema.sql`（正本。Supabase SQL Editorやpsqlで実行する）
-- 差分: `supabase/migrations/*.sql`（`schema.sql` に追記済みのため、新規プロジェクト構築時は `schema.sql` だけ流せば十分）
+> **注意**: Go移行に合わせてスキーマを作り直した。以下の本文は**移行前のスキーマ**の説明で、移行の段階4で書き直す。新しいスキーマは [backend-design.md](./backend-design.md) の4章と `supabase/migrations/` を参照。
+
+- 実体: `supabase/migrations/*.sql`（Supabase CLI で管理する。dev へのマージで GitHub Actions が本番に適用する）
 - 型定義: `lib/database.types.ts`（手動同期。テーブルを追加/変更したらこのファイルも更新すること）
 - 全テーブルでRLS（Row Level Security）が有効。パターンは一貫して `auth.uid() = user_id`（`profiles` のみ `auth.uid() = id`）
 

@@ -152,7 +152,7 @@ Next.js 認証コールバック: `app/auth/callback/route.ts` で `exchangeCode
 
 ## DB スキーマ概要
 
-`supabase/schema.sql` に定義（すべて RLS 有効）。全テーブルの詳細・ER図・未使用カラムの注記は [docs/database-schema.md](docs/database-schema.md) を参照。
+`supabase/migrations/` に定義（Supabase CLI で管理。すべて RLS 有効）。全テーブルの詳細・ER図・未使用カラムの注記は [docs/database-schema.md](docs/database-schema.md) を参照。
 
 - `profiles`: ユーザープロフィール
 - `es_entries`: ES 本文/ステータス/締切など

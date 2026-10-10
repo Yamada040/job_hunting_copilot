@@ -11,6 +11,7 @@ const (
 	KindNotFound
 	KindConflict
 	KindRateLimited
+	KindUnavailable
 )
 
 // FieldError は、入力チェックで項目ごとに見つかった問題を表す。

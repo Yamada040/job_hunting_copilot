@@ -17,7 +17,7 @@ type server struct {
 
 var _ openapi.StrictServerInterface = server{}
 
-func newHandler(verifier *auth.Verifier) (http.Handler, error) {
+func newHandler(verifier *auth.Verifier, db health.Pinger) (http.Handler, error) {
 	spec, err := openapi.GetSpec()
 	if err != nil {
 		return nil, fmt.Errorf("load openapi spec: %w", err)
@@ -25,7 +25,10 @@ func newHandler(verifier *auth.Verifier) (http.Handler, error) {
 	// 仕様の servers とリクエストのホスト名を照合させない（プレビュー環境などホスト名が変わるため）
 	spec.Servers = nil
 
-	strict := openapi.NewStrictHandlerWithOptions(server{}, nil, openapi.StrictHTTPServerOptions{
+	srv := server{
+		Handler: health.Handler{DB: db},
+	}
+	strict := openapi.NewStrictHandlerWithOptions(srv, nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  writeRequestError,
 		ResponseErrorHandlerFunc: platform.WriteError,
 	})

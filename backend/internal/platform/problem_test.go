@@ -38,6 +38,7 @@ func TestWriteErrorMapsEachKindToStatusAndCode(t *testing.T) {
 		{KindNotFound, http.StatusNotFound, "not_found"},
 		{KindConflict, http.StatusConflict, "conflict"},
 		{KindRateLimited, http.StatusTooManyRequests, "rate_limited"},
+		{KindUnavailable, http.StatusServiceUnavailable, "unavailable"},
 	}
 	for _, c := range cases {
 		t.Run(c.code, func(t *testing.T) {

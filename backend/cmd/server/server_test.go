@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,13 +12,17 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 )
 
+type okPinger struct{}
+
+func (okPinger) Ping(context.Context) error { return nil }
+
 func serve(t *testing.T, method, path string) *httptest.ResponseRecorder {
 	t.Helper()
 	verifier, err := auth.NewVerifier(t.Context(), authtest.NewIssuer(t).URL)
 	if err != nil {
 		t.Fatalf("NewVerifier: %v", err)
 	}
-	handler, err := newHandler(verifier)
+	handler, err := newHandler(verifier, okPinger{})
 	if err != nil {
 		t.Fatalf("newHandler: %v", err)
 	}
