@@ -5,20 +5,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
-
-var startedAt = time.Now()
 
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"status":    "ok",
-			"region":    os.Getenv("VERCEL_REGION"),
-			"startedAt": startedAt.Format(time.RFC3339Nano),
-		})
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 
 	port := os.Getenv("PORT")
