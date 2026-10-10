@@ -6,12 +6,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth/authtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 )
 
 func serve(t *testing.T, method, path string) *httptest.ResponseRecorder {
 	t.Helper()
-	handler, err := newHandler()
+	verifier, err := auth.NewVerifier(t.Context(), authtest.NewIssuer(t).URL)
+	if err != nil {
+		t.Fatalf("NewVerifier: %v", err)
+	}
+	handler, err := newHandler(verifier)
 	if err != nil {
 		t.Fatalf("newHandler: %v", err)
 	}

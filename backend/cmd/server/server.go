@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/health"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
@@ -16,7 +17,7 @@ type server struct {
 
 var _ openapi.StrictServerInterface = server{}
 
-func newHandler() (http.Handler, error) {
+func newHandler(verifier *auth.Verifier) (http.Handler, error) {
 	spec, err := openapi.GetSpec()
 	if err != nil {
 		return nil, fmt.Errorf("load openapi spec: %w", err)
@@ -37,7 +38,8 @@ func newHandler() (http.Handler, error) {
 		platform.RequestID,
 		platform.AccessLog,
 		platform.Recover,
-		platform.Validate(spec),
+		verifier.Authenticate,
+		platform.Validate(spec, auth.RequireUser),
 	), nil
 }
 
