@@ -1,0 +1,28 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["hnd1"],
+  "services": {
+    "web": {
+      "root": "./",
+      "framework": "nextjs"
+    },
+    "api": {
+      "root": "backend/",
+      "framework": "go"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/v1/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "web"
+      }
+    }
+  ]
+}
