@@ -3,22 +3,9 @@ import { ArrowUturnLeftIcon, HomeIcon } from "@heroicons/react/24/outline";
 
 import { AppLayout } from "@/app/_components/layout";
 import { ROUTES } from "@/lib/constants/routes";
-import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
 import SelfAnalysisForm from "./_components/self-analysis-form";
 
-export default async function SelfAnalysisPage() {
-  const supabase = await createSupabaseReadonlyClient();
-  const { data: userData } = await supabase.auth.getUser();
-
-  const { data } = await supabase
-    .from("self_analysis_results")
-    .select("*")
-    .eq("user_id", userData.user!.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const isLocked = Boolean(data?.id);
-
+export default function SelfAnalysisPage() {
   const headerActions = (
     <div className="flex flex-wrap gap-3">
       <Link href={ROUTES.DASHBOARD} className="dq-button-secondary">
@@ -39,12 +26,7 @@ export default async function SelfAnalysisPage() {
       headerActions={headerActions}
       className="space-y-6"
     >
-      <SelfAnalysisForm
-        initialAnswers={(data?.answers as Record<string, unknown>) ?? null}
-        initialSummary={data?.ai_summary ?? null}
-        initialResultId={data?.id ?? null}
-        isMonthlyLocked={isLocked}
-      />
+      <SelfAnalysisForm />
     </AppLayout>
   );
 }

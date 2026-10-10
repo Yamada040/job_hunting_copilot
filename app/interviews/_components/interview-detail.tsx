@@ -4,9 +4,16 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-import { useDeleteInterviewLog, useInterviewLog, useUpdateInterviewLog, type InterviewLog } from "@/lib/api/interviews";
+import {
+  useDeleteInterviewLog,
+  useInterviewLog,
+  useReviewInterviewLog,
+  useUpdateInterviewLog,
+  type InterviewLog,
+} from "@/lib/api/interviews";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { InterviewForm } from "./interview-form";
 
 export function InterviewDetail({ id }: { id: string }) {
@@ -22,6 +29,7 @@ function InterviewDetailLoaded({ log }: { log: InterviewLog }) {
   const router = useRouter();
   const updateLog = useUpdateInterviewLog(log.id);
   const deleteLog = useDeleteInterviewLog(log.id);
+  const reviewLog = useReviewInterviewLog(log.id);
   const [saved, setSaved] = useState(false);
 
   const handleDelete = () => {
@@ -42,6 +50,16 @@ function InterviewDetailLoaded({ log }: { log: InterviewLog }) {
         }}
       />
       {saved && <p className="text-sm text-emerald-300">保存しました</p>}
+
+      <AiResultPanel
+        title="AI振り返り"
+        description="保存済みの面接ログをもとに、AIが良かった点・改善点・次回の行動をまとめます。何度でも実行でき、結果は上書きされます（1日の上限あり）。"
+        result={log.aiResult}
+        runLabel={log.aiResult ? "もう一度振り返る" : "AI振り返りを行う"}
+        onRun={() => reviewLog.mutate()}
+        pending={reviewLog.isPending}
+        error={reviewLog.error}
+      />
 
       <div className="space-y-2">
         <button type="button" onClick={handleDelete} disabled={deleteLog.isPending} className="dq-button-secondary">

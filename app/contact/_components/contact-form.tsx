@@ -1,10 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
+
+import { api, ApiError, unwrap } from "@/lib/api/client";
+import { useMe } from "@/lib/api/me";
 import { contactRequestSchema } from "@/lib/validation/schemas/contact";
 
 interface ContactFormProps {
-  displayName: string;
+  /** プロフィールに氏名が無いときに使う、ログイン情報（Googleアカウント）の名前 */
+  accountName: string;
   email: string;
 }
 
@@ -20,7 +24,9 @@ type SubmitState =
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export function ContactForm({ displayName, email }: ContactFormProps) {
+export function ContactForm({ accountName, email }: ContactFormProps) {
+  const { data: me } = useMe();
+  const displayName = me?.fullName?.trim() || accountName || "未設定";
   const [submitState, formAction, isPending] = useActionState<SubmitState, FormData>(async (_prev, formData) => {
     const values: SubmitValues = {
       subject: String(formData.get("subject") ?? ""),
@@ -41,39 +47,13 @@ export function ContactForm({ displayName, email }: ContactFormProps) {
     }
 
     try {
-      const [response] = await Promise.all([
-        fetch("/api/contact", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(validation.data),
-        }),
-        wait(600),
-      ]);
-      const result = (await response.json().catch(() => null)) as {
-        ok?: boolean;
-        message?: string;
-        error?: string;
-      } | null;
-
-      if (!response.ok || !result?.ok) {
-        return {
-          status: "error",
-          message: result?.error ?? "送信に失敗しました。時間をおいて再度お試しください。",
-          values,
-        };
-      }
-
-      return {
-        status: "success",
-        message: result.message ?? "送信に成功しました。",
-        values: null,
-      };
-    } catch {
+      // 送信中の表示が一瞬で消えてちらつかないよう、最低600msは待つ
+      await Promise.all([unwrap(api.POST("/v1/contact", { body: validation.data })), wait(600)]);
+      return { status: "success", message: "送信に成功しました。", values: null };
+    } catch (e) {
       return {
         status: "error",
-        message: "送信に失敗しました。通信環境を確認して再度お試しください。",
+        message: e instanceof ApiError ? e.problem.title : "送信に失敗しました。通信環境を確認して再度お試しください。",
         values,
       };
     }

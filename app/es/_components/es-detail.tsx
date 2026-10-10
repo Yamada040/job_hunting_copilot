@@ -4,9 +4,17 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-import { useDeleteEsEntry, useEsEntry, useSubmitEsEntry, useUpdateEsEntry, type EsEntry } from "@/lib/api/es";
+import {
+  useDeleteEsEntry,
+  useEsEntry,
+  useReviewEsEntry,
+  useSubmitEsEntry,
+  useUpdateEsEntry,
+  type EsEntry,
+} from "@/lib/api/es";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { EsForm } from "./es-form";
 
 export function EsDetail({ id }: { id: string }) {
@@ -23,6 +31,7 @@ function EsDetailLoaded({ entry }: { entry: EsEntry }) {
   const updateEsEntry = useUpdateEsEntry(entry.id);
   const submitEsEntry = useSubmitEsEntry();
   const deleteEsEntry = useDeleteEsEntry(entry.id);
+  const reviewEsEntry = useReviewEsEntry(entry.id);
   const [saved, setSaved] = useState(false);
 
   const handleDelete = () => {
@@ -49,6 +58,16 @@ function EsDetailLoaded({ entry }: { entry: EsEntry }) {
         }}
       />
       {saved && <p className="text-sm text-emerald-300">保存しました</p>}
+
+      <AiResultPanel
+        title="AI添削"
+        description="保存済みの設問・回答と本文をAIが添削します。編集した内容は、保存してから添削してください。何度でも実行でき、結果は上書きされます（1日の上限あり）。"
+        result={entry.aiResult}
+        runLabel={entry.aiResult ? "もう一度添削する" : "AI添削する"}
+        onRun={() => reviewEsEntry.mutate()}
+        pending={reviewEsEntry.isPending}
+        error={reviewEsEntry.error}
+      />
 
       <div className="space-y-2">
         <button type="button" onClick={handleDelete} disabled={deleteEsEntry.isPending} className="dq-button-secondary">

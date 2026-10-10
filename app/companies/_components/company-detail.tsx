@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowTopRightOnSquareIcon, StarIcon, TrashIcon } from "@heroicons/react/24/outline";
 
-import { useCompany, useDeleteCompany, useUpdateCompany, type Company } from "@/lib/api/companies";
+import { useAnalyzeCompany, useCompany, useDeleteCompany, useUpdateCompany, type Company } from "@/lib/api/companies";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { CompanyForm } from "./company-form";
 
 export function CompanyDetail({ id }: { id: string }) {
@@ -22,6 +23,7 @@ function CompanyDetailLoaded({ company }: { company: Company }) {
   const router = useRouter();
   const updateCompany = useUpdateCompany(company.id);
   const deleteCompany = useDeleteCompany(company.id);
+  const analyzeCompany = useAnalyzeCompany(company.id);
   const [saved, setSaved] = useState(false);
 
   const handleDelete = () => {
@@ -66,6 +68,17 @@ function CompanyDetailLoaded({ company }: { company: Company }) {
         }}
       />
       {saved && <p className="text-sm text-emerald-300">保存しました</p>}
+
+      <AiResultPanel
+        title="AI企業分析"
+        description="AIがWebで最新の採用情報などを検索し、企業の概要・強み・求める人物像をまとめます。企業ごとに1回だけ実行できます（数十秒かかります）。"
+        result={company.aiResult}
+        runLabel="AI企業分析を行う"
+        onRun={() => analyzeCompany.mutate()}
+        pending={analyzeCompany.isPending}
+        error={analyzeCompany.error}
+        done={company.aiResult !== null}
+      />
 
       <div className="space-y-2">
         <button type="button" onClick={handleDelete} disabled={deleteCompany.isPending} className="dq-button-secondary">
