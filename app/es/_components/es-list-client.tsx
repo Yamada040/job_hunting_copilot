@@ -1,15 +1,10 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { Database } from "@/lib/database.types";
-
-type EsRow = Database["public"]["Tables"]["es_entries"]["Row"];
-
-type Props = {
-  initialItems: EsRow[];
-};
+import { useEsEntries, type EsEntry } from "@/lib/api/es";
+import { ApiErrorMessage } from "@/app/_components/api-error-message";
 
 const TABS = [
   { label: "すべて", value: "all" },
@@ -17,23 +12,21 @@ const TABS = [
   { label: "提出済み", value: "submitted" },
 ] as const;
 
-const STATUS_LABEL_MAP: Record<string, string> = {
+const STATUS_LABEL_MAP: Record<EsEntry["status"], string> = {
   draft: "下書き",
   submitted: "提出済み",
 };
 
-export function EsListClient({ initialItems }: Props) {
+export function EsListClient() {
+  const { data: items, error, isPending } = useEsEntries();
   const [tab, setTab] = useState<(typeof TABS)[number]["value"]>("all");
   const [query, setQuery] = useState("");
 
   const { filtered, counts } = useMemo(() => {
-    const items = Array.isArray(initialItems) ? initialItems : [];
-    const filtered = items.filter((item) => {
-      const q = query.toLowerCase();
-      const titleHit = (item.title || "").toLowerCase().includes(q);
-      const tagHit = (item.tags ?? []).some((t) => t.toLowerCase().includes(q));
-      return !query || titleHit || tagHit;
-    });
+    const q = query.toLowerCase();
+    const filtered = (items ?? []).filter(
+      (item) => !query || [item.title, item.company.name, ...item.tags].some((v) => v.toLowerCase().includes(q)),
+    );
     const byTab = filtered.filter((item) => (tab === "all" ? true : item.status === tab));
     return {
       filtered: byTab,
@@ -43,7 +36,9 @@ export function EsListClient({ initialItems }: Props) {
         submitted: filtered.filter((i) => i.status === "submitted").length,
       },
     };
-  }, [initialItems, query, tab]);
+  }, [items, query, tab]);
+
+  if (error) return <ApiErrorMessage error={error} />;
 
   return (
     <div className="space-y-6">
@@ -66,7 +61,7 @@ export function EsListClient({ initialItems }: Props) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="タイトル / タグで検索"
+          placeholder="タイトル / 企業名 / タグで検索"
           className="w-full rounded-full border border-white/30 bg-black/70 px-4 py-2 text-xs text-white outline-none ring-0 placeholder:text-white/50 focus:border-yellow-400 sm:w-64"
         />
       </div>
@@ -78,12 +73,13 @@ export function EsListClient({ initialItems }: Props) {
             href={`/es/${es.id}`}
             className="rounded-xl border border-[#3f3f46] bg-[#111111] px-4 py-4 text-white transition hover:-translate-y-0.5"
           >
+            <p className="text-xs text-white/70">{es.company.name}</p>
             <p className="text-sm font-semibold">{es.title}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/70">
               <span className="rounded-full border border-white/40 bg-black/60 px-2 py-1 text-white">
-                {STATUS_LABEL_MAP[es.status ?? ""] ?? "未設定"}
+                {STATUS_LABEL_MAP[es.status]}
               </span>
-              {es.tags?.length ? (
+              {es.tags.length ? (
                 es.tags.map((tag) => (
                   <span
                     key={tag}
@@ -97,13 +93,13 @@ export function EsListClient({ initialItems }: Props) {
               )}
             </div>
             <p className="mt-1 text-xs text-white/60">
-              更新日: {es.updated_at ? new Date(es.updated_at).toLocaleDateString() : "-"}
+              締切: {es.deadline ?? "-"} ／ 更新日: {new Date(es.updatedAt).toLocaleDateString()}
             </p>
           </Link>
         ))}
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-[#3f3f46] bg-[#111111] px-6 py-6 text-sm text-white/80">
-            該当するESがありません。フィルタやキーワードを変えてみてください。
+            {isPending ? "読み込み中…" : "該当するESがありません。フィルタやキーワードを変えてみてください。"}
           </div>
         ) : null}
       </div>

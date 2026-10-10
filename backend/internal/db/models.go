@@ -257,7 +257,7 @@ type CalendarEvent struct {
 	CompanyID *uuid.UUID
 	Title     string
 	Type      CalendarEventType
-	Date      pgtype.Date
+	Date      time.Time
 	Time      pgtype.Time
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -291,7 +291,7 @@ type EsEntry struct {
 	ContentMd *string
 	Questions []byte
 	Tags      []string
-	Deadline  pgtype.Date
+	Deadline  *time.Time
 	Memo      *string
 	AiResult  *string
 	CreatedAt time.Time
@@ -304,7 +304,7 @@ type InterviewLog struct {
 	CompanyID     uuid.UUID
 	Format        *InterviewFormat
 	Round         *string
-	InterviewDate pgtype.Date
+	InterviewDate *time.Time
 	Questions     []byte
 	Improvement   *string
 	Unexpected    *string

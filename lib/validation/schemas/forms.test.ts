@@ -1,34 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  esFormSchema,
-  esQuestionSchema,
-  esQuestionsSchema,
-  webtestAnswerFormSchema,
-  webtestQuestionFormSchema,
-} from "./forms";
-
-describe("esQuestionSchema / esQuestionsSchema", () => {
-  it("allows an empty array", () => {
-    expect(esQuestionsSchema.parse([])).toEqual([]);
-  });
-
-  it("allows an object with only some fields", () => {
-    expect(esQuestionSchema.parse({ prompt: "自己PR" })).toEqual({ prompt: "自己PR" });
-  });
-});
-
-describe("esFormSchema", () => {
-  it("applies defaults for content_md/tags/intent", () => {
-    const result = esFormSchema.parse({ title: "ES1" });
-    expect(result.content_md).toBe("");
-    expect(result.tags).toBe("");
-    expect(result.intent).toBe("save");
-  });
-
-  it("requires title", () => {
-    expect(() => esFormSchema.parse({})).toThrow();
-  });
-});
+import { webtestAnswerFormSchema, webtestQuestionFormSchema } from "./forms";
 
 describe("webtestQuestionFormSchema", () => {
   const base = { title: "問題1", body: "本文", answer: "答え" };
