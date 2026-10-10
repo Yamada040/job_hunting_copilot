@@ -247,7 +247,6 @@ flowchart LR
 
 | ファイル        | スキーマ                                 | 主なテストケース                                                                                        |
 | --------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `forms.ts`      | `companyFormSchema`                      | `preference`が数値文字列→数値変換／空文字→`undefined`／`favorite`が`"on"`→`true`、省略→`false`          |
 | `forms.ts`      | `esQuestionSchema` / `esQuestionsSchema` | 空配列許容／部分的なフィールドのみのオブジェクト許容                                                    |
 | `forms.ts`      | `esFormSchema`                           | `content_md`/`tags`/`intent`のデフォルト値／`title`必須                                                 |
 | `forms.ts`      | `webtestQuestionFormSchema`              | `title`/`body`/`answer`必須（空白のみで失敗）／`time_limit`が負の文字列でエラー                         |

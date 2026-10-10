@@ -1,25 +1,11 @@
 import { z } from "zod";
 
 import {
-  checkboxBoolean,
   optionalNonNegativeNumber,
-  optionalNumber,
   optionalString,
   optionalTrimmedString,
   requiredTrimmedString,
 } from "@/lib/validation";
-
-export const companyFormSchema = z.object({
-  name: requiredTrimmedString,
-  industry: optionalTrimmedString,
-  url: optionalTrimmedString,
-  mypage_id: optionalTrimmedString,
-  mypage_url: optionalTrimmedString,
-  memo: optionalTrimmedString,
-  stage: optionalTrimmedString,
-  preference: optionalNumber,
-  favorite: checkboxBoolean,
-});
 
 export const esQuestionSchema = z.object({
   id: z.string().optional(),

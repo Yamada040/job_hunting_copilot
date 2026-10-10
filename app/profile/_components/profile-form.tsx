@@ -4,8 +4,8 @@ import Image from "next/image";
 import { UserCircleIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
 
-import { ApiError } from "@/lib/api/client";
 import { useMe, useUpdateMe, type Me, type ProfileUpdate } from "@/lib/api/me";
+import { ApiErrorMessage } from "@/app/_components/api-error-message";
 
 // backend/api/openapi.yaml の ProfileUpdate の maxLength と同じ値（超えた入力はGoが400で拒否する）
 const MAX_LENGTH = 100;
@@ -26,7 +26,7 @@ const textFields = [
 export function ProfileForm({ email }: { email: string }) {
   const { data, error } = useMe();
 
-  if (error) return <p className="dq-card p-8 text-sm text-rose-300">{error.message}</p>;
+  if (error) return <ApiErrorMessage error={error} />;
   if (!data) return <p className="dq-card p-8 text-sm text-white">読み込み中…</p>;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return <ProfileFormFields key={JSON.stringify(data)} me={data} email={email} />;
@@ -54,8 +54,6 @@ function ProfileFormFields({ me, email }: { me: Me; email: string }) {
       { onSuccess: () => setSaved(true) },
     );
   };
-
-  const problem = updateMe.error instanceof ApiError ? updateMe.error.problem : null;
 
   return (
     <form onSubmit={handleSubmit} className="dq-card p-8">
@@ -125,16 +123,7 @@ function ProfileFormFields({ me, email }: { me: Me; email: string }) {
           </div>
         </fieldset>
 
-        {problem && (
-          <div role="alert" className="text-sm text-rose-300">
-            <p>{problem.title}</p>
-            {problem.errors?.map((e) => (
-              <p key={e.field}>
-                {textFields.find((f) => f.name === e.field)?.label ?? e.field}: {e.message}
-              </p>
-            ))}
-          </div>
-        )}
+        <ApiErrorMessage error={updateMe.error} labels={Object.fromEntries(textFields.map((f) => [f.name, f.label]))} />
         {saved && <p className="text-sm text-emerald-300">保存しました</p>}
 
         <button type="submit" className="dq-button" disabled={updateMe.isPending}>
