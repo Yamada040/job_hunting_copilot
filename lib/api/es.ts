@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { calendarKeys } from "./calendar";
 import { api, unwrap } from "./client";
 import type { components } from "./schema";
 import { applyXpResult } from "./xp";
@@ -37,6 +38,8 @@ export function useCreateEsEntry() {
     onSuccess: (entry) => {
       queryClient.setQueryData(esKeys.detail(entry.id), entry);
       void queryClient.invalidateQueries({ queryKey: ["es-entries", "list"] });
+      // ESの締切はカレンダーにも表示されるため
+      void queryClient.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 }
@@ -49,6 +52,8 @@ export function useUpdateEsEntry(id: string) {
     onSuccess: (entry) => {
       queryClient.setQueryData(esKeys.detail(id), entry);
       void queryClient.invalidateQueries({ queryKey: ["es-entries", "list"] });
+      // ESの締切はカレンダーにも表示されるため
+      void queryClient.invalidateQueries({ queryKey: calendarKeys.all });
     },
   });
 }
@@ -62,6 +67,8 @@ export function useSubmitEsEntry() {
     onSuccess: ({ esEntry, xp }) => {
       queryClient.setQueryData(esKeys.detail(esEntry.id), esEntry);
       void queryClient.invalidateQueries({ queryKey: ["es-entries", "list"] });
+      // ESの締切はカレンダーにも表示されるため
+      void queryClient.invalidateQueries({ queryKey: calendarKeys.all });
       applyXpResult(queryClient, xp);
     },
   });
@@ -74,6 +81,17 @@ export function useDeleteEsEntry(id: string) {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: esKeys.detail(id) });
       void queryClient.invalidateQueries({ queryKey: ["es-entries", "list"] });
+      // ESの締切はカレンダーにも表示されるため
+      void queryClient.invalidateQueries({ queryKey: calendarKeys.all });
     },
+  });
+}
+
+/** AI添削を行う。結果はバックエンドが保存し、返ってきたESでキャッシュを置き換える。 */
+export function useReviewEsEntry(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => unwrap(api.POST("/v1/es-entries/{esEntryId}/review", { params: { path: { esEntryId: id } } })),
+    onSuccess: (entry) => queryClient.setQueryData(esKeys.detail(id), entry),
   });
 }

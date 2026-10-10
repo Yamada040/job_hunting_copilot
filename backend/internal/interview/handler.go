@@ -96,6 +96,18 @@ func (h Handler) UpdateInterviewLog(ctx context.Context, req openapi.UpdateInter
 	return openapi.UpdateInterviewLog200JSONResponse(toAPI(log)), nil
 }
 
+func (h Handler) ReviewInterviewLog(ctx context.Context, req openapi.ReviewInterviewLogRequestObject) (openapi.ReviewInterviewLogResponseObject, error) {
+	userID, err := auth.RequireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	log, err := h.Service.Review(ctx, userID, req.InterviewLogId)
+	if err != nil {
+		return nil, err
+	}
+	return openapi.ReviewInterviewLog200JSONResponse(toAPI(log)), nil
+}
+
 func (h Handler) DeleteInterviewLog(ctx context.Context, req openapi.DeleteInterviewLogRequestObject) (openapi.DeleteInterviewLogResponseObject, error) {
 	userID, err := auth.RequireUserID(ctx)
 	if err != nil {

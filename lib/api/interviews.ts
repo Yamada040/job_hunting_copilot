@@ -68,3 +68,13 @@ export function useDeleteInterviewLog(id: string) {
     },
   });
 }
+
+/** AI振り返りを行う。結果はバックエンドが保存し、返ってきた面接ログでキャッシュを置き換える。 */
+export function useReviewInterviewLog(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      unwrap(api.POST("/v1/interview-logs/{interviewLogId}/review", { params: { path: { interviewLogId: id } } })),
+    onSuccess: (log) => queryClient.setQueryData(interviewKeys.detail(id), log),
+  });
+}

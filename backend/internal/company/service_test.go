@@ -2,14 +2,17 @@ package company
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai/aitest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -18,7 +21,7 @@ func ptr[T any](v T) *T { return &v }
 func setup(t *testing.T) (*pgxpool.Pool, *Service, uuid.UUID) {
 	t.Helper()
 	pool := dbtest.Connect(t)
-	return pool, NewService(pool, xp.NewService()), dbtest.CreateUser(t, pool)
+	return pool, NewService(pool, xp.NewService(), nil, nil), dbtest.CreateUser(t, pool)
 }
 
 func create(t *testing.T, s *Service, userID uuid.UUID, name string) db.Company {
@@ -168,5 +171,33 @@ func TestDeleteRemovesLinkedEntries(t *testing.T) {
 	}
 	if count != 0 {
 		t.Errorf("%d ES remain after deleting the company, want 0", count)
+	}
+}
+
+func TestAnalyzeRunsOncePerCompanyWithoutPrivateMemo(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	fake := &aitest.Fake{Reply: "分析結果"}
+	s := NewService(pool, xp.NewService(), fake, ratelimit.NewLimiter())
+	row, _, err := s.Create(t.Context(), userID, Fields{Name: ptr("サンプル"), Industry: ptr("IT"), Memo: ptr("第一志望・年収重視")})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	analyzed, err := s.Analyze(t.Context(), userID, row.ID)
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+	if analyzed.AiResult == nil || *analyzed.AiResult != "分析結果" {
+		t.Errorf("ai result = %v, want the AI reply saved", analyzed.AiResult)
+	}
+	if !strings.Contains(fake.Inputs[0], "サンプル") || strings.Contains(fake.Inputs[0], "年収重視") {
+		t.Errorf("AI input = %q, want the company name but not the private memo", fake.Inputs[0])
+	}
+
+	_, err = s.Analyze(t.Context(), userID, row.ID)
+	assertKind(t, err, platform.KindConflict)
+	if len(fake.Inputs) != 1 {
+		t.Errorf("AI was called %d times, want once", len(fake.Inputs))
 	}
 }

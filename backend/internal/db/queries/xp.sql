@@ -15,3 +15,6 @@ on conflict (user_id, action, ref_id) do nothing;
 
 -- name: SetProfileXP :exec
 update profiles set xp = @xp, level = @level where id = @id;
+
+-- name: ListXPLogs :many
+select xp, action, created_at from xp_logs where user_id = @user_id order by created_at desc limit sqlc.arg(max_rows);

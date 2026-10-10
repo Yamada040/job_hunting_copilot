@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useMe, useUpdateMe, type Me, type ProfileUpdate } from "@/lib/api/me";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 
-// backend/api/openapi.yaml の ProfileUpdate の maxLength と同じ値（超えた入力はGoが400で拒否する）
+// backend/api/openapi.yaml の ProfileUpdate の maxLength と同じ値（超えた入力はバックエンドが400で拒否する）
 const MAX_LENGTH = 100;
 
 const avatarOptions = [

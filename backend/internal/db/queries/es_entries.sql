@@ -41,3 +41,6 @@ delete from es_entries where id = @id and user_id = @user_id;
 -- name: CompanyExists :one
 -- ESなどを企業にひも付ける前に、その企業が本人のものかを確かめる（他人の企業IDを指定されても、ひも付けさせない）
 select exists (select 1 from companies where id = @id and user_id = @user_id);
+
+-- name: SetEsAiResult :execrows
+update es_entries set ai_result = @ai_result where id = @id and user_id = @user_id;

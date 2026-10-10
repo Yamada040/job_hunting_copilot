@@ -25,6 +25,48 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for CalendarEventType.
+const (
+	Es        CalendarEventType = "es"
+	Intern    CalendarEventType = "intern"
+	Interview CalendarEventType = "interview"
+	Other     CalendarEventType = "other"
+)
+
+// Valid indicates whether the value is a known member of the CalendarEventType enum.
+func (e CalendarEventType) Valid() bool {
+	switch e {
+	case Es:
+		return true
+	case Intern:
+		return true
+	case Interview:
+		return true
+	case Other:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CalendarItemSource.
+const (
+	EsDeadline CalendarItemSource = "es_deadline"
+	Event      CalendarItemSource = "event"
+)
+
+// Valid indicates whether the value is a known member of the CalendarItemSource enum.
+func (e CalendarItemSource) Valid() bool {
+	switch e {
+	case EsDeadline:
+		return true
+	case Event:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyStage.
 const (
 	Declined     CompanyStage = "declined"
@@ -133,6 +175,155 @@ func (e InterviewRating) Valid() bool {
 	}
 }
 
+// Defines values for XpAction.
+const (
+	XpActionAptitudeComplete       XpAction = "aptitude_complete"
+	XpActionCompanyNew             XpAction = "company_new"
+	XpActionEsSubmitted            XpAction = "es_submitted"
+	XpActionInterviewLog           XpAction = "interview_log"
+	XpActionSelfAnalysisComplete   XpAction = "self_analysis_complete"
+	XpActionWebtestAttemptComplete XpAction = "webtest_attempt_complete"
+	XpActionWebtestQuestionCreate  XpAction = "webtest_question_create"
+)
+
+// Valid indicates whether the value is a known member of the XpAction enum.
+func (e XpAction) Valid() bool {
+	switch e {
+	case XpActionAptitudeComplete:
+		return true
+	case XpActionCompanyNew:
+		return true
+	case XpActionEsSubmitted:
+		return true
+	case XpActionInterviewLog:
+		return true
+	case XpActionSelfAnalysisComplete:
+		return true
+	case XpActionWebtestAttemptComplete:
+		return true
+	case XpActionWebtestQuestionCreate:
+		return true
+	default:
+		return false
+	}
+}
+
+// AdminStats defines model for AdminStats.
+type AdminStats struct {
+	// ActiveUsers7d 直近7日間にXPを獲得したユーザー数
+	ActiveUsers7d       int `json:"activeUsers7d"`
+	ActiveUsersToday    int `json:"activeUsersToday"`
+	CompaniesCreated7d  int `json:"companiesCreated7d"`
+	EsCreated7d         int `json:"esCreated7d"`
+	InterviewsCreated7d int `json:"interviewsCreated7d"`
+	NewUsers7d          int `json:"newUsers7d"`
+	TotalCompanies      int `json:"totalCompanies"`
+	TotalEs             int `json:"totalEs"`
+	TotalInterviews     int `json:"totalInterviews"`
+	TotalUsers          int `json:"totalUsers"`
+}
+
+// AptitudeAnswers 適性診断の回答
+type AptitudeAnswers struct {
+	// Achievements 誇りに思う達成
+	Achievements string `json:"achievements"`
+
+	// Dislike 苦手・避けたいこと
+	Dislike string `json:"dislike"`
+
+	// Enjoy 好きな業務・没頭できること
+	Enjoy string `json:"enjoy"`
+
+	// IndustryWish 興味のある業界
+	IndustryWish string `json:"industryWish"`
+
+	// Interests 興味のある領域
+	Interests []string `json:"interests"`
+
+	// Location 希望勤務地・働き方
+	Location string `json:"location"`
+
+	// Mbti MBTI
+	Mbti string `json:"mbti"`
+
+	// OtherNotes 補足メモ
+	OtherNotes string `json:"otherNotes"`
+
+	// RoleWish 興味のある職種
+	RoleWish string `json:"roleWish"`
+
+	// Strengths 強み
+	Strengths []string `json:"strengths"`
+
+	// Values 価値観
+	Values []string `json:"values"`
+
+	// WorkStyle 働き方の希望
+	WorkStyle string `json:"workStyle"`
+}
+
+// AptitudeResult defines model for AptitudeResult.
+type AptitudeResult struct {
+	// AiResult AI適性診断の診断結果
+	AiResult *string `json:"aiResult"`
+
+	// Answers 適性診断の回答
+	Answers   AptitudeAnswers    `json:"answers"`
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+}
+
+// AptitudeSubmitted defines model for AptitudeSubmitted.
+type AptitudeSubmitted struct {
+	Result AptitudeResult `json:"result"`
+
+	// Xp XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+	Xp XpResult `json:"xp"`
+}
+
+// CalendarEventCreate defines model for CalendarEventCreate.
+type CalendarEventCreate struct {
+	CompanyId *openapi_types.UUID `json:"companyId,omitempty"`
+	Date      openapi_types.Date  `json:"date"`
+	Time      *string             `json:"time,omitempty"`
+	Title     string              `json:"title"`
+
+	// Type 予定の種類。日本語の表示名はフロントエンドが持つ
+	Type *CalendarEventType `json:"type,omitempty"`
+}
+
+// CalendarEventType 予定の種類。日本語の表示名はフロントエンドが持つ
+type CalendarEventType string
+
+// CalendarEventUpdate defines model for CalendarEventUpdate.
+type CalendarEventUpdate struct {
+	CompanyId nullable.Nullable[string] `json:"companyId,omitempty"`
+	Date      *openapi_types.Date       `json:"date,omitempty"`
+	Time      nullable.Nullable[string] `json:"time,omitempty"`
+	Title     *string                   `json:"title,omitempty"`
+
+	// Type 予定の種類。日本語の表示名はフロントエンドが持つ
+	Type *CalendarEventType `json:"type,omitempty"`
+}
+
+// CalendarItem カレンダーの1件。source が event ならユーザーが登録した予定（id は予定のID）、es_deadline ならESの締切（id はESのID）
+type CalendarItem struct {
+	Company *CompanySummary    `json:"company"`
+	Date    openapi_types.Date `json:"date"`
+	Id      openapi_types.UUID `json:"id"`
+	Source  CalendarItemSource `json:"source"`
+
+	// Time 時刻（HH:MM）
+	Time  *string `json:"time"`
+	Title string  `json:"title"`
+
+	// Type 予定の種類。日本語の表示名はフロントエンドが持つ
+	Type CalendarEventType `json:"type"`
+}
+
+// CalendarItemSource defines model for CalendarItem.Source.
+type CalendarItemSource string
+
 // Company defines model for Company.
 type Company struct {
 	// AiResult AI企業分析の分析結果
@@ -200,6 +391,12 @@ type CompanyUpdate struct {
 	// Stage 選考状況。日本語の表示名はフロントエンドが持つ
 	Stage *CompanyStage `json:"stage,omitempty"`
 	Url   *string       `json:"url,omitempty"`
+}
+
+// ContactRequest defines model for ContactRequest.
+type ContactRequest struct {
+	Message string `json:"message"`
+	Subject string `json:"subject"`
 }
 
 // EsEntry defines model for EsEntry.
@@ -439,6 +636,145 @@ type ProfileUpdate struct {
 	University     *string `json:"university,omitempty"`
 }
 
+// SelfAnalysisAnswers 自己分析の回答
+type SelfAnalysisAnswers struct {
+	// Failures 失敗体験と学び
+	Failures string `json:"failures"`
+
+	// Future 将来像（3〜5年後）
+	Future string `json:"future"`
+
+	// Motivation モチベーションの源泉
+	Motivation string `json:"motivation"`
+
+	// Strengths 強み・得意なこと
+	Strengths string `json:"strengths"`
+
+	// Successes 成功体験
+	Successes string `json:"successes"`
+
+	// Values 価値観
+	Values string `json:"values"`
+
+	// WorkStyle 働き方の好み
+	WorkStyle string `json:"workStyle"`
+}
+
+// SelfAnalysisResult defines model for SelfAnalysisResult.
+type SelfAnalysisResult struct {
+	// AiResult AI自己分析の分析結果
+	AiResult *string `json:"aiResult"`
+
+	// Answers 自己分析の回答
+	Answers   SelfAnalysisAnswers `json:"answers"`
+	CreatedAt time.Time           `json:"createdAt"`
+	Id        openapi_types.UUID  `json:"id"`
+}
+
+// SelfAnalysisSubmitted defines model for SelfAnalysisSubmitted.
+type SelfAnalysisSubmitted struct {
+	Result SelfAnalysisResult `json:"result"`
+
+	// Xp XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+	Xp XpResult `json:"xp"`
+}
+
+// WebtestAnswer defines model for WebtestAnswer.
+type WebtestAnswer struct {
+	Answer    string `json:"answer"`
+	TimeSpent *int   `json:"timeSpent,omitempty"`
+}
+
+// WebtestAnswered defines model for WebtestAnswered.
+type WebtestAnswered struct {
+	Attempt WebtestAttempt `json:"attempt"`
+
+	// Xp XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+	Xp XpResult `json:"xp"`
+}
+
+// WebtestAttempt defines model for WebtestAttempt.
+type WebtestAttempt struct {
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+	IsCorrect bool               `json:"isCorrect"`
+
+	// TimeSpent かかった時間（秒）
+	TimeSpent *int `json:"timeSpent"`
+}
+
+// WebtestQuestionCreate defines model for WebtestQuestionCreate.
+type WebtestQuestionCreate struct {
+	Answer      string    `json:"answer"`
+	Body        string    `json:"body"`
+	Category    *string   `json:"category,omitempty"`
+	Choices     *[]string `json:"choices,omitempty"`
+	Difficulty  *string   `json:"difficulty,omitempty"`
+	Explanation *string   `json:"explanation,omitempty"`
+	Format      *string   `json:"format,omitempty"`
+	TestType    *string   `json:"testType,omitempty"`
+	TimeLimit   *int      `json:"timeLimit,omitempty"`
+	Title       string    `json:"title"`
+}
+
+// WebtestQuestionCreated defines model for WebtestQuestionCreated.
+type WebtestQuestionCreated struct {
+	Question WebtestQuestionDetail `json:"question"`
+
+	// Xp XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+	Xp XpResult `json:"xp"`
+}
+
+// WebtestQuestionDetail defines model for WebtestQuestionDetail.
+type WebtestQuestionDetail struct {
+	Answer string `json:"answer"`
+
+	// Attempts 解答の記録（新しい順）
+	Attempts    []WebtestAttempt   `json:"attempts"`
+	Body        string             `json:"body"`
+	Category    *string            `json:"category"`
+	Choices     []string           `json:"choices"`
+	CreatedAt   time.Time          `json:"createdAt"`
+	Difficulty  *string            `json:"difficulty"`
+	Explanation *string            `json:"explanation"`
+	Format      *string            `json:"format"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// TestType テストの種類（SPI・玉手箱など）
+	TestType *string `json:"testType"`
+
+	// TimeLimit 制限時間（秒）
+	TimeLimit *int   `json:"timeLimit"`
+	Title     string `json:"title"`
+}
+
+// WebtestQuestionSummary defines model for WebtestQuestionSummary.
+type WebtestQuestionSummary struct {
+	Category   *string            `json:"category"`
+	CreatedAt  time.Time          `json:"createdAt"`
+	Difficulty *string            `json:"difficulty"`
+	Format     *string            `json:"format"`
+	Id         openapi_types.UUID `json:"id"`
+
+	// TestType テストの種類（SPI・玉手箱など）
+	TestType *string `json:"testType"`
+
+	// TimeLimit 制限時間（秒）
+	TimeLimit *int   `json:"timeLimit"`
+	Title     string `json:"title"`
+}
+
+// XpAction XPが付いた操作。日本語の表示名はフロントエンドが持つ
+type XpAction string
+
+// XpLog defines model for XpLog.
+type XpLog struct {
+	// Action XPが付いた操作。日本語の表示名はフロントエンドが持つ
+	Action    XpAction  `json:"action"`
+	CreatedAt time.Time `json:"createdAt"`
+	Xp        int       `json:"xp"`
+}
+
 // XpResult XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
 type XpResult struct {
 	// Awarded この操作で付与されたXP
@@ -454,6 +790,9 @@ type XpResult struct {
 	Total int `json:"total"`
 }
 
+// CalendarEventId defines model for CalendarEventId.
+type CalendarEventId = openapi_types.UUID
+
 // CompanyId defines model for CompanyId.
 type CompanyId = openapi_types.UUID
 
@@ -462,6 +801,21 @@ type EsEntryId = openapi_types.UUID
 
 // InterviewLogId defines model for InterviewLogId.
 type InterviewLogId = openapi_types.UUID
+
+// WebtestQuestionId defines model for WebtestQuestionId.
+type WebtestQuestionId = openapi_types.UUID
+
+// SubmitAptitudeAnswersJSONBody defines parameters for SubmitAptitudeAnswers.
+type SubmitAptitudeAnswersJSONBody struct {
+	// Answers 適性診断の回答
+	Answers AptitudeAnswers `json:"answers"`
+}
+
+// ListCalendarItemsParams defines parameters for ListCalendarItems.
+type ListCalendarItemsParams struct {
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+	To   *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
 
 // ListCompaniesParams defines parameters for ListCompanies.
 type ListCompaniesParams struct {
@@ -480,11 +834,39 @@ type ListInterviewLogsParams struct {
 	Limit     *int                `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// SubmitSelfAnalysisAnswersJSONBody defines parameters for SubmitSelfAnalysisAnswers.
+type SubmitSelfAnalysisAnswersJSONBody struct {
+	// Answers 自己分析の回答
+	Answers SelfAnalysisAnswers `json:"answers"`
+}
+
+// ListWebtestQuestionsParams defines parameters for ListWebtestQuestions.
+type ListWebtestQuestionsParams struct {
+	TestType *string `form:"testType,omitempty" json:"testType,omitempty"`
+}
+
+// ListXpLogsParams defines parameters for ListXpLogs.
+type ListXpLogsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// SubmitAptitudeAnswersJSONRequestBody defines body for SubmitAptitudeAnswers for application/json ContentType.
+type SubmitAptitudeAnswersJSONRequestBody SubmitAptitudeAnswersJSONBody
+
+// CreateCalendarEventJSONRequestBody defines body for CreateCalendarEvent for application/json ContentType.
+type CreateCalendarEventJSONRequestBody = CalendarEventCreate
+
+// UpdateCalendarEventJSONRequestBody defines body for UpdateCalendarEvent for application/json ContentType.
+type UpdateCalendarEventJSONRequestBody = CalendarEventUpdate
+
 // CreateCompanyJSONRequestBody defines body for CreateCompany for application/json ContentType.
 type CreateCompanyJSONRequestBody = CompanyCreate
 
 // UpdateCompanyJSONRequestBody defines body for UpdateCompany for application/json ContentType.
 type UpdateCompanyJSONRequestBody = CompanyUpdate
+
+// SendContactJSONRequestBody defines body for SendContact for application/json ContentType.
+type SendContactJSONRequestBody = ContactRequest
 
 // CreateEsEntryJSONRequestBody defines body for CreateEsEntry for application/json ContentType.
 type CreateEsEntryJSONRequestBody = EsEntryCreate
@@ -501,8 +883,41 @@ type UpdateInterviewLogJSONRequestBody = InterviewLogUpdate
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = ProfileUpdate
 
+// SubmitSelfAnalysisAnswersJSONRequestBody defines body for SubmitSelfAnalysisAnswers for application/json ContentType.
+type SubmitSelfAnalysisAnswersJSONRequestBody SubmitSelfAnalysisAnswersJSONBody
+
+// CreateWebtestQuestionJSONRequestBody defines body for CreateWebtestQuestion for application/json ContentType.
+type CreateWebtestQuestionJSONRequestBody = WebtestQuestionCreate
+
+// AnswerWebtestQuestionJSONRequestBody defines body for AnswerWebtestQuestion for application/json ContentType.
+type AnswerWebtestQuestionJSONRequestBody = WebtestAnswer
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetAdminStats 利用状況の集計を取得する（開発者のみ）
+	// (GET /v1/admin/stats)
+	GetAdminStats(w http.ResponseWriter, r *http.Request)
+	// GetAptitudeResult 自分の適性診断の回答と診断結果を取得する
+	// (GET /v1/aptitude-result)
+	GetAptitudeResult(w http.ResponseWriter, r *http.Request)
+	// SubmitAptitudeAnswers 適性診断の回答を保存する
+	// (POST /v1/aptitude-result)
+	SubmitAptitudeAnswers(w http.ResponseWriter, r *http.Request)
+	// DiagnoseAptitude AI適性診断を行う
+	// (POST /v1/aptitude-result/diagnosis)
+	DiagnoseAptitude(w http.ResponseWriter, r *http.Request)
+	// ListCalendarItems カレンダーに表示する予定を取得する
+	// (GET /v1/calendar-events)
+	ListCalendarItems(w http.ResponseWriter, r *http.Request, params ListCalendarItemsParams)
+	// CreateCalendarEvent 予定を登録する
+	// (POST /v1/calendar-events)
+	CreateCalendarEvent(w http.ResponseWriter, r *http.Request)
+	// DeleteCalendarEvent 予定を削除する
+	// (DELETE /v1/calendar-events/{calendarEventId})
+	DeleteCalendarEvent(w http.ResponseWriter, r *http.Request, calendarEventId CalendarEventId)
+	// UpdateCalendarEvent 予定を更新する
+	// (PATCH /v1/calendar-events/{calendarEventId})
+	UpdateCalendarEvent(w http.ResponseWriter, r *http.Request, calendarEventId CalendarEventId)
 	// ListCompanies 自分の企業の一覧を取得する
 	// (GET /v1/companies)
 	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
@@ -518,6 +933,12 @@ type ServerInterface interface {
 	// UpdateCompany 企業を更新する
 	// (PATCH /v1/companies/{companyId})
 	UpdateCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId)
+	// AnalyzeCompany AI企業分析を行う
+	// (POST /v1/companies/{companyId}/analysis)
+	AnalyzeCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId)
+	// SendContact 問い合わせを運営にメールで送る
+	// (POST /v1/contact)
+	SendContact(w http.ResponseWriter, r *http.Request)
 	// ListEsEntries 自分のESの一覧を取得する
 	// (GET /v1/es-entries)
 	ListEsEntries(w http.ResponseWriter, r *http.Request, params ListEsEntriesParams)
@@ -533,6 +954,9 @@ type ServerInterface interface {
 	// UpdateEsEntry ESを更新する
 	// (PATCH /v1/es-entries/{esEntryId})
 	UpdateEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId)
+	// ReviewEsEntry AI添削を行う
+	// (POST /v1/es-entries/{esEntryId}/review)
+	ReviewEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId)
 	// SubmitEsEntry ESを提出済みにする
 	// (POST /v1/es-entries/{esEntryId}/submit)
 	SubmitEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId)
@@ -554,12 +978,39 @@ type ServerInterface interface {
 	// UpdateInterviewLog 面接ログを更新する
 	// (PATCH /v1/interview-logs/{interviewLogId})
 	UpdateInterviewLog(w http.ResponseWriter, r *http.Request, interviewLogId InterviewLogId)
+	// ReviewInterviewLog AI振り返りを行う
+	// (POST /v1/interview-logs/{interviewLogId}/review)
+	ReviewInterviewLog(w http.ResponseWriter, r *http.Request, interviewLogId InterviewLogId)
 	// GetMe 自分のプロフィールとXP・レベルを取得する
 	// (GET /v1/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
 	// UpdateMe 自分のプロフィールを更新する
 	// (PATCH /v1/me)
 	UpdateMe(w http.ResponseWriter, r *http.Request)
+	// GetSelfAnalysisResult 自分の自己分析の回答と分析結果を取得する
+	// (GET /v1/self-analysis-result)
+	GetSelfAnalysisResult(w http.ResponseWriter, r *http.Request)
+	// SubmitSelfAnalysisAnswers 自己分析の回答を保存する
+	// (POST /v1/self-analysis-result)
+	SubmitSelfAnalysisAnswers(w http.ResponseWriter, r *http.Request)
+	// AnalyzeSelf AI自己分析を行う
+	// (POST /v1/self-analysis-result/analysis)
+	AnalyzeSelf(w http.ResponseWriter, r *http.Request)
+	// ListWebtestQuestions 自分が作ったWebテストの問題の一覧を取得する
+	// (GET /v1/webtest-questions)
+	ListWebtestQuestions(w http.ResponseWriter, r *http.Request, params ListWebtestQuestionsParams)
+	// CreateWebtestQuestion Webテストの問題を作る
+	// (POST /v1/webtest-questions)
+	CreateWebtestQuestion(w http.ResponseWriter, r *http.Request)
+	// GetWebtestQuestion 問題と、これまでの解答の記録を取得する
+	// (GET /v1/webtest-questions/{webtestQuestionId})
+	GetWebtestQuestion(w http.ResponseWriter, r *http.Request, webtestQuestionId WebtestQuestionId)
+	// AnswerWebtestQuestion 問題に解答する
+	// (POST /v1/webtest-questions/{webtestQuestionId}/attempts)
+	AnswerWebtestQuestion(w http.ResponseWriter, r *http.Request, webtestQuestionId WebtestQuestionId)
+	// ListXpLogs XPの獲得履歴を取得する
+	// (GET /v1/xp-logs)
+	ListXpLogs(w http.ResponseWriter, r *http.Request, params ListXpLogsParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -570,6 +1021,174 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetAdminStats operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminStats(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminStats(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAptitudeResult operation middleware
+func (siw *ServerInterfaceWrapper) GetAptitudeResult(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAptitudeResult(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitAptitudeAnswers operation middleware
+func (siw *ServerInterfaceWrapper) SubmitAptitudeAnswers(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitAptitudeAnswers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiagnoseAptitude operation middleware
+func (siw *ServerInterfaceWrapper) DiagnoseAptitude(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiagnoseAptitude(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCalendarItems operation middleware
+func (siw *ServerInterfaceWrapper) ListCalendarItems(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCalendarItemsParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCalendarItems(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCalendarEvent operation middleware
+func (siw *ServerInterfaceWrapper) CreateCalendarEvent(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCalendarEvent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCalendarEvent operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCalendarEvent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "calendarEventId" -------------
+	var calendarEventId CalendarEventId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "calendarEventId", r.PathValue("calendarEventId"), &calendarEventId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "calendarEventId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCalendarEvent(w, r, calendarEventId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCalendarEvent operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCalendarEvent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "calendarEventId" -------------
+	var calendarEventId CalendarEventId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "calendarEventId", r.PathValue("calendarEventId"), &calendarEventId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "calendarEventId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCalendarEvent(w, r, calendarEventId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListCompanies operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.Request) {
@@ -687,6 +1306,46 @@ func (siw *ServerInterfaceWrapper) UpdateCompany(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateCompany(w, r, companyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnalyzeCompany operation middleware
+func (siw *ServerInterfaceWrapper) AnalyzeCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "companyId" -------------
+	var companyId CompanyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "companyId", r.PathValue("companyId"), &companyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "companyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnalyzeCompany(w, r, companyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendContact operation middleware
+func (siw *ServerInterfaceWrapper) SendContact(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendContact(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -825,6 +1484,32 @@ func (siw *ServerInterfaceWrapper) UpdateEsEntry(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateEsEntry(w, r, esEntryId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReviewEsEntry operation middleware
+func (siw *ServerInterfaceWrapper) ReviewEsEntry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "esEntryId" -------------
+	var esEntryId EsEntryId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "esEntryId", r.PathValue("esEntryId"), &esEntryId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "esEntryId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReviewEsEntry(w, r, esEntryId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1012,6 +1697,32 @@ func (siw *ServerInterfaceWrapper) UpdateInterviewLog(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ReviewInterviewLog operation middleware
+func (siw *ServerInterfaceWrapper) ReviewInterviewLog(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "interviewLogId" -------------
+	var interviewLogId InterviewLogId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "interviewLogId", r.PathValue("interviewLogId"), &interviewLogId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "interviewLogId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReviewInterviewLog(w, r, interviewLogId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMe operation middleware
 func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
 
@@ -1031,6 +1742,180 @@ func (siw *ServerInterfaceWrapper) UpdateMe(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSelfAnalysisResult operation middleware
+func (siw *ServerInterfaceWrapper) GetSelfAnalysisResult(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSelfAnalysisResult(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitSelfAnalysisAnswers operation middleware
+func (siw *ServerInterfaceWrapper) SubmitSelfAnalysisAnswers(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitSelfAnalysisAnswers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnalyzeSelf operation middleware
+func (siw *ServerInterfaceWrapper) AnalyzeSelf(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnalyzeSelf(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListWebtestQuestions operation middleware
+func (siw *ServerInterfaceWrapper) ListWebtestQuestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListWebtestQuestionsParams
+
+	// ------------- Optional query parameter "testType" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "testType", r.URL.Query(), &params.TestType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "testType"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "testType", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWebtestQuestions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateWebtestQuestion operation middleware
+func (siw *ServerInterfaceWrapper) CreateWebtestQuestion(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateWebtestQuestion(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetWebtestQuestion operation middleware
+func (siw *ServerInterfaceWrapper) GetWebtestQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "webtestQuestionId" -------------
+	var webtestQuestionId WebtestQuestionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "webtestQuestionId", r.PathValue("webtestQuestionId"), &webtestQuestionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "webtestQuestionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWebtestQuestion(w, r, webtestQuestionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerWebtestQuestion operation middleware
+func (siw *ServerInterfaceWrapper) AnswerWebtestQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "webtestQuestionId" -------------
+	var webtestQuestionId WebtestQuestionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "webtestQuestionId", r.PathValue("webtestQuestionId"), &webtestQuestionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "webtestQuestionId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerWebtestQuestion(w, r, webtestQuestionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListXpLogs operation middleware
+func (siw *ServerInterfaceWrapper) ListXpLogs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListXpLogsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListXpLogs(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1168,22 +2053,346 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/companies/{companyId}", wrapper.DeleteCompany)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/companies/{companyId}", wrapper.GetCompany)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/companies/{companyId}", wrapper.UpdateCompany)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/companies/{companyId}/analysis", wrapper.AnalyzeCompany)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/es-entries", wrapper.ListEsEntries)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/es-entries", wrapper.CreateEsEntry)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/es-entries/{esEntryId}", wrapper.DeleteEsEntry)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/es-entries/{esEntryId}", wrapper.GetEsEntry)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/es-entries/{esEntryId}", wrapper.UpdateEsEntry)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/es-entries/{esEntryId}/submit", wrapper.SubmitEsEntry)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/es-entries/{esEntryId}/review", wrapper.ReviewEsEntry)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/interview-logs", wrapper.ListInterviewLogs)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/interview-logs", wrapper.CreateInterviewLog)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/interview-logs/{interviewLogId}", wrapper.DeleteInterviewLog)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/interview-logs/{interviewLogId}", wrapper.GetInterviewLog)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/interview-logs/{interviewLogId}", wrapper.UpdateInterviewLog)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/interview-logs/{interviewLogId}/review", wrapper.ReviewInterviewLog)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/calendar-events", wrapper.ListCalendarItems)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/calendar-events", wrapper.CreateCalendarEvent)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/calendar-events/{calendarEventId}", wrapper.DeleteCalendarEvent)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/calendar-events/{calendarEventId}", wrapper.UpdateCalendarEvent)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/xp-logs", wrapper.ListXpLogs)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/aptitude-result", wrapper.GetAptitudeResult)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/aptitude-result", wrapper.SubmitAptitudeAnswers)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/aptitude-result/diagnosis", wrapper.DiagnoseAptitude)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/self-analysis-result", wrapper.GetSelfAnalysisResult)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/self-analysis-result", wrapper.SubmitSelfAnalysisAnswers)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/self-analysis-result/analysis", wrapper.AnalyzeSelf)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/webtest-questions", wrapper.ListWebtestQuestions)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/webtest-questions", wrapper.CreateWebtestQuestion)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/webtest-questions/{webtestQuestionId}", wrapper.GetWebtestQuestion)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/webtest-questions/{webtestQuestionId}/attempts", wrapper.AnswerWebtestQuestion)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/contact", wrapper.SendContact)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/admin/stats", wrapper.GetAdminStats)
 
 	return m
 }
 
 type ProblemApplicationProblemPlusJSONResponse Problem
+
+type GetAdminStatsRequestObject struct {
+}
+
+type GetAdminStatsResponseObject interface {
+	VisitGetAdminStatsResponse(w http.ResponseWriter) error
+}
+
+type GetAdminStats200JSONResponse AdminStats
+
+func (response GetAdminStats200JSONResponse) VisitGetAdminStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAdminStatsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAdminStatsdefaultApplicationProblemPlusJSONResponse) VisitGetAdminStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAptitudeResultRequestObject struct {
+}
+
+type GetAptitudeResultResponseObject interface {
+	VisitGetAptitudeResultResponse(w http.ResponseWriter) error
+}
+
+type GetAptitudeResult200JSONResponse AptitudeResult
+
+func (response GetAptitudeResult200JSONResponse) VisitGetAptitudeResultResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAptitudeResultdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetAptitudeResultdefaultApplicationProblemPlusJSONResponse) VisitGetAptitudeResultResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitAptitudeAnswersRequestObject struct {
+	Body *SubmitAptitudeAnswersJSONRequestBody
+}
+
+type SubmitAptitudeAnswersResponseObject interface {
+	VisitSubmitAptitudeAnswersResponse(w http.ResponseWriter) error
+}
+
+type SubmitAptitudeAnswers201JSONResponse AptitudeSubmitted
+
+func (response SubmitAptitudeAnswers201JSONResponse) VisitSubmitAptitudeAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitAptitudeAnswersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SubmitAptitudeAnswersdefaultApplicationProblemPlusJSONResponse) VisitSubmitAptitudeAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DiagnoseAptitudeRequestObject struct {
+}
+
+type DiagnoseAptitudeResponseObject interface {
+	VisitDiagnoseAptitudeResponse(w http.ResponseWriter) error
+}
+
+type DiagnoseAptitude200JSONResponse AptitudeResult
+
+func (response DiagnoseAptitude200JSONResponse) VisitDiagnoseAptitudeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DiagnoseAptitudedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DiagnoseAptitudedefaultApplicationProblemPlusJSONResponse) VisitDiagnoseAptitudeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCalendarItemsRequestObject struct {
+	Params ListCalendarItemsParams
+}
+
+type ListCalendarItemsResponseObject interface {
+	VisitListCalendarItemsResponse(w http.ResponseWriter) error
+}
+
+type ListCalendarItems200JSONResponse []CalendarItem
+
+func (response ListCalendarItems200JSONResponse) VisitListCalendarItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCalendarItemsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListCalendarItemsdefaultApplicationProblemPlusJSONResponse) VisitListCalendarItemsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCalendarEventRequestObject struct {
+	Body *CreateCalendarEventJSONRequestBody
+}
+
+type CreateCalendarEventResponseObject interface {
+	VisitCreateCalendarEventResponse(w http.ResponseWriter) error
+}
+
+type CreateCalendarEvent201JSONResponse CalendarItem
+
+func (response CreateCalendarEvent201JSONResponse) VisitCreateCalendarEventResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCalendarEventdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateCalendarEventdefaultApplicationProblemPlusJSONResponse) VisitCreateCalendarEventResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCalendarEventRequestObject struct {
+	CalendarEventId CalendarEventId `json:"calendarEventId"`
+}
+
+type DeleteCalendarEventResponseObject interface {
+	VisitDeleteCalendarEventResponse(w http.ResponseWriter) error
+}
+
+type DeleteCalendarEvent204Response struct {
+}
+
+func (response DeleteCalendarEvent204Response) VisitDeleteCalendarEventResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCalendarEventdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteCalendarEventdefaultApplicationProblemPlusJSONResponse) VisitDeleteCalendarEventResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCalendarEventRequestObject struct {
+	CalendarEventId CalendarEventId `json:"calendarEventId"`
+	Body            *UpdateCalendarEventJSONRequestBody
+}
+
+type UpdateCalendarEventResponseObject interface {
+	VisitUpdateCalendarEventResponse(w http.ResponseWriter) error
+}
+
+type UpdateCalendarEvent200JSONResponse CalendarItem
+
+func (response UpdateCalendarEvent200JSONResponse) VisitUpdateCalendarEventResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCalendarEventdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateCalendarEventdefaultApplicationProblemPlusJSONResponse) VisitUpdateCalendarEventResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListCompaniesRequestObject struct {
 	Params ListCompaniesParams
@@ -1375,6 +2584,78 @@ func (response UpdateCompanydefaultApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
+type AnalyzeCompanyRequestObject struct {
+	CompanyId CompanyId `json:"companyId"`
+}
+
+type AnalyzeCompanyResponseObject interface {
+	VisitAnalyzeCompanyResponse(w http.ResponseWriter) error
+}
+
+type AnalyzeCompany200JSONResponse Company
+
+func (response AnalyzeCompany200JSONResponse) VisitAnalyzeCompanyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeCompanydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AnalyzeCompanydefaultApplicationProblemPlusJSONResponse) VisitAnalyzeCompanyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendContactRequestObject struct {
+	Body *SendContactJSONRequestBody
+}
+
+type SendContactResponseObject interface {
+	VisitSendContactResponse(w http.ResponseWriter) error
+}
+
+type SendContact204Response struct {
+}
+
+func (response SendContact204Response) VisitSendContactResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SendContactdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SendContactdefaultApplicationProblemPlusJSONResponse) VisitSendContactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListEsEntriesRequestObject struct {
 	Params ListEsEntriesParams
 }
@@ -1554,6 +2835,45 @@ type UpdateEsEntrydefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateEsEntrydefaultApplicationProblemPlusJSONResponse) VisitUpdateEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewEsEntryRequestObject struct {
+	EsEntryId EsEntryId `json:"esEntryId"`
+}
+
+type ReviewEsEntryResponseObject interface {
+	VisitReviewEsEntryResponse(w http.ResponseWriter) error
+}
+
+type ReviewEsEntry200JSONResponse EsEntry
+
+func (response ReviewEsEntry200JSONResponse) VisitReviewEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewEsEntrydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ReviewEsEntrydefaultApplicationProblemPlusJSONResponse) VisitReviewEsEntryResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1832,6 +3152,45 @@ func (response UpdateInterviewLogdefaultApplicationProblemPlusJSONResponse) Visi
 	return err
 }
 
+type ReviewInterviewLogRequestObject struct {
+	InterviewLogId InterviewLogId `json:"interviewLogId"`
+}
+
+type ReviewInterviewLogResponseObject interface {
+	VisitReviewInterviewLogResponse(w http.ResponseWriter) error
+}
+
+type ReviewInterviewLog200JSONResponse InterviewLog
+
+func (response ReviewInterviewLog200JSONResponse) VisitReviewInterviewLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewInterviewLogdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ReviewInterviewLogdefaultApplicationProblemPlusJSONResponse) VisitReviewInterviewLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetMeRequestObject struct {
 }
 
@@ -1909,8 +3268,343 @@ func (response UpdateMedefaultApplicationProblemPlusJSONResponse) VisitUpdateMeR
 	return err
 }
 
+type GetSelfAnalysisResultRequestObject struct {
+}
+
+type GetSelfAnalysisResultResponseObject interface {
+	VisitGetSelfAnalysisResultResponse(w http.ResponseWriter) error
+}
+
+type GetSelfAnalysisResult200JSONResponse SelfAnalysisResult
+
+func (response GetSelfAnalysisResult200JSONResponse) VisitGetSelfAnalysisResultResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSelfAnalysisResultdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetSelfAnalysisResultdefaultApplicationProblemPlusJSONResponse) VisitGetSelfAnalysisResultResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitSelfAnalysisAnswersRequestObject struct {
+	Body *SubmitSelfAnalysisAnswersJSONRequestBody
+}
+
+type SubmitSelfAnalysisAnswersResponseObject interface {
+	VisitSubmitSelfAnalysisAnswersResponse(w http.ResponseWriter) error
+}
+
+type SubmitSelfAnalysisAnswers201JSONResponse SelfAnalysisSubmitted
+
+func (response SubmitSelfAnalysisAnswers201JSONResponse) VisitSubmitSelfAnalysisAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitSelfAnalysisAnswersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SubmitSelfAnalysisAnswersdefaultApplicationProblemPlusJSONResponse) VisitSubmitSelfAnalysisAnswersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeSelfRequestObject struct {
+}
+
+type AnalyzeSelfResponseObject interface {
+	VisitAnalyzeSelfResponse(w http.ResponseWriter) error
+}
+
+type AnalyzeSelf200JSONResponse SelfAnalysisResult
+
+func (response AnalyzeSelf200JSONResponse) VisitAnalyzeSelfResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeSelfdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AnalyzeSelfdefaultApplicationProblemPlusJSONResponse) VisitAnalyzeSelfResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListWebtestQuestionsRequestObject struct {
+	Params ListWebtestQuestionsParams
+}
+
+type ListWebtestQuestionsResponseObject interface {
+	VisitListWebtestQuestionsResponse(w http.ResponseWriter) error
+}
+
+type ListWebtestQuestions200JSONResponse []WebtestQuestionSummary
+
+func (response ListWebtestQuestions200JSONResponse) VisitListWebtestQuestionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListWebtestQuestionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListWebtestQuestionsdefaultApplicationProblemPlusJSONResponse) VisitListWebtestQuestionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateWebtestQuestionRequestObject struct {
+	Body *CreateWebtestQuestionJSONRequestBody
+}
+
+type CreateWebtestQuestionResponseObject interface {
+	VisitCreateWebtestQuestionResponse(w http.ResponseWriter) error
+}
+
+type CreateWebtestQuestion201JSONResponse WebtestQuestionCreated
+
+func (response CreateWebtestQuestion201JSONResponse) VisitCreateWebtestQuestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateWebtestQuestiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateWebtestQuestiondefaultApplicationProblemPlusJSONResponse) VisitCreateWebtestQuestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWebtestQuestionRequestObject struct {
+	WebtestQuestionId WebtestQuestionId `json:"webtestQuestionId"`
+}
+
+type GetWebtestQuestionResponseObject interface {
+	VisitGetWebtestQuestionResponse(w http.ResponseWriter) error
+}
+
+type GetWebtestQuestion200JSONResponse WebtestQuestionDetail
+
+func (response GetWebtestQuestion200JSONResponse) VisitGetWebtestQuestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWebtestQuestiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetWebtestQuestiondefaultApplicationProblemPlusJSONResponse) VisitGetWebtestQuestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnswerWebtestQuestionRequestObject struct {
+	WebtestQuestionId WebtestQuestionId `json:"webtestQuestionId"`
+	Body              *AnswerWebtestQuestionJSONRequestBody
+}
+
+type AnswerWebtestQuestionResponseObject interface {
+	VisitAnswerWebtestQuestionResponse(w http.ResponseWriter) error
+}
+
+type AnswerWebtestQuestion201JSONResponse WebtestAnswered
+
+func (response AnswerWebtestQuestion201JSONResponse) VisitAnswerWebtestQuestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnswerWebtestQuestiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AnswerWebtestQuestiondefaultApplicationProblemPlusJSONResponse) VisitAnswerWebtestQuestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListXpLogsRequestObject struct {
+	Params ListXpLogsParams
+}
+
+type ListXpLogsResponseObject interface {
+	VisitListXpLogsResponse(w http.ResponseWriter) error
+}
+
+type ListXpLogs200JSONResponse []XpLog
+
+func (response ListXpLogs200JSONResponse) VisitListXpLogsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListXpLogsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListXpLogsdefaultApplicationProblemPlusJSONResponse) VisitListXpLogsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetAdminStats 利用状況の集計を取得する（開発者のみ）
+	// (GET /v1/admin/stats)
+	GetAdminStats(ctx context.Context, request GetAdminStatsRequestObject) (GetAdminStatsResponseObject, error)
+	// GetAptitudeResult 自分の適性診断の回答と診断結果を取得する
+	// (GET /v1/aptitude-result)
+	GetAptitudeResult(ctx context.Context, request GetAptitudeResultRequestObject) (GetAptitudeResultResponseObject, error)
+	// SubmitAptitudeAnswers 適性診断の回答を保存する
+	// (POST /v1/aptitude-result)
+	SubmitAptitudeAnswers(ctx context.Context, request SubmitAptitudeAnswersRequestObject) (SubmitAptitudeAnswersResponseObject, error)
+	// DiagnoseAptitude AI適性診断を行う
+	// (POST /v1/aptitude-result/diagnosis)
+	DiagnoseAptitude(ctx context.Context, request DiagnoseAptitudeRequestObject) (DiagnoseAptitudeResponseObject, error)
+	// ListCalendarItems カレンダーに表示する予定を取得する
+	// (GET /v1/calendar-events)
+	ListCalendarItems(ctx context.Context, request ListCalendarItemsRequestObject) (ListCalendarItemsResponseObject, error)
+	// CreateCalendarEvent 予定を登録する
+	// (POST /v1/calendar-events)
+	CreateCalendarEvent(ctx context.Context, request CreateCalendarEventRequestObject) (CreateCalendarEventResponseObject, error)
+	// DeleteCalendarEvent 予定を削除する
+	// (DELETE /v1/calendar-events/{calendarEventId})
+	DeleteCalendarEvent(ctx context.Context, request DeleteCalendarEventRequestObject) (DeleteCalendarEventResponseObject, error)
+	// UpdateCalendarEvent 予定を更新する
+	// (PATCH /v1/calendar-events/{calendarEventId})
+	UpdateCalendarEvent(ctx context.Context, request UpdateCalendarEventRequestObject) (UpdateCalendarEventResponseObject, error)
 	// ListCompanies 自分の企業の一覧を取得する
 	// (GET /v1/companies)
 	ListCompanies(ctx context.Context, request ListCompaniesRequestObject) (ListCompaniesResponseObject, error)
@@ -1926,6 +3620,12 @@ type StrictServerInterface interface {
 	// UpdateCompany 企業を更新する
 	// (PATCH /v1/companies/{companyId})
 	UpdateCompany(ctx context.Context, request UpdateCompanyRequestObject) (UpdateCompanyResponseObject, error)
+	// AnalyzeCompany AI企業分析を行う
+	// (POST /v1/companies/{companyId}/analysis)
+	AnalyzeCompany(ctx context.Context, request AnalyzeCompanyRequestObject) (AnalyzeCompanyResponseObject, error)
+	// SendContact 問い合わせを運営にメールで送る
+	// (POST /v1/contact)
+	SendContact(ctx context.Context, request SendContactRequestObject) (SendContactResponseObject, error)
 	// ListEsEntries 自分のESの一覧を取得する
 	// (GET /v1/es-entries)
 	ListEsEntries(ctx context.Context, request ListEsEntriesRequestObject) (ListEsEntriesResponseObject, error)
@@ -1941,6 +3641,9 @@ type StrictServerInterface interface {
 	// UpdateEsEntry ESを更新する
 	// (PATCH /v1/es-entries/{esEntryId})
 	UpdateEsEntry(ctx context.Context, request UpdateEsEntryRequestObject) (UpdateEsEntryResponseObject, error)
+	// ReviewEsEntry AI添削を行う
+	// (POST /v1/es-entries/{esEntryId}/review)
+	ReviewEsEntry(ctx context.Context, request ReviewEsEntryRequestObject) (ReviewEsEntryResponseObject, error)
 	// SubmitEsEntry ESを提出済みにする
 	// (POST /v1/es-entries/{esEntryId}/submit)
 	SubmitEsEntry(ctx context.Context, request SubmitEsEntryRequestObject) (SubmitEsEntryResponseObject, error)
@@ -1962,12 +3665,39 @@ type StrictServerInterface interface {
 	// UpdateInterviewLog 面接ログを更新する
 	// (PATCH /v1/interview-logs/{interviewLogId})
 	UpdateInterviewLog(ctx context.Context, request UpdateInterviewLogRequestObject) (UpdateInterviewLogResponseObject, error)
+	// ReviewInterviewLog AI振り返りを行う
+	// (POST /v1/interview-logs/{interviewLogId}/review)
+	ReviewInterviewLog(ctx context.Context, request ReviewInterviewLogRequestObject) (ReviewInterviewLogResponseObject, error)
 	// GetMe 自分のプロフィールとXP・レベルを取得する
 	// (GET /v1/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
 	// UpdateMe 自分のプロフィールを更新する
 	// (PATCH /v1/me)
 	UpdateMe(ctx context.Context, request UpdateMeRequestObject) (UpdateMeResponseObject, error)
+	// GetSelfAnalysisResult 自分の自己分析の回答と分析結果を取得する
+	// (GET /v1/self-analysis-result)
+	GetSelfAnalysisResult(ctx context.Context, request GetSelfAnalysisResultRequestObject) (GetSelfAnalysisResultResponseObject, error)
+	// SubmitSelfAnalysisAnswers 自己分析の回答を保存する
+	// (POST /v1/self-analysis-result)
+	SubmitSelfAnalysisAnswers(ctx context.Context, request SubmitSelfAnalysisAnswersRequestObject) (SubmitSelfAnalysisAnswersResponseObject, error)
+	// AnalyzeSelf AI自己分析を行う
+	// (POST /v1/self-analysis-result/analysis)
+	AnalyzeSelf(ctx context.Context, request AnalyzeSelfRequestObject) (AnalyzeSelfResponseObject, error)
+	// ListWebtestQuestions 自分が作ったWebテストの問題の一覧を取得する
+	// (GET /v1/webtest-questions)
+	ListWebtestQuestions(ctx context.Context, request ListWebtestQuestionsRequestObject) (ListWebtestQuestionsResponseObject, error)
+	// CreateWebtestQuestion Webテストの問題を作る
+	// (POST /v1/webtest-questions)
+	CreateWebtestQuestion(ctx context.Context, request CreateWebtestQuestionRequestObject) (CreateWebtestQuestionResponseObject, error)
+	// GetWebtestQuestion 問題と、これまでの解答の記録を取得する
+	// (GET /v1/webtest-questions/{webtestQuestionId})
+	GetWebtestQuestion(ctx context.Context, request GetWebtestQuestionRequestObject) (GetWebtestQuestionResponseObject, error)
+	// AnswerWebtestQuestion 問題に解答する
+	// (POST /v1/webtest-questions/{webtestQuestionId}/attempts)
+	AnswerWebtestQuestion(ctx context.Context, request AnswerWebtestQuestionRequestObject) (AnswerWebtestQuestionResponseObject, error)
+	// ListXpLogs XPの獲得履歴を取得する
+	// (GET /v1/xp-logs)
+	ListXpLogs(ctx context.Context, request ListXpLogsRequestObject) (ListXpLogsResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -2007,6 +3737,225 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetAdminStats operation middleware
+func (sh *strictHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
+	var request GetAdminStatsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAdminStats(ctx, request.(GetAdminStatsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAdminStats")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAdminStatsResponseObject); ok {
+		if err := validResponse.VisitGetAdminStatsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAptitudeResult operation middleware
+func (sh *strictHandler) GetAptitudeResult(w http.ResponseWriter, r *http.Request) {
+	var request GetAptitudeResultRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAptitudeResult(ctx, request.(GetAptitudeResultRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAptitudeResult")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAptitudeResultResponseObject); ok {
+		if err := validResponse.VisitGetAptitudeResultResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitAptitudeAnswers operation middleware
+func (sh *strictHandler) SubmitAptitudeAnswers(w http.ResponseWriter, r *http.Request) {
+	var request SubmitAptitudeAnswersRequestObject
+
+	var body SubmitAptitudeAnswersJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitAptitudeAnswers(ctx, request.(SubmitAptitudeAnswersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitAptitudeAnswers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitAptitudeAnswersResponseObject); ok {
+		if err := validResponse.VisitSubmitAptitudeAnswersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DiagnoseAptitude operation middleware
+func (sh *strictHandler) DiagnoseAptitude(w http.ResponseWriter, r *http.Request) {
+	var request DiagnoseAptitudeRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DiagnoseAptitude(ctx, request.(DiagnoseAptitudeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DiagnoseAptitude")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DiagnoseAptitudeResponseObject); ok {
+		if err := validResponse.VisitDiagnoseAptitudeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCalendarItems operation middleware
+func (sh *strictHandler) ListCalendarItems(w http.ResponseWriter, r *http.Request, params ListCalendarItemsParams) {
+	var request ListCalendarItemsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCalendarItems(ctx, request.(ListCalendarItemsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCalendarItems")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCalendarItemsResponseObject); ok {
+		if err := validResponse.VisitListCalendarItemsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCalendarEvent operation middleware
+func (sh *strictHandler) CreateCalendarEvent(w http.ResponseWriter, r *http.Request) {
+	var request CreateCalendarEventRequestObject
+
+	var body CreateCalendarEventJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCalendarEvent(ctx, request.(CreateCalendarEventRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCalendarEvent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCalendarEventResponseObject); ok {
+		if err := validResponse.VisitCreateCalendarEventResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCalendarEvent operation middleware
+func (sh *strictHandler) DeleteCalendarEvent(w http.ResponseWriter, r *http.Request, calendarEventId CalendarEventId) {
+	var request DeleteCalendarEventRequestObject
+
+	request.CalendarEventId = calendarEventId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCalendarEvent(ctx, request.(DeleteCalendarEventRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCalendarEvent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCalendarEventResponseObject); ok {
+		if err := validResponse.VisitDeleteCalendarEventResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCalendarEvent operation middleware
+func (sh *strictHandler) UpdateCalendarEvent(w http.ResponseWriter, r *http.Request, calendarEventId CalendarEventId) {
+	var request UpdateCalendarEventRequestObject
+
+	request.CalendarEventId = calendarEventId
+
+	var body UpdateCalendarEventJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCalendarEvent(ctx, request.(UpdateCalendarEventRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCalendarEvent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCalendarEventResponseObject); ok {
+		if err := validResponse.VisitUpdateCalendarEventResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListCompanies operation middleware
@@ -2151,6 +4100,63 @@ func (sh *strictHandler) UpdateCompany(w http.ResponseWriter, r *http.Request, c
 	}
 }
 
+// AnalyzeCompany operation middleware
+func (sh *strictHandler) AnalyzeCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId) {
+	var request AnalyzeCompanyRequestObject
+
+	request.CompanyId = companyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AnalyzeCompany(ctx, request.(AnalyzeCompanyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AnalyzeCompany")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AnalyzeCompanyResponseObject); ok {
+		if err := validResponse.VisitAnalyzeCompanyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SendContact operation middleware
+func (sh *strictHandler) SendContact(w http.ResponseWriter, r *http.Request) {
+	var request SendContactRequestObject
+
+	var body SendContactJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SendContact(ctx, request.(SendContactRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SendContact")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SendContactResponseObject); ok {
+		if err := validResponse.VisitSendContactResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListEsEntries operation middleware
 func (sh *strictHandler) ListEsEntries(w http.ResponseWriter, r *http.Request, params ListEsEntriesParams) {
 	var request ListEsEntriesRequestObject
@@ -2286,6 +4292,32 @@ func (sh *strictHandler) UpdateEsEntry(w http.ResponseWriter, r *http.Request, e
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateEsEntryResponseObject); ok {
 		if err := validResponse.VisitUpdateEsEntryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReviewEsEntry operation middleware
+func (sh *strictHandler) ReviewEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId) {
+	var request ReviewEsEntryRequestObject
+
+	request.EsEntryId = esEntryId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReviewEsEntry(ctx, request.(ReviewEsEntryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReviewEsEntry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReviewEsEntryResponseObject); ok {
+		if err := validResponse.VisitReviewEsEntryResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2485,6 +4517,32 @@ func (sh *strictHandler) UpdateInterviewLog(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// ReviewInterviewLog operation middleware
+func (sh *strictHandler) ReviewInterviewLog(w http.ResponseWriter, r *http.Request, interviewLogId InterviewLogId) {
+	var request ReviewInterviewLogRequestObject
+
+	request.InterviewLogId = interviewLogId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReviewInterviewLog(ctx, request.(ReviewInterviewLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReviewInterviewLog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReviewInterviewLogResponseObject); ok {
+		if err := validResponse.VisitReviewInterviewLogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetMe operation middleware
 func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	var request GetMeRequestObject
@@ -2540,83 +4598,352 @@ func (sh *strictHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetSelfAnalysisResult operation middleware
+func (sh *strictHandler) GetSelfAnalysisResult(w http.ResponseWriter, r *http.Request) {
+	var request GetSelfAnalysisResultRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSelfAnalysisResult(ctx, request.(GetSelfAnalysisResultRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSelfAnalysisResult")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSelfAnalysisResultResponseObject); ok {
+		if err := validResponse.VisitGetSelfAnalysisResultResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitSelfAnalysisAnswers operation middleware
+func (sh *strictHandler) SubmitSelfAnalysisAnswers(w http.ResponseWriter, r *http.Request) {
+	var request SubmitSelfAnalysisAnswersRequestObject
+
+	var body SubmitSelfAnalysisAnswersJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitSelfAnalysisAnswers(ctx, request.(SubmitSelfAnalysisAnswersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitSelfAnalysisAnswers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitSelfAnalysisAnswersResponseObject); ok {
+		if err := validResponse.VisitSubmitSelfAnalysisAnswersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AnalyzeSelf operation middleware
+func (sh *strictHandler) AnalyzeSelf(w http.ResponseWriter, r *http.Request) {
+	var request AnalyzeSelfRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AnalyzeSelf(ctx, request.(AnalyzeSelfRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AnalyzeSelf")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AnalyzeSelfResponseObject); ok {
+		if err := validResponse.VisitAnalyzeSelfResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListWebtestQuestions operation middleware
+func (sh *strictHandler) ListWebtestQuestions(w http.ResponseWriter, r *http.Request, params ListWebtestQuestionsParams) {
+	var request ListWebtestQuestionsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListWebtestQuestions(ctx, request.(ListWebtestQuestionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListWebtestQuestions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListWebtestQuestionsResponseObject); ok {
+		if err := validResponse.VisitListWebtestQuestionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateWebtestQuestion operation middleware
+func (sh *strictHandler) CreateWebtestQuestion(w http.ResponseWriter, r *http.Request) {
+	var request CreateWebtestQuestionRequestObject
+
+	var body CreateWebtestQuestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateWebtestQuestion(ctx, request.(CreateWebtestQuestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateWebtestQuestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateWebtestQuestionResponseObject); ok {
+		if err := validResponse.VisitCreateWebtestQuestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetWebtestQuestion operation middleware
+func (sh *strictHandler) GetWebtestQuestion(w http.ResponseWriter, r *http.Request, webtestQuestionId WebtestQuestionId) {
+	var request GetWebtestQuestionRequestObject
+
+	request.WebtestQuestionId = webtestQuestionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetWebtestQuestion(ctx, request.(GetWebtestQuestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetWebtestQuestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetWebtestQuestionResponseObject); ok {
+		if err := validResponse.VisitGetWebtestQuestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AnswerWebtestQuestion operation middleware
+func (sh *strictHandler) AnswerWebtestQuestion(w http.ResponseWriter, r *http.Request, webtestQuestionId WebtestQuestionId) {
+	var request AnswerWebtestQuestionRequestObject
+
+	request.WebtestQuestionId = webtestQuestionId
+
+	var body AnswerWebtestQuestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AnswerWebtestQuestion(ctx, request.(AnswerWebtestQuestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AnswerWebtestQuestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AnswerWebtestQuestionResponseObject); ok {
+		if err := validResponse.VisitAnswerWebtestQuestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListXpLogs operation middleware
+func (sh *strictHandler) ListXpLogs(w http.ResponseWriter, r *http.Request, params ListXpLogsParams) {
+	var request ListXpLogsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListXpLogs(ctx, request.(ListXpLogsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListXpLogs")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListXpLogsResponseObject); ok {
+		if err := validResponse.VisitListXpLogsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

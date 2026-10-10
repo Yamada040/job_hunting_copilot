@@ -1,7 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { Database } from "@/lib/database.types";
 
 const getEnv = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,10 +11,10 @@ const getEnv = () => {
   return { supabaseUrl, supabaseAnonKey };
 };
 
-export const createSupabaseServerReadonlyClient = async (): Promise<SupabaseClient<Database>> => {
+export const createSupabaseServerReadonlyClient = async (): Promise<SupabaseClient> => {
   const { supabaseUrl, supabaseAnonKey } = getEnv();
   const cookieStore = await cookies();
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -24,10 +23,10 @@ export const createSupabaseServerReadonlyClient = async (): Promise<SupabaseClie
   });
 };
 
-export const createSupabaseServerActionClient = async (): Promise<SupabaseClient<Database>> => {
+export const createSupabaseServerActionClient = async (): Promise<SupabaseClient> => {
   const { supabaseUrl, supabaseAnonKey } = getEnv();
   const cookieStore = await cookies();
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -39,13 +38,13 @@ export const createSupabaseServerActionClient = async (): Promise<SupabaseClient
   });
 };
 
-export const createSupabaseAdminClient = (): SupabaseClient<Database> => {
+export const createSupabaseAdminClient = (): SupabaseClient => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error("Supabase URL/Service Role Key is missing. Check env.");
   }
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
+  return createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

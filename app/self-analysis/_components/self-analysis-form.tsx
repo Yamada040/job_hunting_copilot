@@ -1,18 +1,18 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import { AiPanel } from "@/app/_components/ai-panel";
-import { notifyXpUpdated } from "@/lib/xp/level-up-signal";
+import { useState } from "react";
 
-type Answers = {
-  strengths: string;
-  values: string;
-  motivation: string;
-  successes: string;
-  failures: string;
-  workStyle: string;
-  future: string;
-};
+import {
+  useAnalyzeSelf,
+  useSelfAnalysisResult,
+  useSubmitSelfAnalysis,
+  type SelfAnalysisAnswers,
+  type SelfAnalysisResult,
+} from "@/lib/api/assessments";
+import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
+
+type Answers = SelfAnalysisAnswers;
 
 const defaultAnswers: Answers = {
   strengths: "",
@@ -24,64 +24,29 @@ const defaultAnswers: Answers = {
   future: "",
 };
 
-const buildPrompt = (a: Answers) =>
-  [
-    `強み: ${a.strengths || "未記入"}`,
-    `価値観: ${a.values || "未記入"}`,
-    `モチベーション源泉: ${a.motivation || "未記入"}`,
-    `成功体験: ${a.successes || "未記入"}`,
-    `失敗体験・学び: ${a.failures || "未記入"}`,
-    `働き方の好み: ${a.workStyle || "未記入"}`,
-    `将来像（3-5年）: ${a.future || "未記入"}`,
-  ].join("\n");
+export default function SelfAnalysisForm() {
+  const { data: result, error, isPending } = useSelfAnalysisResult();
 
-export default function SelfAnalysisForm({
-  initialAnswers,
-  initialSummary,
-  initialResultId,
-  isMonthlyLocked,
-}: {
-  initialAnswers: Record<string, unknown> | null;
-  initialSummary: string | null;
-  initialResultId: string | null;
-  isMonthlyLocked: boolean;
-}) {
-  const [answers, setAnswers] = useState<Answers>(() => {
-    if (initialAnswers) return { ...defaultAnswers, ...(initialAnswers as Partial<Answers>) };
-    return defaultAnswers;
-  });
-  const [resultId, setResultId] = useState<string | null>(initialResultId);
-  const prompt = useMemo(() => buildPrompt(answers), [answers]);
-  const [presetKey, setPresetKey] = useState<string | undefined>(undefined);
-  const [presetText, setPresetText] = useState<string>(() => buildPrompt(defaultAnswers));
+  if (error) return <ApiErrorMessage error={error} />;
+  if (isPending) return <div className="dq-card p-6 text-sm text-white">読み込み中…</div>;
+  return <SelfAnalysisFormLoaded result={result} />;
+}
 
-  const [, saveAction, saving] = useActionState<null, FormData>(async () => {
-    if (isMonthlyLocked) {
-      alert("自己分析は現在一回しかできません。");
-      return null;
-    }
-    try {
-      const res = await fetch("/api/self-analysis/answers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json?.id) {
-        throw new Error(json?.error || "保存に失敗しました");
-      }
-      notifyXpUpdated();
-      setResultId(json.id);
-      setPresetText(prompt);
-      setPresetKey(`${Date.now()}`);
-    } catch (err) {
-      alert("保存に失敗しました。もう一度お試しください。");
-      console.error(err);
-    }
-    return null;
-  }, null);
+function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null }) {
+  const [answers, setAnswers] = useState<Answers>(result?.answers ?? defaultAnswers);
+  const submit = useSubmitSelfAnalysis();
+  const analyze = useAnalyzeSelf();
+  // 回答は1人1回だけ。保存済みなら回答を表示するだけにする（docs/backend-design.md 3章）
+  const locked = result !== null;
+  const saving = submit.isPending;
+
+  const saveAction = () => {
+    if (!window.confirm("回答は1回だけ保存できます。この内容で保存しますか？")) return;
+    submit.mutate(answers);
+  };
 
   const handleChange = (key: keyof Answers, value: string) => {
+    if (locked) return;
     setAnswers((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -120,32 +85,31 @@ export default function SelfAnalysisForm({
             value={answers.future}
             onChange={(v) => handleChange("future", v)}
           />
-          <form action={saveAction} className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3">
             <button
-              type="submit"
-              disabled={saving || isMonthlyLocked}
+              type="button"
+              onClick={saveAction}
+              disabled={saving || locked}
               className="dq-button disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isMonthlyLocked ? "実施済み" : saving ? "保存中..." : "保存する"}
+              {locked ? "実施済み" : saving ? "保存中..." : "保存する"}
             </button>
-          </form>
+          </div>
+          <ApiErrorMessage error={submit.error} />
         </div>
       </div>
 
-      <div className="dq-card p-5">
-        <AiPanel
-          kind="self_analysis"
-          defaultInput={prompt}
-          presetText={presetText}
-          presetKey={presetKey}
-          cacheKey={resultId ? `self-analysis-${resultId}` : undefined}
-          initialSummary={initialSummary ?? undefined}
-          saveUrl="/api/ai/self-analysis"
-          saveId={resultId ?? undefined}
-          title="AI自己分析サマリー"
-          hint="入力をもとに強み・価値観・モチベーションを整理します。保存すると再実行できません。"
-        />
-      </div>
+      <AiResultPanel
+        title="AI自己分析"
+        description="保存した回答をもとに、強み・価値観・モチベーションの源泉と自己PRの骨子をAIがまとめます。1回だけ実行できます。"
+        result={result?.aiResult ?? null}
+        runLabel="AI自己分析を行う"
+        onRun={() => analyze.mutate()}
+        pending={analyze.isPending}
+        error={analyze.error}
+        done={!!result?.aiResult}
+        blockedReason={locked ? undefined : "回答を保存すると実行できます"}
+      />
     </div>
   );
 }

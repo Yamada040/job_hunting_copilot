@@ -1,7 +1,7 @@
 import { ApiError } from "@/lib/api/client";
 
 /**
- * Go のAPIが返したエラーを表示する。メッセージはGoが返した日本語をそのまま出し（docs/backend-design.md 5章）、
+ * バックエンドのAPIが返したエラーを表示する。メッセージはバックエンドが返した日本語をそのまま出し（docs/backend-design.md 5章）、
  * 項目ごとのエラーは labels で項目名を日本語にして並べる。
  */
 export function ApiErrorMessage({ error, labels = {} }: { error: unknown; labels?: Record<string, string> }) {

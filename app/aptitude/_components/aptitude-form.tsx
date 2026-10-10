@@ -1,31 +1,30 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useState } from "react";
 
-import { AiPanel } from "@/app/_components/ai-panel";
-import { notifyXpUpdated } from "@/lib/xp/level-up-signal";
+import { useAptitudeResult, useDiagnoseAptitude, useSubmitAptitude, type AptitudeResult } from "@/lib/api/assessments";
+import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { Answers } from "../types";
 import { defaultAnswers, interestOptions, mbtiOptions, strengthOptions, valueOptions } from "./aptitude-constants";
-import { buildPrompt } from "./aptitude-utils";
 
-type Props = {
-  initialAnswers: Record<string, unknown> | null;
-  initialSummary: string | null;
-  initialResultId: string | null;
-  isMonthlyLocked: boolean;
-};
+export default function AptitudeForm() {
+  const { data: result, error, isPending } = useAptitudeResult();
 
-export default function AptitudeForm({ initialAnswers, initialSummary, initialResultId, isMonthlyLocked }: Props) {
-  const [answers, setAnswers] = useState<Answers>(() => {
-    if (initialAnswers) return { ...defaultAnswers, ...(initialAnswers as Partial<Answers>) };
-    return defaultAnswers;
-  });
-  const [resultId, setResultId] = useState<string | null>(initialResultId);
-  const prompt = useMemo(() => buildPrompt(answers), [answers]);
-  const [presetKey, setPresetKey] = useState<string | undefined>(undefined);
-  const [presetText, setPresetText] = useState<string>(() => buildPrompt(defaultAnswers));
+  if (error) return <ApiErrorMessage error={error} />;
+  if (isPending) return <div className="dq-card p-6 text-sm text-white">読み込み中…</div>;
+  return <AptitudeFormLoaded result={result} />;
+}
+
+function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
+  const [answers, setAnswers] = useState<Answers>(result?.answers ?? defaultAnswers);
+  const submit = useSubmitAptitude();
+  const diagnose = useDiagnoseAptitude();
+  // 回答は1人1回だけ。保存済みなら回答を表示するだけにする（docs/backend-design.md 3章）
+  const locked = result !== null;
 
   const toggle = (key: keyof Pick<Answers, "interests" | "strengths" | "values">, value: string) => {
+    if (locked) return;
     setAnswers((prev) => {
       const list = new Set(prev[key]);
       if (list.has(value)) {
@@ -33,37 +32,20 @@ export default function AptitudeForm({ initialAnswers, initialSummary, initialRe
       } else {
         list.add(value);
       }
-      return { ...prev, [key]: Array.from(list) } as Answers;
+      return { ...prev, [key]: Array.from(list) };
     });
   };
 
   const handleChange = (key: keyof Answers, value: string) => {
+    if (locked) return;
     setAnswers((prev) => ({ ...prev, [key]: value }));
   };
 
-  const [, saveAction, saving] = useActionState<null, FormData>(async () => {
-    if (isMonthlyLocked) {
-      alert("適性チェックは現在一回しかできません。");
-      return null;
-    }
-    try {
-      const res = await fetch("/api/aptitude/answers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json?.id) throw new Error(json?.error || "保存に失敗しました");
-      notifyXpUpdated();
-      setResultId(json.id);
-      setPresetText(prompt);
-      setPresetKey(`${Date.now()}`);
-    } catch (err) {
-      alert("保存に失敗しました。もう一度お試しください。");
-      console.error(err);
-    }
-    return null;
-  }, null);
+  const saveAction = () => {
+    if (!window.confirm("回答は1回だけ保存できます。この内容で保存しますか？")) return;
+    submit.mutate(answers);
+  };
+  const saving = submit.isPending;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
@@ -123,32 +105,31 @@ export default function AptitudeForm({ initialAnswers, initialSummary, initialRe
             placeholder="選択してください"
           />
           <TextArea label="補足メモ" value={answers.otherNotes} onChange={(v) => handleChange("otherNotes", v)} />
-          <form action={saveAction} className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3">
             <button
-              type="submit"
-              disabled={saving || isMonthlyLocked}
+              type="button"
+              onClick={saveAction}
+              disabled={saving || locked}
               className="dq-button disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isMonthlyLocked ? "実施済み" : saving ? "保存中..." : "保存する"}
+              {locked ? "実施済み" : saving ? "保存中..." : "保存する"}
             </button>
-          </form>
+          </div>
+          <ApiErrorMessage error={submit.error} />
         </div>
       </div>
 
-      <div className="dq-card p-5">
-        <AiPanel
-          kind="aptitude_analysis"
-          defaultInput={prompt}
-          presetText={presetText}
-          presetKey={presetKey}
-          cacheKey={resultId ? `aptitude-${resultId}` : undefined}
-          initialSummary={initialSummary ?? undefined}
-          saveUrl="/api/ai/aptitude"
-          saveId={resultId ?? undefined}
-          title="AI適性診断"
-          hint="保存後は再実行できません。入力内容を確認して送信してください。"
-        />
-      </div>
+      <AiResultPanel
+        title="AI適性診断"
+        description="保存した回答をもとに、向いている業界・職種をAIが診断します。1回だけ実行できます。"
+        result={result?.aiResult ?? null}
+        runLabel="AI適性診断を行う"
+        onRun={() => diagnose.mutate()}
+        pending={diagnose.isPending}
+        error={diagnose.error}
+        done={!!result?.aiResult}
+        blockedReason={locked ? undefined : "回答を保存すると実行できます"}
+      />
     </div>
   );
 }

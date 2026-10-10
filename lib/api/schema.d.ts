@@ -96,6 +96,28 @@ export interface paths {
     patch: operations["updateCompany"];
     trace?: never;
   };
+  "/v1/companies/{companyId}/analysis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        companyId: components["parameters"]["CompanyId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI企業分析を行う
+     * @description AIがWeb検索をしながら企業を分析し、分析結果を保存して返す。企業ごとに1回だけで、2回目は 409。完成してからまとめて返す（数十秒かかる）。
+     */
+    post: operations["analyzeCompany"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/es-entries": {
     parameters: {
       query?: never;
@@ -163,6 +185,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/es-entries/{esEntryId}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI添削を行う
+     * @description 保存済みのESの内容をAIが添削し、添削結果を保存して返す。何度でも実行でき、結果は上書きする（1日の上限あり）。
+     */
+    post: operations["reviewEsEntry"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/interview-logs": {
     parameters: {
       query?: never;
@@ -209,6 +253,282 @@ export interface paths {
      * @description 送った項目だけを更新する。
      */
     patch: operations["updateInterviewLog"];
+    trace?: never;
+  };
+  "/v1/interview-logs/{interviewLogId}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        interviewLogId: components["parameters"]["InterviewLogId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI振り返りを行う
+     * @description 保存済みの面接ログをAIが振り返り、振り返り結果を保存して返す。何度でも実行でき、結果は上書きする（1日の上限あり）。
+     */
+    post: operations["reviewInterviewLog"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/calendar-events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * カレンダーに表示する予定を取得する
+     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる。
+     */
+    get: operations["listCalendarItems"];
+    put?: never;
+    /** 予定を登録する */
+    post: operations["createCalendarEvent"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/calendar-events/{calendarEventId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        calendarEventId: components["parameters"]["CalendarEventId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** 予定を削除する */
+    delete: operations["deleteCalendarEvent"];
+    options?: never;
+    head?: never;
+    /**
+     * 予定を更新する
+     * @description 送った項目だけを更新する。時刻と企業は null で空にできる。ESの締切はESの画面で変える。
+     */
+    patch: operations["updateCalendarEvent"];
+    trace?: never;
+  };
+  "/v1/xp-logs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * XPの獲得履歴を取得する
+     * @description 新しい順。
+     */
+    get: operations["listXpLogs"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/aptitude-result": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 自分の適性診断の回答と診断結果を取得する
+     * @description まだ回答していなければ 404。
+     */
+    get: operations["getAptitudeResult"];
+    put?: never;
+    /**
+     * 適性診断の回答を保存する
+     * @description 1人1回だけで、2回目は 409。初回はXPが付く。
+     */
+    post: operations["submitAptitudeAnswers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/aptitude-result/diagnosis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI適性診断を行う
+     * @description 保存済みの回答をもとにAI適性診断を行い、診断結果を保存して返す。1回だけで、2回目は 409。
+     */
+    post: operations["diagnoseAptitude"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/self-analysis-result": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 自分の自己分析の回答と分析結果を取得する
+     * @description まだ回答していなければ 404。
+     */
+    get: operations["getSelfAnalysisResult"];
+    put?: never;
+    /**
+     * 自己分析の回答を保存する
+     * @description 1人1回だけで、2回目は 409。初回はXPが付く。
+     */
+    post: operations["submitSelfAnalysisAnswers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/self-analysis-result/analysis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI自己分析を行う
+     * @description 保存済みの回答をもとにAI自己分析を行い、分析結果を保存して返す。1回だけで、2回目は 409。
+     */
+    post: operations["analyzeSelf"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/webtest-questions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 自分が作ったWebテストの問題の一覧を取得する
+     * @description 作成日時の新しい順。testType を渡すとその種類の問題だけに絞る。
+     */
+    get: operations["listWebtestQuestions"];
+    put?: never;
+    /**
+     * Webテストの問題を作る
+     * @description XPが付く（1日3回まで）。
+     */
+    post: operations["createWebtestQuestion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/webtest-questions/{webtestQuestionId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    /** 問題と、これまでの解答の記録を取得する */
+    get: operations["getWebtestQuestion"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/webtest-questions/{webtestQuestionId}/attempts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * 問題に解答する
+     * @description 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
+     */
+    post: operations["answerWebtestQuestion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/contact": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 問い合わせを運営にメールで送る */
+    post: operations["sendContact"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/admin/stats": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 利用状況の集計を取得する（開発者のみ）
+     * @description 開発者でなければ 403。「直近」は7日間、「今日」は日本時間の今日。
+     */
+    get: operations["getAdminStats"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
 }
@@ -443,6 +763,203 @@ export interface components {
       interviewLog: components["schemas"]["InterviewLog"];
       xp: components["schemas"]["XpResult"];
     };
+    /**
+     * @description 予定の種類。日本語の表示名はフロントエンドが持つ
+     * @enum {string}
+     */
+    CalendarEventType: "es" | "interview" | "intern" | "other";
+    /** @description カレンダーの1件。source が event ならユーザーが登録した予定（id は予定のID）、es_deadline ならESの締切（id はESのID） */
+    CalendarItem: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      source: "event" | "es_deadline";
+      title: string;
+      type: components["schemas"]["CalendarEventType"];
+      /** Format: date */
+      date: string;
+      /** @description 時刻（HH:MM） */
+      time: string | null;
+      company: components["schemas"]["CompanySummary"] | null;
+    };
+    CalendarEventCreate: {
+      title: string;
+      type?: components["schemas"]["CalendarEventType"];
+      /** Format: date */
+      date: string;
+      time?: string;
+      /** Format: uuid */
+      companyId?: string;
+    };
+    CalendarEventUpdate: {
+      title?: string;
+      type?: components["schemas"]["CalendarEventType"];
+      /** Format: date */
+      date?: string;
+      time?: string | null;
+      /** Format: uuid */
+      companyId?: string | null;
+    };
+    /**
+     * @description XPが付いた操作。日本語の表示名はフロントエンドが持つ
+     * @enum {string}
+     */
+    XpAction:
+      | "es_submitted"
+      | "interview_log"
+      | "company_new"
+      | "aptitude_complete"
+      | "self_analysis_complete"
+      | "webtest_question_create"
+      | "webtest_attempt_complete";
+    XpLog: {
+      xp: number;
+      action: components["schemas"]["XpAction"];
+      /** Format: date-time */
+      createdAt: string;
+    };
+    /** @description 適性診断の回答 */
+    AptitudeAnswers: {
+      /** @description 興味のある領域 */
+      interests: string[];
+      /** @description 強み */
+      strengths: string[];
+      /** @description 価値観 */
+      values: string[];
+      /** @description 好きな業務・没頭できること */
+      enjoy: string;
+      /** @description 誇りに思う達成 */
+      achievements: string;
+      /** @description 苦手・避けたいこと */
+      dislike: string;
+      /** @description 働き方の希望 */
+      workStyle: string;
+      /** @description 希望勤務地・働き方 */
+      location: string;
+      /** @description 興味のある業界 */
+      industryWish: string;
+      /** @description 興味のある職種 */
+      roleWish: string;
+      /** @description 補足メモ */
+      otherNotes: string;
+      /** @description MBTI */
+      mbti: string;
+    };
+    AptitudeResult: {
+      /** Format: uuid */
+      id: string;
+      answers: components["schemas"]["AptitudeAnswers"];
+      /** @description AI適性診断の診断結果 */
+      aiResult: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    AptitudeSubmitted: {
+      result: components["schemas"]["AptitudeResult"];
+      xp: components["schemas"]["XpResult"];
+    };
+    /** @description 自己分析の回答 */
+    SelfAnalysisAnswers: {
+      /** @description 強み・得意なこと */
+      strengths: string;
+      /** @description 価値観 */
+      values: string;
+      /** @description モチベーションの源泉 */
+      motivation: string;
+      /** @description 成功体験 */
+      successes: string;
+      /** @description 失敗体験と学び */
+      failures: string;
+      /** @description 働き方の好み */
+      workStyle: string;
+      /** @description 将来像（3〜5年後） */
+      future: string;
+    };
+    SelfAnalysisResult: {
+      /** Format: uuid */
+      id: string;
+      answers: components["schemas"]["SelfAnalysisAnswers"];
+      /** @description AI自己分析の分析結果 */
+      aiResult: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    SelfAnalysisSubmitted: {
+      result: components["schemas"]["SelfAnalysisResult"];
+      xp: components["schemas"]["XpResult"];
+    };
+    WebtestQuestionSummary: {
+      /** Format: uuid */
+      id: string;
+      title: string;
+      /** @description テストの種類（SPI・玉手箱など） */
+      testType: string | null;
+      category: string | null;
+      format: string | null;
+      difficulty: string | null;
+      /** @description 制限時間（秒） */
+      timeLimit: number | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    WebtestQuestionDetail: components["schemas"]["WebtestQuestionSummary"] & {
+      body: string;
+      choices: string[];
+      answer: string;
+      explanation: string | null;
+      /** @description 解答の記録（新しい順） */
+      attempts: components["schemas"]["WebtestAttempt"][];
+    };
+    WebtestQuestionCreate: {
+      title: string;
+      body: string;
+      answer: string;
+      choices?: string[];
+      explanation?: string;
+      testType?: string;
+      category?: string;
+      format?: string;
+      difficulty?: string;
+      timeLimit?: number;
+    };
+    WebtestQuestionCreated: {
+      question: components["schemas"]["WebtestQuestionDetail"];
+      xp: components["schemas"]["XpResult"];
+    };
+    WebtestAttempt: {
+      /** Format: uuid */
+      id: string;
+      isCorrect: boolean;
+      /** @description かかった時間（秒） */
+      timeSpent: number | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    WebtestAnswer: {
+      answer: string;
+      timeSpent?: number;
+    };
+    WebtestAnswered: {
+      attempt: components["schemas"]["WebtestAttempt"];
+      xp: components["schemas"]["XpResult"];
+    };
+    ContactRequest: {
+      subject: string;
+      message: string;
+    };
+    AdminStats: {
+      totalUsers: number;
+      newUsers7d: number;
+      /** @description 直近7日間にXPを獲得したユーザー数 */
+      activeUsers7d: number;
+      activeUsersToday: number;
+      totalEs: number;
+      esCreated7d: number;
+      totalCompanies: number;
+      companiesCreated7d: number;
+      totalInterviews: number;
+      interviewsCreated7d: number;
+    };
     /** @description RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの */
     Problem: {
       /**
@@ -491,6 +1008,8 @@ export interface components {
     };
   };
   parameters: {
+    WebtestQuestionId: string;
+    CalendarEventId: string;
     InterviewLogId: string;
     EsEntryId: string;
     CompanyId: string;
@@ -687,6 +1206,29 @@ export interface operations {
       default: components["responses"]["Problem"];
     };
   };
+  analyzeCompany: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        companyId: components["parameters"]["CompanyId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 分析結果を保存した企業 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
   listEsEntries: {
     parameters: {
       query?: {
@@ -830,6 +1372,29 @@ export interface operations {
       default: components["responses"]["Problem"];
     };
   };
+  reviewEsEntry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 添削結果を保存したES */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EsEntry"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
   listInterviewLogs: {
     parameters: {
       query?: {
@@ -945,6 +1510,429 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["InterviewLog"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  reviewInterviewLog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        interviewLogId: components["parameters"]["InterviewLogId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 振り返り結果を保存した面接ログ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InterviewLog"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  listCalendarItems: {
+    parameters: {
+      query?: {
+        from?: string;
+        to?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 予定とESの締切 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarItem"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  createCalendarEvent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalendarEventCreate"];
+      };
+    };
+    responses: {
+      /** @description 登録した予定 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarItem"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteCalendarEvent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        calendarEventId: components["parameters"]["CalendarEventId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 削除した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  updateCalendarEvent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        calendarEventId: components["parameters"]["CalendarEventId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalendarEventUpdate"];
+      };
+    };
+    responses: {
+      /** @description 更新後の予定 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarItem"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  listXpLogs: {
+    parameters: {
+      query?: {
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description XPの獲得履歴 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["XpLog"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getAptitudeResult: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 適性診断 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AptitudeResult"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  submitAptitudeAnswers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          answers: components["schemas"]["AptitudeAnswers"];
+        };
+      };
+    };
+    responses: {
+      /** @description 保存した回答と、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AptitudeSubmitted"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  diagnoseAptitude: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 診断結果を保存した適性診断 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AptitudeResult"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getSelfAnalysisResult: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 自己分析 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SelfAnalysisResult"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  submitSelfAnalysisAnswers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          answers: components["schemas"]["SelfAnalysisAnswers"];
+        };
+      };
+    };
+    responses: {
+      /** @description 保存した回答と、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SelfAnalysisSubmitted"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  analyzeSelf: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 分析結果を保存した自己分析 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SelfAnalysisResult"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  listWebtestQuestions: {
+    parameters: {
+      query?: {
+        testType?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 問題の一覧 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestQuestionSummary"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  createWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WebtestQuestionCreate"];
+      };
+    };
+    responses: {
+      /** @description 作った問題と、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestQuestionCreated"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 問題と解答の記録 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestQuestionDetail"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  answerWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WebtestAnswer"];
+      };
+    };
+    responses: {
+      /** @description 解答の記録と、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestAnswered"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  sendContact: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContactRequest"];
+      };
+    };
+    responses: {
+      /** @description 送信した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getAdminStats: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 利用状況 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminStats"];
         };
       };
       default: components["responses"]["Problem"];

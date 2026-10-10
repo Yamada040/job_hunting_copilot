@@ -5,13 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -31,12 +34,14 @@ type Fields struct {
 }
 
 type Service struct {
-	pool *pgxpool.Pool
-	xp   *xp.Service
+	pool    *pgxpool.Pool
+	xp      *xp.Service
+	ai      ai.Generator
+	limiter *ratelimit.Limiter
 }
 
-func NewService(pool *pgxpool.Pool, xp *xp.Service) *Service {
-	return &Service{pool: pool, xp: xp}
+func NewService(pool *pgxpool.Pool, xp *xp.Service, ai ai.Generator, limiter *ratelimit.Limiter) *Service {
+	return &Service{pool: pool, xp: xp, ai: ai, limiter: limiter}
 }
 
 // List は、ユーザーの企業を更新日時の新しい順に返す。query を渡すと、正規化した企業名の部分一致で絞り込む。
@@ -166,6 +171,51 @@ func (s *Service) Delete(ctx context.Context, userID, id uuid.UUID) error {
 		return notFound()
 	}
 	return nil
+}
+
+// Analyze は、AIにWeb検索をさせながら企業を分析し、分析結果を保存する。企業ごとに1回だけで、2回目は 409。
+// Web検索と分析に数十秒かかるため、DBのトランザクションの外でAIを呼ぶ。
+func (s *Service) Analyze(ctx context.Context, userID, id uuid.UUID) (db.Company, error) {
+	q := db.New(s.pool)
+	row, err := s.Get(ctx, userID, id)
+	if err != nil {
+		return db.Company{}, err
+	}
+	if row.AiResult != nil {
+		return db.Company{}, alreadyAnalyzed()
+	}
+	if err := s.limiter.Hit(ctx, q, userID, ratelimit.CompanyAnalysisBurst, ratelimit.CompanyAnalysisDaily); err != nil {
+		return db.Company{}, err
+	}
+	text, err := s.ai.AnalyzeCompany(ctx, analysisInput(row))
+	if err != nil {
+		return db.Company{}, err
+	}
+	n, err := q.SetCompanyAiResultOnce(ctx, db.SetCompanyAiResultOnceParams{ID: id, UserID: userID, AiResult: &text})
+	if err != nil {
+		return db.Company{}, fmt.Errorf("save company analysis: %w", err)
+	}
+	if n == 0 {
+		// 同時に2回実行され、先に保存された場合
+		return db.Company{}, alreadyAnalyzed()
+	}
+	return s.Get(ctx, userID, id)
+}
+
+// analysisInput は、AI企業分析に渡す文章を作る。メモは本人の私的な記録なので渡さない。
+func analysisInput(c db.Company) string {
+	lines := []string{"企業名: " + c.Name}
+	if c.Industry != nil {
+		lines = append(lines, "業界: "+*c.Industry)
+	}
+	if c.Url != nil {
+		lines = append(lines, "企業サイト: "+*c.Url)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func alreadyAnalyzed() *platform.Error {
+	return &platform.Error{Kind: platform.KindConflict, Message: "この企業はすでにAI企業分析を行っています（企業ごとに1回までです）"}
 }
 
 func trimFields(f Fields) Fields {

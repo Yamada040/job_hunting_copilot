@@ -179,6 +179,24 @@ func (q *Queries) ListEsEntries(ctx context.Context, arg ListEsEntriesParams) ([
 	return items, nil
 }
 
+const setEsAiResult = `-- name: SetEsAiResult :execrows
+update es_entries set ai_result = $1 where id = $2 and user_id = $3
+`
+
+type SetEsAiResultParams struct {
+	AiResult *string
+	ID       uuid.UUID
+	UserID   uuid.UUID
+}
+
+func (q *Queries) SetEsAiResult(ctx context.Context, arg SetEsAiResultParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setEsAiResult, arg.AiResult, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const submitEsEntry = `-- name: SubmitEsEntry :execrows
 update es_entries set status = 'submitted' where id = $1 and user_id = $2
 `

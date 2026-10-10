@@ -96,6 +96,18 @@ func (h Handler) UpdateCompany(ctx context.Context, req openapi.UpdateCompanyReq
 	return openapi.UpdateCompany200JSONResponse(ToAPI(row)), nil
 }
 
+func (h Handler) AnalyzeCompany(ctx context.Context, req openapi.AnalyzeCompanyRequestObject) (openapi.AnalyzeCompanyResponseObject, error) {
+	userID, err := auth.RequireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	row, err := h.Service.Analyze(ctx, userID, req.CompanyId)
+	if err != nil {
+		return nil, err
+	}
+	return openapi.AnalyzeCompany200JSONResponse(ToAPI(row)), nil
+}
+
 func (h Handler) DeleteCompany(ctx context.Context, req openapi.DeleteCompanyRequestObject) (openapi.DeleteCompanyResponseObject, error) {
 	userID, err := auth.RequireUserID(ctx)
 	if err != nil {

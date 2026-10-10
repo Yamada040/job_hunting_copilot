@@ -2,16 +2,19 @@ package interview
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai/aitest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -26,13 +29,20 @@ type fixture struct {
 	pool       *pgxpool.Pool
 	interviews *Service
 	companies  *company.Service
+	ai         *aitest.Fake
 }
 
 func setup(t *testing.T) fixture {
 	t.Helper()
 	pool := dbtest.Connect(t)
 	x := xp.NewService()
-	return fixture{pool: pool, interviews: NewService(pool, x), companies: company.NewService(pool, x)}
+	fake := &aitest.Fake{Reply: "振り返り結果"}
+	return fixture{
+		pool:       pool,
+		interviews: NewService(pool, x, fake, ratelimit.NewLimiter()),
+		companies:  company.NewService(pool, x, nil, nil),
+		ai:         fake,
+	}
 }
 
 func (f fixture) newCompany(t *testing.T, userID uuid.UUID, name string) uuid.UUID {
@@ -158,4 +168,29 @@ func TestOtherUsersLogIsNotFound(t *testing.T) {
 	assertKind(t, err, platform.KindNotFound)
 	err = f.interviews.Delete(t.Context(), bob, log.ID)
 	assertKind(t, err, platform.KindNotFound)
+}
+
+func TestReviewSendsLogToAIAndSavesResult(t *testing.T) {
+	f := setup(t)
+	userID := dbtest.CreateUser(t, f.pool)
+	fields := validFields(f.newCompany(t, userID, "サンプル"), "2026-10-01")
+	fields.Improvement = ptr("結論から話す")
+	log, _, err := f.interviews.Create(t.Context(), userID, fields)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	reviewed, err := f.interviews.Review(t.Context(), userID, log.ID)
+	if err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+
+	if reviewed.AiResult == nil || *reviewed.AiResult != "振り返り結果" {
+		t.Errorf("ai result = %v, want the AI reply saved", reviewed.AiResult)
+	}
+	for _, want := range []string{"サンプル", "オンライン", "自己紹介", "手応え: 良い", "結論から話す"} {
+		if !strings.Contains(f.ai.Inputs[0], want) {
+			t.Errorf("AI input %q does not contain %q", f.ai.Inputs[0], want)
+		}
+	}
 }

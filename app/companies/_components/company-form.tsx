@@ -28,7 +28,7 @@ export const COMPANY_FIELD_LABELS: Record<string, string> = {
   preference: "志望度",
 };
 
-// maxLength は backend/api/openapi.yaml の CompanyCreate / CompanyUpdate と同じ値（超えた入力はGoが400で拒否する）
+// maxLength は backend/api/openapi.yaml の CompanyCreate / CompanyUpdate と同じ値（超えた入力はバックエンドが400で拒否する）
 const textFields = [
   { name: "name", maxLength: 100, placeholder: "例）株式会社サンプル", required: true },
   { name: "industry", maxLength: 100, placeholder: "例）IT / コンサル / メーカー" },
