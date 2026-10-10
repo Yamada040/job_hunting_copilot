@@ -59,7 +59,103 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/companies:
+    get:
+      operationId: listCompanies
+      summary: 自分の企業の一覧を取得する
+      description: 更新日時の新しい順。q を渡すと、正規化した企業名の部分一致で絞り込む（企業の候補の表示に使う）。
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        "200":
+          description: 企業の一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Company"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createCompany
+      summary: 企業を登録する
+      description: 正規化した企業名が同じ企業がすでにあれば 409 を返す。登録でXPが付く（1日5回まで）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyCreate"
+      responses:
+        "201":
+          description: 登録した企業と、付与されたXP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyCreated"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/companies/{companyId}:
+    parameters:
+      - $ref: "#/components/parameters/CompanyId"
+    get:
+      operationId: getCompany
+      summary: 企業を1件取得する
+      responses:
+        "200":
+          description: 企業
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateCompany
+      summary: 企業を更新する
+      description: 送った項目だけを更新する。文字列の項目は空文字で、志望度は null で空にできる。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyUpdate"
+      responses:
+        "200":
+          description: 更新後の企業
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteCompany
+      summary: 企業を削除する
+      description: ひも付くES・面接ログ・カレンダーの予定も一緒に削除される。
+      responses:
+        "204":
+          description: 削除した
+        default:
+          $ref: "#/components/responses/Problem"
+
 components:
+  parameters:
+    CompanyId:
+      name: companyId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
   securitySchemes:
     bearerAuth:
       type: http
@@ -155,6 +251,169 @@ components:
         goalState:
           type: string
           maxLength: 100
+
+    XpResult:
+      type: object
+      description: XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+      required: [awarded, total, level, leveledUp]
+      properties:
+        awarded:
+          type: integer
+          description: この操作で付与されたXP
+        total:
+          type: integer
+          description: 付与後の合計XP
+        level:
+          type: integer
+          description: 付与後のレベル
+        leveledUp:
+          type: boolean
+          description: この操作でレベルが上がったか
+
+    CompanyStage:
+      type: string
+      description: 選考状況。日本語の表示名はフロントエンドが持つ
+      enum: [not_entered, entered, screening, interviewing, offered, rejected, declined]
+
+    Company:
+      type: object
+      required:
+        [
+          id,
+          name,
+          industry,
+          url,
+          mypageId,
+          mypageUrl,
+          memo,
+          stage,
+          preference,
+          favorite,
+          aiResult,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        industry:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        mypageId:
+          type: string
+          nullable: true
+        mypageUrl:
+          type: string
+          nullable: true
+        memo:
+          type: string
+          nullable: true
+        stage:
+          $ref: "#/components/schemas/CompanyStage"
+        preference:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+          description: 志望度（1〜5）
+        favorite:
+          type: boolean
+        aiResult:
+          type: string
+          nullable: true
+          description: AI企業分析の分析結果
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CompanyCreate:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        industry:
+          type: string
+          maxLength: 100
+        url:
+          type: string
+          maxLength: 500
+        mypageId:
+          type: string
+          maxLength: 100
+        mypageUrl:
+          type: string
+          maxLength: 500
+        memo:
+          type: string
+          maxLength: 2000
+        stage:
+          $ref: "#/components/schemas/CompanyStage"
+        preference:
+          type: integer
+          minimum: 1
+          maximum: 5
+        favorite:
+          type: boolean
+
+    CompanyUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        industry:
+          type: string
+          maxLength: 100
+        url:
+          type: string
+          maxLength: 500
+        mypageId:
+          type: string
+          maxLength: 100
+        mypageUrl:
+          type: string
+          maxLength: 500
+        memo:
+          type: string
+          maxLength: 2000
+        stage:
+          $ref: "#/components/schemas/CompanyStage"
+        preference:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+          # 「項目が送られていない（変更しない）」と「null（未設定に戻す）」を区別するため、この項目だけ nullable.Nullable にする
+          x-go-type: nullable.Nullable[int]
+          x-go-type-import:
+            path: github.com/oapi-codegen/nullable
+          x-go-type-skip-optional-pointer: true
+        favorite:
+          type: boolean
+
+    CompanyCreated:
+      type: object
+      required: [company, xp]
+      properties:
+        company:
+          $ref: "#/components/schemas/Company"
+        xp:
+          $ref: "#/components/schemas/XpResult"
 
     Problem:
       type: object

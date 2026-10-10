@@ -11,15 +11,52 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/oapi-codegen/nullable"
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for CompanyStage.
+const (
+	Declined     CompanyStage = "declined"
+	Entered      CompanyStage = "entered"
+	Interviewing CompanyStage = "interviewing"
+	NotEntered   CompanyStage = "not_entered"
+	Offered      CompanyStage = "offered"
+	Rejected     CompanyStage = "rejected"
+	Screening    CompanyStage = "screening"
+)
+
+// Valid indicates whether the value is a known member of the CompanyStage enum.
+func (e CompanyStage) Valid() bool {
+	switch e {
+	case Declined:
+		return true
+	case Entered:
+		return true
+	case Interviewing:
+		return true
+	case NotEntered:
+		return true
+	case Offered:
+		return true
+	case Rejected:
+		return true
+	case Screening:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for HealthStatus.
 const (
@@ -34,6 +71,69 @@ func (e HealthStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Company defines model for Company.
+type Company struct {
+	// AiResult AI企業分析の分析結果
+	AiResult  *string            `json:"aiResult"`
+	CreatedAt time.Time          `json:"createdAt"`
+	Favorite  bool               `json:"favorite"`
+	Id        openapi_types.UUID `json:"id"`
+	Industry  *string            `json:"industry"`
+	Memo      *string            `json:"memo"`
+	MypageId  *string            `json:"mypageId"`
+	MypageUrl *string            `json:"mypageUrl"`
+	Name      string             `json:"name"`
+
+	// Preference 志望度（1〜5）
+	Preference *int `json:"preference"`
+
+	// Stage 選考状況。日本語の表示名はフロントエンドが持つ
+	Stage     CompanyStage `json:"stage"`
+	UpdatedAt time.Time    `json:"updatedAt"`
+	Url       *string      `json:"url"`
+}
+
+// CompanyCreate defines model for CompanyCreate.
+type CompanyCreate struct {
+	Favorite   *bool   `json:"favorite,omitempty"`
+	Industry   *string `json:"industry,omitempty"`
+	Memo       *string `json:"memo,omitempty"`
+	MypageId   *string `json:"mypageId,omitempty"`
+	MypageUrl  *string `json:"mypageUrl,omitempty"`
+	Name       string  `json:"name"`
+	Preference *int    `json:"preference,omitempty"`
+
+	// Stage 選考状況。日本語の表示名はフロントエンドが持つ
+	Stage *CompanyStage `json:"stage,omitempty"`
+	Url   *string       `json:"url,omitempty"`
+}
+
+// CompanyCreated defines model for CompanyCreated.
+type CompanyCreated struct {
+	Company Company `json:"company"`
+
+	// Xp XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+	Xp XpResult `json:"xp"`
+}
+
+// CompanyStage 選考状況。日本語の表示名はフロントエンドが持つ
+type CompanyStage string
+
+// CompanyUpdate defines model for CompanyUpdate.
+type CompanyUpdate struct {
+	Favorite   *bool                  `json:"favorite,omitempty"`
+	Industry   *string                `json:"industry,omitempty"`
+	Memo       *string                `json:"memo,omitempty"`
+	MypageId   *string                `json:"mypageId,omitempty"`
+	MypageUrl  *string                `json:"mypageUrl,omitempty"`
+	Name       *string                `json:"name,omitempty"`
+	Preference nullable.Nullable[int] `json:"preference,omitempty"`
+
+	// Stage 選考状況。日本語の表示名はフロントエンドが持つ
+	Stage *CompanyStage `json:"stage,omitempty"`
+	Url   *string       `json:"url,omitempty"`
 }
 
 // FieldError defines model for FieldError.
@@ -130,11 +230,55 @@ type ProfileUpdate struct {
 	University     *string `json:"university,omitempty"`
 }
 
+// XpResult XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+type XpResult struct {
+	// Awarded この操作で付与されたXP
+	Awarded int `json:"awarded"`
+
+	// Level 付与後のレベル
+	Level int `json:"level"`
+
+	// LeveledUp この操作でレベルが上がったか
+	LeveledUp bool `json:"leveledUp"`
+
+	// Total 付与後の合計XP
+	Total int `json:"total"`
+}
+
+// CompanyId defines model for CompanyId.
+type CompanyId = openapi_types.UUID
+
+// ListCompaniesParams defines parameters for ListCompanies.
+type ListCompaniesParams struct {
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
+// CreateCompanyJSONRequestBody defines body for CreateCompany for application/json ContentType.
+type CreateCompanyJSONRequestBody = CompanyCreate
+
+// UpdateCompanyJSONRequestBody defines body for UpdateCompany for application/json ContentType.
+type UpdateCompanyJSONRequestBody = CompanyUpdate
+
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = ProfileUpdate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListCompanies 自分の企業の一覧を取得する
+	// (GET /v1/companies)
+	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
+	// CreateCompany 企業を登録する
+	// (POST /v1/companies)
+	CreateCompany(w http.ResponseWriter, r *http.Request)
+	// DeleteCompany 企業を削除する
+	// (DELETE /v1/companies/{companyId})
+	DeleteCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId)
+	// GetCompany 企業を1件取得する
+	// (GET /v1/companies/{companyId})
+	GetCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId)
+	// UpdateCompany 企業を更新する
+	// (PATCH /v1/companies/{companyId})
+	UpdateCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId)
 	// GetHealth 稼働確認
 	// (GET /v1/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -154,6 +298,131 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListCompanies operation middleware
+func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCompaniesParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCompanies(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCompany operation middleware
+func (siw *ServerInterfaceWrapper) CreateCompany(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCompany(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCompany operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "companyId" -------------
+	var companyId CompanyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "companyId", r.PathValue("companyId"), &companyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "companyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCompany(w, r, companyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCompany operation middleware
+func (siw *ServerInterfaceWrapper) GetCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "companyId" -------------
+	var companyId CompanyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "companyId", r.PathValue("companyId"), &companyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "companyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCompany(w, r, companyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCompany operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "companyId" -------------
+	var companyId CompanyId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "companyId", r.PathValue("companyId"), &companyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "companyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCompany(w, r, companyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Request) {
@@ -320,11 +589,206 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/health", wrapper.GetHealth)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/me", wrapper.GetMe)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/me", wrapper.UpdateMe)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/companies", wrapper.ListCompanies)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/companies", wrapper.CreateCompany)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/companies/{companyId}", wrapper.DeleteCompany)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/companies/{companyId}", wrapper.GetCompany)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/companies/{companyId}", wrapper.UpdateCompany)
 
 	return m
 }
 
 type ProblemApplicationProblemPlusJSONResponse Problem
+
+type ListCompaniesRequestObject struct {
+	Params ListCompaniesParams
+}
+
+type ListCompaniesResponseObject interface {
+	VisitListCompaniesResponse(w http.ResponseWriter) error
+}
+
+type ListCompanies200JSONResponse []Company
+
+func (response ListCompanies200JSONResponse) VisitListCompaniesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCompaniesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListCompaniesdefaultApplicationProblemPlusJSONResponse) VisitListCompaniesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCompanyRequestObject struct {
+	Body *CreateCompanyJSONRequestBody
+}
+
+type CreateCompanyResponseObject interface {
+	VisitCreateCompanyResponse(w http.ResponseWriter) error
+}
+
+type CreateCompany201JSONResponse CompanyCreated
+
+func (response CreateCompany201JSONResponse) VisitCreateCompanyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCompanydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateCompanydefaultApplicationProblemPlusJSONResponse) VisitCreateCompanyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCompanyRequestObject struct {
+	CompanyId CompanyId `json:"companyId"`
+}
+
+type DeleteCompanyResponseObject interface {
+	VisitDeleteCompanyResponse(w http.ResponseWriter) error
+}
+
+type DeleteCompany204Response struct {
+}
+
+func (response DeleteCompany204Response) VisitDeleteCompanyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCompanydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteCompanydefaultApplicationProblemPlusJSONResponse) VisitDeleteCompanyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCompanyRequestObject struct {
+	CompanyId CompanyId `json:"companyId"`
+}
+
+type GetCompanyResponseObject interface {
+	VisitGetCompanyResponse(w http.ResponseWriter) error
+}
+
+type GetCompany200JSONResponse Company
+
+func (response GetCompany200JSONResponse) VisitGetCompanyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCompanydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetCompanydefaultApplicationProblemPlusJSONResponse) VisitGetCompanyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCompanyRequestObject struct {
+	CompanyId CompanyId `json:"companyId"`
+	Body      *UpdateCompanyJSONRequestBody
+}
+
+type UpdateCompanyResponseObject interface {
+	VisitUpdateCompanyResponse(w http.ResponseWriter) error
+}
+
+type UpdateCompany200JSONResponse Company
+
+func (response UpdateCompany200JSONResponse) VisitUpdateCompanyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCompanydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateCompanydefaultApplicationProblemPlusJSONResponse) VisitUpdateCompanyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type GetHealthRequestObject struct {
 }
@@ -443,6 +907,21 @@ func (response UpdateMedefaultApplicationProblemPlusJSONResponse) VisitUpdateMeR
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListCompanies 自分の企業の一覧を取得する
+	// (GET /v1/companies)
+	ListCompanies(ctx context.Context, request ListCompaniesRequestObject) (ListCompaniesResponseObject, error)
+	// CreateCompany 企業を登録する
+	// (POST /v1/companies)
+	CreateCompany(ctx context.Context, request CreateCompanyRequestObject) (CreateCompanyResponseObject, error)
+	// DeleteCompany 企業を削除する
+	// (DELETE /v1/companies/{companyId})
+	DeleteCompany(ctx context.Context, request DeleteCompanyRequestObject) (DeleteCompanyResponseObject, error)
+	// GetCompany 企業を1件取得する
+	// (GET /v1/companies/{companyId})
+	GetCompany(ctx context.Context, request GetCompanyRequestObject) (GetCompanyResponseObject, error)
+	// UpdateCompany 企業を更新する
+	// (PATCH /v1/companies/{companyId})
+	UpdateCompany(ctx context.Context, request UpdateCompanyRequestObject) (UpdateCompanyResponseObject, error)
 	// GetHealth 稼働確認
 	// (GET /v1/health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
@@ -491,6 +970,148 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListCompanies operation middleware
+func (sh *strictHandler) ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams) {
+	var request ListCompaniesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCompanies(ctx, request.(ListCompaniesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCompanies")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCompaniesResponseObject); ok {
+		if err := validResponse.VisitListCompaniesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCompany operation middleware
+func (sh *strictHandler) CreateCompany(w http.ResponseWriter, r *http.Request) {
+	var request CreateCompanyRequestObject
+
+	var body CreateCompanyJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCompany(ctx, request.(CreateCompanyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCompany")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCompanyResponseObject); ok {
+		if err := validResponse.VisitCreateCompanyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCompany operation middleware
+func (sh *strictHandler) DeleteCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId) {
+	var request DeleteCompanyRequestObject
+
+	request.CompanyId = companyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCompany(ctx, request.(DeleteCompanyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCompany")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCompanyResponseObject); ok {
+		if err := validResponse.VisitDeleteCompanyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCompany operation middleware
+func (sh *strictHandler) GetCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId) {
+	var request GetCompanyRequestObject
+
+	request.CompanyId = companyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCompany(ctx, request.(GetCompanyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCompany")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCompanyResponseObject); ok {
+		if err := validResponse.VisitGetCompanyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCompany operation middleware
+func (sh *strictHandler) UpdateCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId) {
+	var request UpdateCompanyRequestObject
+
+	request.CompanyId = companyId
+
+	var body UpdateCompanyJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCompany(ctx, request.(UpdateCompanyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCompany")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCompanyResponseObject); ok {
+		if err := validResponse.VisitUpdateCompanyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetHealth operation middleware
@@ -577,35 +1198,54 @@ func (sh *strictHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
