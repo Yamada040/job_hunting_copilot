@@ -31,11 +31,3 @@ google_oauth = {
   client_id     = ""
   client_secret = ""
 }
-
-e2e = {
-  secret         = ""
-  user_email     = ""
-  user_password  = ""
-  user2_email    = ""
-  user2_password = ""
-}

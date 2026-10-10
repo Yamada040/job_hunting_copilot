@@ -1,19 +1,26 @@
 import path from "node:path";
-import { request } from "@playwright/test";
+import { request, type FullConfig } from "@playwright/test";
+import { readLocalSupabase, TEST_USERS } from "./support/local-supabase";
 
 export const AUTH_STORAGE_STATE_A = path.join(__dirname, ".auth/userA.json");
 export const AUTH_STORAGE_STATE_B = path.join(__dirname, ".auth/userB.json");
 
-const REQUIRED_ENV_KEYS = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-  "E2E_TEST_MODE",
-  "E2E_TEST_SECRET",
-  "E2E_TEST_USER_EMAIL",
-  "E2E_TEST_USER_PASSWORD",
-  "E2E_TEST_USER2_EMAIL",
-  "E2E_TEST_USER2_PASSWORD",
-] as const;
+// 手元の Supabase の管理APIでテストユーザーを作る。2回目以降は「既にある」で失敗するが、それでよい
+async function ensureTestUserExists(email: string, password: string) {
+  const supabase = readLocalSupabase();
+  const response = await fetch(`${supabase.API_URL}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: {
+      apikey: supabase.SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${supabase.SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password, email_confirm: true }),
+  });
+  if (!response.ok && response.status !== 422) {
+    throw new Error(`[e2e] テストユーザーを作れませんでした: ${response.status} ${await response.text()}`);
+  }
+}
 
 async function loginAndSaveState(baseURL: string, user: "a" | "b", storagePath: string) {
   const requestContext = await request.newContext({ baseURL });
@@ -28,19 +35,11 @@ async function loginAndSaveState(baseURL: string, user: "a" | "b", storagePath: 
   await requestContext.dispose();
 }
 
-// テストユーザーA・Bは、Supabase の画面であらかじめ作っておく（docs/testing/e2e-test-plan.md）。
-// ここで自動で作らないのは、そのために全権限の secret キーをCIに置きたくないため
-export default async function globalSetup() {
-  const missing = REQUIRED_ENV_KEYS.filter((key) => !process.env[key]);
-  if (missing.length > 0) {
-    console.warn(
-      `[e2e] E2Eテストユーザーの環境変数が未設定のため、認証が必要なテストはスキップされます。不足: ${missing.join(", ")}`,
-    );
-    return;
-  }
+export default async function globalSetup(config: FullConfig) {
+  await ensureTestUserExists(TEST_USERS.a.email, TEST_USERS.a.password);
+  await ensureTestUserExists(TEST_USERS.b.email, TEST_USERS.b.password);
 
-  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-
+  const baseURL = config.projects[0].use.baseURL!;
   await loginAndSaveState(baseURL, "a", AUTH_STORAGE_STATE_A);
   await loginAndSaveState(baseURL, "b", AUTH_STORAGE_STATE_B);
 }

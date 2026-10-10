@@ -5,12 +5,6 @@ locals {
     # build・e2e ジョブが Next.js をビルド・起動するのに使う
     NEXT_PUBLIC_SUPABASE_URL             = local.supabase_url
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = var.supabase_publishable_key
-    # E2E のテスト用ログインAPIと、テストユーザー（Supabase の画面で作っておく）
-    E2E_TEST_SECRET         = var.e2e.secret
-    E2E_TEST_USER_EMAIL     = var.e2e.user_email
-    E2E_TEST_USER_PASSWORD  = var.e2e.user_password
-    E2E_TEST_USER2_EMAIL    = var.e2e.user2_email
-    E2E_TEST_USER2_PASSWORD = var.e2e.user2_password
     # migrate.yml が本番にマイグレーションを適用する
     SUPABASE_ACCESS_TOKEN = var.supabase_migration_access_token
     SUPABASE_DB_PASSWORD  = var.supabase_db_password

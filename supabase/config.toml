@@ -167,7 +167,9 @@ jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
-# signing_keys_path = "./signing_keys.json"
+# バックエンドは HS256 のトークンを受け付けないため、手元・CIでも本番と同じ ES256 で署名する。
+# 鍵のファイルが無いと CLI のどのコマンドも止まるので、最初に npm run supabase:signing-key で作る（git の対象外）
+signing_keys_path = "./signing_keys.json"
 # If disabled, the refresh token will never expire.
 enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
@@ -334,6 +336,13 @@ url = ""
 skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
+
+# E2E で「Googleでログイン」が Google の画面へ進むことだけを確かめる、ダミーのクライアント（実際にはログインできない）
+[auth.external.google]
+enabled = true
+client_id = "e2e-dummy.apps.googleusercontent.com"
+secret = "e2e-dummy"
+skip_nonce_check = false
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.

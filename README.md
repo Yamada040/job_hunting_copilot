@@ -112,7 +112,8 @@ flowchart LR
 ## セットアップ
 
 ```bash
-# DB（Docker が必要）
+# DB と認証（Docker が必要）。署名鍵は最初の1回だけ作る
+npm run supabase:signing-key
 supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta
 
 # バックエンドの API（localhost:8080）

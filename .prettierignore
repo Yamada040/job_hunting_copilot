@@ -9,3 +9,6 @@ supabase/.temp
 
 # Terraform が手元に作るファイル
 infra/.terraform
+
+# 手元・CI専用の JWT の署名鍵
+supabase/signing_keys.json
