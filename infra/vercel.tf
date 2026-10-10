@@ -35,7 +35,6 @@ resource "vercel_project_environment_variable" "public" {
   for_each = nonsensitive(toset(keys(local.public_env)))
 
   project_id = var.vercel_project_id
-  team_id    = var.vercel_team_id
   key        = each.key
   value      = local.public_env[each.key]
   target     = ["production", "preview", "development"]
@@ -46,7 +45,6 @@ resource "vercel_project_environment_variable" "secret" {
   for_each = nonsensitive(toset(keys(local.secret_env)))
 
   project_id = var.vercel_project_id
-  team_id    = var.vercel_team_id
   key        = each.key
   value      = local.secret_env[each.key]
   target     = ["production", "preview"]

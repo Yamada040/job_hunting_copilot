@@ -4,3 +4,5 @@
 # 秘密の値と、state の接続先（README.md 参照）
 terraform.tfvars
 backend.hcl
+# plan の結果。変数の値（秘密を含む）が平文で入る
+tfplan

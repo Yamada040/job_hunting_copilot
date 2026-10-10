@@ -20,11 +20,6 @@ variable "supabase_access_token" {
 
 # ---- 管理対象の識別子（秘密ではない） ----
 
-variable "vercel_team_id" {
-  type    = string
-  default = "team_SdVSOgPcd6j56NQxtmXBCgbR"
-}
-
 variable "vercel_project_id" {
   type    = string
   default = "prj_RvozCC16Ybrk0Ym5eT83w16WVHZh"
