@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/uuid"
 )
@@ -17,7 +18,7 @@ insert into aptitude_results (user_id, answers) values ($1, $2) on conflict (use
 
 type CreateAptitudeResultParams struct {
 	UserID  uuid.UUID
-	Answers []byte
+	Answers json.RawMessage
 }
 
 // 1人1回だけ（docs/backend-design.md 3章）。2回目はユニーク制約に任せて0行で返す
@@ -35,7 +36,7 @@ insert into self_analysis_results (user_id, answers) values ($1, $2) on conflict
 
 type CreateSelfAnalysisResultParams struct {
 	UserID  uuid.UUID
-	Answers []byte
+	Answers json.RawMessage
 }
 
 func (q *Queries) CreateSelfAnalysisResult(ctx context.Context, arg CreateSelfAnalysisResultParams) (int64, error) {

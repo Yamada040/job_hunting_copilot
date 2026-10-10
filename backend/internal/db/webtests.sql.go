@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -55,7 +56,7 @@ type CreateWebtestQuestionParams struct {
 	Title       string
 	Body        string
 	TestType    *string
-	Choices     []byte
+	Choices     json.RawMessage
 	Answer      string
 	Explanation *string
 	Category    *string

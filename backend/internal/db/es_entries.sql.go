@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,7 +42,7 @@ type CreateEsEntryParams struct {
 	Position  *string
 	Title     *string
 	ContentMd *string
-	Questions []byte
+	Questions json.RawMessage
 	Tags      []string
 	Deadline  *time.Time
 	Memo      *string
@@ -237,7 +238,7 @@ type UpdateEsEntryParams struct {
 	SetContentMd bool
 	ContentMd    *string
 	SetQuestions bool
-	Questions    []byte
+	Questions    json.RawMessage
 	SetTags      bool
 	Tags         []string
 	SetDeadline  bool

@@ -28,3 +28,9 @@ sql:
               import: time
               type: Time
               pointer: true
+          # []byte のままだと、本番の QueryExecModeExec ではバイナリとして送られ、jsonb の列に入らない
+          - db_type: jsonb
+            go_type: encoding/json.RawMessage
+          - db_type: jsonb
+            nullable: true
+            go_type: encoding/json.RawMessage

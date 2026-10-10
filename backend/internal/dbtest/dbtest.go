@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 )
 
 // Connect は、TEST_DATABASE_URL のDBにつなぐ。
@@ -21,7 +23,8 @@ func Connect(t *testing.T) *pgxpool.Pool {
 		}
 		t.Skip("TEST_DATABASE_URL is not set; run `supabase start` and set it to run database tests")
 	}
-	pool, err := pgxpool.New(t.Context(), url)
+	// 本番と同じ設定（QueryExecModeExec など）でつなぐ。既定の設定では、本番だけで起きる型の扱いの違いを見逃すため
+	pool, err := platform.OpenDB(t.Context(), url)
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}

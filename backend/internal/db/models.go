@@ -6,6 +6,7 @@ package db
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -246,7 +247,7 @@ type ApiRateLimit struct {
 type AptitudeResult struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
-	Answers   []byte
+	Answers   json.RawMessage
 	AiResult  *string
 	CreatedAt time.Time
 }
@@ -289,7 +290,7 @@ type EsEntry struct {
 	Title     *string
 	Status    EsStatus
 	ContentMd *string
-	Questions []byte
+	Questions json.RawMessage
 	Tags      []string
 	Deadline  *time.Time
 	Memo      *string
@@ -305,7 +306,7 @@ type InterviewLog struct {
 	Format        *InterviewFormat
 	Round         *string
 	InterviewDate *time.Time
-	Questions     []byte
+	Questions     json.RawMessage
 	Improvement   *string
 	Unexpected    *string
 	AiResult      *string
@@ -331,7 +332,7 @@ type Profile struct {
 type SelfAnalysisResult struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
-	Answers   []byte
+	Answers   json.RawMessage
 	AiResult  *string
 	CreatedAt time.Time
 }
@@ -351,7 +352,7 @@ type WebtestQuestion struct {
 	Title       string
 	Body        string
 	TestType    *string
-	Choices     []byte
+	Choices     json.RawMessage
 	Answer      string
 	Explanation *string
 	Category    *string
