@@ -9,7 +9,8 @@ blocked=$(printf '%s\n' "$@" | grep -E \
   -e '(^|/)tfplan$' \
   -e '\.tfplan$' \
   -e '(^|/)backend\.hcl$' \
-  -e '(^|/)\.terraform/' |
+  -e '(^|/)\.terraform/' \
+  -e '(^|/)signing_keys\.json$' |
   grep -v -E '(^|/)\.env\.example$')
 
 if [ -n "$blocked" ]; then

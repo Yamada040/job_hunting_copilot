@@ -35,13 +35,14 @@ npm run format        # Prettierで整形
 npm run format:check  # フォーマットをチェック
 npm run generate:api  # openapi.yaml から lib/api/schema.d.ts を生成する（openapi.yaml を変えたら必ず実行）
 npm run test          # Vitestで単体テストを実行
-npm run test:e2e      # PlaywrightでE2Eテストを実行
+npm run test:e2e      # PlaywrightでE2Eテストを実行（手元の Supabase を起動しておく。Next.js とバックエンドは自動で起動する）
 ```
 
 **バックエンド（`backend/`）**:
 
 ```bash
-supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta  # ローカルのDB（リポジトリのルートで実行）
+npm run supabase:signing-key  # 手元の Supabase の JWT 署名鍵（ES256）を作る。最初の1回だけ（リポジトリのルートで実行）
+supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta  # ローカルのDBと認証（リポジトリのルートで実行）
 go generate ./...     # openapi.yaml と SQL（internal/db/queries）からGoのコードを生成する
 go run ./cmd/server   # Goのサーバーを起動 (localhost:8080)。SUPABASE_URL と DATABASE_URL が必要
 TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres go test ./...  # DBを使うテストも含めて実行
@@ -251,7 +252,7 @@ backend/
 **Goのテスト**:
 
 - テストはテスト対象と同じパッケージに `*_test.go` で置く
-- DBを使うテストは `internal/dbtest` で実際のDB（`supabase start` のもの）につなぐ。`TEST_DATABASE_URL` が無いと手元ではスキップし、CIでは失敗させる
+- DBを使うテストは `internal/dbtest` で実際のDB（`supabase start` のもの）に、本番と同じ接続設定（`platform.OpenDB`）でつなぐ。`TEST_DATABASE_URL` が無いと手元ではスキップし、CIでは失敗させる
 - ユーザー間でデータが混ざらないこと（他人のIDで取得・更新・削除できないこと）と、同時実行（XPの日次上限・回数制限）は、実際のDBで確かめる
 - テスト用の偽物: `internal/auth/authtest`（Supabase Auth の代わりにJWTを発行）、`internal/ai/aitest`（AIの代わり）
 
@@ -263,16 +264,17 @@ backend/
 **E2Eテスト（Playwright）**:
 
 - テストは `e2e/` ディレクトリに配置する
-- 認証は「本番Supabaseに固定のテストユーザーA/Bを作成して流用」する方式。テストユーザーは Supabase の画面であらかじめ作っておく（全権限の secret キーをCIに置かないため）。`POST /api/test-support/login` が `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致という多重ガードの下でのみ、固定ユーザーのセッションを発行する
-- `e2e/global-setup.ts` がテストユーザーA/Bでログインし、`storageState` を保存する
-- E2Eは本番ビルドの Next.js だけを起動しており、`/v1` を受けるバックエンドがいない。バックエンドに移した画面（ESなど）のE2Eは、E2Eでバックエンドを起動する方法を決めてから書き直す
+- **本番ではなく、手元・CIで起動した Supabase（`supabase start`）につなぐ**。`playwright.config.ts` が `supabase status` からURLとキーを読み、バックエンド（ポート8180）と本番ビルドの Next.js（ポート3100）を起動する
+- 手元の Supabase は、本番と同じ ES256 でトークンに署名する（`npm run supabase:signing-key`。バックエンドは HS256 を受け付けない）
+- `e2e/global-setup.ts` が、手元の Supabase の管理APIでテストユーザーA/Bを作り、`POST /api/test-support/login` でログインして `storageState` を保存する。このルートは `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致のときだけ動く
+- 本番の Supabase はメールアドレスでのログインを止めているので、本番ではテストユーザーでログインできない
 - 本番Vercel環境変数には **`E2E_TEST_MODE` を絶対に設定しない**
 - 詳細な設計・セキュリティ上の注意点は `docs/testing/e2e-test-plan.md` を参照
 
 **CI（GitHub Actions）**:
 
 - `.github/workflows/checks.yml`: 静的チェック（`checks` = lint/type-check/format:check/APIの型の鮮度）+ `build`（本番ビルド確認）
-- `.github/workflows/test.yml`: `unit`（Vitest）+ `check-e2e-secrets`/`e2e`（Playwright。E2E用Secretsが未設定の間は自動スキップ）
+- `.github/workflows/test.yml`: `unit`（Vitest）+ `e2e`（Playwright。CIの中で Supabase を起動する）
 - `.github/workflows/go.yml`: `go`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）
 - `.github/workflows/migrate.yml`: dev へのマージで、本番の Supabase にマイグレーションを適用する
 - devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`go`）を要求し、マージ前にブランチを最新化するルールセットが設定されている（`infra/github.tf`）
@@ -321,16 +323,7 @@ CONTACT_TO_EMAIL=contact-destination@example.com
 DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザー
 ```
 
-**E2Eテスト用（任意。ローカルは `.env.test.local` に設定。CIはGitHub Secretsから注入）**:
-
-```env
-E2E_TEST_MODE=true
-E2E_TEST_SECRET=...
-E2E_TEST_USER_EMAIL=...
-E2E_TEST_USER_PASSWORD=...
-E2E_TEST_USER2_EMAIL=...
-E2E_TEST_USER2_PASSWORD=...
-```
+E2Eテストの値（テストユーザーなど）は、手元の Supabase 専用の固定値として `e2e/support/local-supabase.ts` に置いている。
 
 **GitHub Actions（マイグレーションの適用）**: `SUPABASE_ACCESS_TOKEN`（Project Settings・API Keys・API Key Secrets・Connection Pooling の Read 権限）、`SUPABASE_DB_PASSWORD`、`SUPABASE_PROJECT_ID`
 

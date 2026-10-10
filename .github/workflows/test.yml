@@ -15,41 +15,21 @@ jobs:
       - run: npm ci
       - run: npm run test
 
-  # docs/testing/e2e-test-plan.md の「前提条件」参照。新規Supabaseプロジェクトは作らず、
-  # build ジョブと同じ本番Supabaseの資格情報を流用し、固定のテストユーザーA/Bでログインする。
-  # E2E_TEST_SECRET が未設定の間は自動でスキップする。
-  # job-levelのif:はsecretsコンテキストを直接参照できないため、事前チェック用ジョブの
-  # outputs経由で判定する。
-  check-e2e-secrets:
-    runs-on: ubuntu-latest
-    outputs:
-      configured: ${{ steps.check.outputs.configured }}
-    steps:
-      - id: check
-        env:
-          E2E_TEST_SECRET: ${{ secrets.E2E_TEST_SECRET }}
-        run: |
-          if [ -n "$E2E_TEST_SECRET" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-          fi
-
+  # 本番ではなく、CIの中で起動した Supabase（認証とDB）とバックエンドにつないで確かめる（docs/testing/e2e-test-plan.md）
   e2e:
-    needs: check-e2e-secrets
-    if: needs.check-e2e-secrets.outputs.configured == 'true'
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-      E2E_TEST_MODE: "true"
-      E2E_TEST_SECRET: ${{ secrets.E2E_TEST_SECRET }}
-      E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
-      E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
-      E2E_TEST_USER2_EMAIL: ${{ secrets.E2E_TEST_USER2_EMAIL }}
-      E2E_TEST_USER2_PASSWORD: ${{ secrets.E2E_TEST_USER2_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: npm run supabase:signing-key
+      # 認証（GoTrue）・DB・その前段の API ゲートウェイだけを起動する
+      - run: supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta,postgrest,supavisor
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: 20

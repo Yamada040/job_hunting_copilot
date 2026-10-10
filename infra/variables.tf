@@ -119,15 +119,3 @@ variable "google_oauth" {
   })
   sensitive = true
 }
-
-variable "e2e" {
-  description = "E2E テストの固定ユーザーと、テスト用ログインAPIの共有シークレット"
-  type = object({
-    secret         = string
-    user_email     = string
-    user_password  = string
-    user2_email    = string
-    user2_password = string
-  })
-  sensitive = true
-}

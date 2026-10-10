@@ -14,6 +14,9 @@ resource "supabase_settings" "this" {
     external_google_enabled   = true
     external_google_client_id = var.google_oauth.client_id
     external_google_secret    = var.google_oauth.client_secret
+    # ログインは Google だけ。メールアドレスでのログインを開けておくと、公開されている publishable キーで
+    # 誰でもアカウントを量産でき、1人あたりのAIの回数制限が意味を失う（E2E は手元・CIの Supabase で行う）
+    external_email_enabled = false
   })
 
   # データの読み書きはすべてバックエンドが行い、Data API（PostgREST）は使わない。

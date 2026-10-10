@@ -25,5 +25,7 @@ jobs:
         with:
           version: latest
       # Secrets が未設定のまま黙って飛ばすと、本番にマイグレーションが当たっていないことに気づけないため、失敗させる
+      # config.toml が手元・CI用の JWT の署名鍵のファイルを指しており、無いと CLI が止まる。本番には使わないので使い捨てで作る
+      - run: npm run supabase:signing-key
       - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
       - run: supabase db push
