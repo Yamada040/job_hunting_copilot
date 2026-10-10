@@ -1,0 +1,95 @@
+openapi: 3.0.3
+info:
+  title: 就活copilot API
+  version: 1.0.0
+  description: |
+    就活copilot のバックエンドAPI。設計は docs/backend-design.md を参照。
+    このファイルが唯一の正であり、Go のサーバーと TypeScript のクライアントはここから生成する。
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/health:
+    get:
+      operationId: getHealth
+      summary: 稼働確認
+      security: []
+      responses:
+        "200":
+          description: 稼働中
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        default:
+          $ref: "#/components/responses/Problem"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth が発行したアクセストークン
+
+  responses:
+    Problem:
+      description: エラー（RFC 9457 Problem Details）
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+
+    Problem:
+      type: object
+      description: RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの
+      required: [type, title, status, code]
+      properties:
+        type:
+          type: string
+          description: エラーの種類を表すURI。種類を区別しない場合は about:blank
+          example: about:blank
+        title:
+          type: string
+          description: 利用者向けの日本語のメッセージ
+          example: 入力内容に誤りがあります
+        status:
+          type: integer
+          description: HTTPステータスコード
+          example: 400
+        detail:
+          type: string
+          description: この発生に固有の補足（任意）
+        instance:
+          type: string
+          description: 発生したリクエストのパス（任意）
+        code:
+          type: string
+          description: 機械が判定するための英語のコード
+          example: validation_failed
+        errors:
+          type: array
+          description: 項目ごとのエラー（入力チェックのとき）
+          items:
+            $ref: "#/components/schemas/FieldError"
+
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          example: title
+        message:
+          type: string
+          example: タイトルは必須です

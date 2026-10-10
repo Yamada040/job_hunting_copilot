@@ -1,0 +1,28 @@
+name: Go
+
+on:
+  pull_request:
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  # 生成コードの鮮度・lint・テストを1ジョブにまとめる（Goのモジュールのダウンロードを重複させない）
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: 生成コードが openapi.yaml と一致しているか確認
+        run: |
+          go generate ./...
+          git diff --exit-code -- .
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.14.0
+          working-directory: backend
+      - run: go test ./...
