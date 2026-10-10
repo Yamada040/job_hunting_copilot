@@ -261,9 +261,9 @@ backend/
 **E2Eテスト（Playwright）**:
 
 - テストは `e2e/` ディレクトリに配置する
-- 認証は「本番Supabaseに固定のテストユーザーA/Bを作成して流用」する方式。`POST /api/test-support/login` が `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致という多重ガードの下でのみ、固定ユーザーのセッションを発行する
-- `e2e/global-setup.ts` がテストユーザーの作成〜ログイン〜`storageState` 保存までを行い、`e2e/global-teardown.ts` が全テスト終了後にテストユーザーの `es_entries` を一括削除する（本番Supabase流用に伴う安全策）
-- E2Eは本番ビルドの Next.js だけを起動しており、`/v1` を受けるバックエンドがいない。バックエンドに移した画面（ESなど）のE2Eは、E2Eでバックエンドを起動する方法を決めるまで `test.fixme` で止めている
+- 認証は「本番Supabaseに固定のテストユーザーA/Bを作成して流用」する方式。テストユーザーは Supabase の画面であらかじめ作っておく（全権限の secret キーをCIに置かないため）。`POST /api/test-support/login` が `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致という多重ガードの下でのみ、固定ユーザーのセッションを発行する
+- `e2e/global-setup.ts` がテストユーザーA/Bでログインし、`storageState` を保存する
+- E2Eは本番ビルドの Next.js だけを起動しており、`/v1` を受けるバックエンドがいない。バックエンドに移した画面（ESなど）のE2Eは、E2Eでバックエンドを起動する方法を決めてから書き直す
 - 本番Vercel環境変数には **`E2E_TEST_MODE` を絶対に設定しない**
 - 詳細な設計・セキュリティ上の注意点は `docs/testing/e2e-test-plan.md` を参照
 
@@ -273,7 +273,7 @@ backend/
 - `.github/workflows/test.yml`: `unit`（Vitest）+ `check-e2e-secrets`/`e2e`（Playwright。E2E用Secretsが未設定の間は自動スキップ）
 - `.github/workflows/go.yml`: `go`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）
 - `.github/workflows/migrate.yml`: dev へのマージで、本番の Supabase にマイグレーションを適用する
-- devブランチには必須ステータスチェック（`checks`/`build`/`unit`）を要求し、マージ前にブランチを最新化するルールセットが設定されている
+- devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`go`）を要求し、マージ前にブランチを最新化するルールセットが設定されている（`infra/github.tf`）
 
 ### ブランチ運用
 
@@ -284,13 +284,13 @@ backend/
 
 ### 環境変数
 
-Vercel の環境変数は Next.js と バックエンドで共有される。
+Vercel の環境変数は Next.js と バックエンドで共有される。Vercel の環境変数・GitHub Actions の Secrets・Supabase Auth の設定は `infra/`（Terraform）で管理しており、画面から直接変えない（`infra/README.md` 参照）。
 
 **Next.js**:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...   # sb_publishable_ で始まるキー
 NEXT_PUBLIC_SITE_URL=https://job-seeker-gray.vercel.app (ローカルは localhost:3000)
 API_ORIGIN=http://localhost:8080 (ローカル開発のみ。/v1 の転送先)
 ```
@@ -322,7 +322,6 @@ DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザ
 **E2Eテスト用（任意。ローカルは `.env.test.local` に設定。CIはGitHub Secretsから注入）**:
 
 ```env
-SUPABASE_SERVICE_ROLE_KEY=...
 E2E_TEST_MODE=true
 E2E_TEST_SECRET=...
 E2E_TEST_USER_EMAIL=...
@@ -335,17 +334,9 @@ E2E_TEST_USER2_PASSWORD=...
 
 ### Supabase Auth設定
 
-**ローカル開発**（`http://localhost:3000`）:
+`infra/supabase.tf` で管理する。Site URL は本番のURL、Redirect URL は本番と `http://localhost:3000` の `/auth/callback`・`/dashboard`。Google ログインの OAuth クライアントも同じファイルで設定する。
 
-- Site URL: `http://localhost:3000`
-- Redirect URL: `http://localhost:3000/auth/callback`, `http://localhost:3000/dashboard`
-
-**本番**（`https://job-seeker-gray.vercel.app`）:
-
-- Site URL: `https://job-seeker-gray.vercel.app`
-- Redirect URL: `https://job-seeker-gray.vercel.app/auth/callback`, `https://job-seeker-gray.vercel.app/dashboard`
-
-Supabaseダッシュボード → Authentication → URL Configuration で設定する。
+Data API（PostgREST）は使わないため、公開するスキーマを `graphql_public` だけにして `public` を外している。
 
 ### ページ構成
 
@@ -377,7 +368,7 @@ Supabaseダッシュボード → Authentication → URL Configuration で設定
 
 - **Vercel**（無料のHobbyプラン）でホスティング。`vercel.json` の Services で、`/v1/*` を Go、それ以外を Next.js に振り分ける。関数のリージョンは東京（`hnd1`、Supabase と同じ）
 - `dev` ブランチへのマージで自動デプロイ
-- 環境変数はVercelダッシュボードで設定する
+- 環境変数は `infra/vercel.tf`（Terraform）で設定する。変えたら Vercel で再デプロイするまで反映されない
 - ブランチごとにプレビューデプロイが作成される
 
 ### 既知のパターン・落とし穴
