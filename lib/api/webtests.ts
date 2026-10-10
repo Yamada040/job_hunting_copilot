@@ -42,7 +42,7 @@ export function useCreateWebtestQuestion() {
   });
 }
 
-/** 問題に解答する。正誤はGoが判定する。解答の記録を取り直すため、問題の詳細のキャッシュを捨てる。 */
+/** 問題に解答する。正誤はバックエンドが判定する。解答の記録を取り直すため、問題の詳細のキャッシュを捨てる。 */
 export function useAnswerWebtestQuestion(id: string) {
   const queryClient = useQueryClient();
   return useMutation({

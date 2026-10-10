@@ -69,7 +69,7 @@ export function useDeleteCompany(id: string) {
 /** ESなど他の項目にひも付く企業の、表示に必要な最小限の情報。 */
 export type CompanySummary = components["schemas"]["CompanySummary"];
 
-/** AI企業分析を行う（企業ごとに1回）。結果はGoが保存し、返ってきた企業でキャッシュを置き換える。 */
+/** AI企業分析を行う（企業ごとに1回）。結果はバックエンドが保存し、返ってきた企業でキャッシュを置き換える。 */
 export function useAnalyzeCompany(id: string) {
   const queryClient = useQueryClient();
   return useMutation({

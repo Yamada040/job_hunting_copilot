@@ -1,6 +1,6 @@
 # 単体テスト計画
 
-Go 移行（[backend-design.md](../backend-design.md)）で、ビジネスロジックとDBアクセスはすべて Go に移った。そのため、テストの中心は Go 側にある。フロントエンド（Vitest）は、画面から使う小さな関数と、APIクライアントだけをテストする。
+Go 移行（[backend-design.md](../backend-design.md)）で、ビジネスロジックとDBアクセスはすべて バックエンドに移った。そのため、テストの中心は Go 側にある。フロントエンド（Vitest）は、画面から使う小さな関数と、APIクライアントだけをテストする。
 
 ## Go（`go test`）
 
@@ -43,14 +43,14 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres go tes
 
 ### 対象
 
-| ファイル                                      | 確かめること                                                                                                                            |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `lib/api/client.ts`                           | Supabase のアクセストークンを Bearer で付ける（未ログインなら付けない）。エラーを `ApiError` にして、Goの日本語のメッセージを取り出せる |
-| `lib/xp/compute-level.ts`                     | レベルごとのXPのしきい値（ヘッダーの進捗バー）                                                                                          |
-| `app/_components/ai-result/sanitize.ts`       | AIの結果のMarkdownの記号を、画面で読める形に整える                                                                                      |
-| `app/dashboard/_components/calendar/utils.ts` | 日付のキー（YYYY-MM-DD）の作り方                                                                                                        |
-| `lib/validation/schemas/contact.ts`           | 問い合わせフォームの入力チェック（使い勝手のため。正式な検証は Go）                                                                     |
-| `lib/constants/site.ts`                       | サイトURLの決め方                                                                                                                       |
+| ファイル                                      | 確かめること                                                                                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/api/client.ts`                           | Supabase のアクセストークンを Bearer で付ける（未ログインなら付けない）。エラーを `ApiError` にして、バックエンドの日本語のメッセージを取り出せる |
+| `lib/xp/compute-level.ts`                     | レベルごとのXPのしきい値（ヘッダーの進捗バー）                                                                                                    |
+| `app/_components/ai-result/sanitize.ts`       | AIの結果のMarkdownの記号を、画面で読める形に整える                                                                                                |
+| `app/dashboard/_components/calendar/utils.ts` | 日付のキー（YYYY-MM-DD）の作り方                                                                                                                  |
+| `lib/validation/schemas/contact.ts`           | 問い合わせフォームの入力チェック（使い勝手のため。正式な検証は Go）                                                                               |
+| `lib/constants/site.ts`                       | サイトURLの決め方                                                                                                                                 |
 
 ### 実行
 

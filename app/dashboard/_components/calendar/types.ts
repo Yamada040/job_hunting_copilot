@@ -19,7 +19,7 @@ export type CalendarFormState = {
   time: string;
 };
 
-/** Goが返すカレンダーの1件を、画面で扱う形にする。 */
+/** バックエンドが返すカレンダーの1件を、画面で扱う形にする。 */
 export function toCalendarEvent(item: CalendarItem): CalendarEvent {
   return {
     id: item.source === "es_deadline" ? `es-${item.id}` : item.id,

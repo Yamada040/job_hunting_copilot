@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 
-**就活copilot** は、日本の就活生向けのMVP（Next.js の画面 + Go のAPI + Supabase）。ES（エントリーシート）作成、企業管理、面接ログ、自己分析ツールを1つのダッシュボードに集約し、AIによる添削とゲーミフィケーション（XP/レベリング）を提供する。
+**就活copilot** は、日本の就活生向けのMVP（Next.js の画面 + バックエンドのAPI + Supabase）。ES（エントリーシート）作成、企業管理、面接ログ、自己分析ツールを1つのダッシュボードに集約し、AIによる添削とゲーミフィケーション（XP/レベリング）を提供する。
 
 **中核の目的**: 分断された就活タスクを1つの統合されたインターフェースに集約し、摩擦（フリクション）を取り除くこと。このアプリの価値は「もっと頑張らせること」ではなく、進捗を妨げる「フリクションタイム」を取り除くことにある。
 
@@ -18,7 +18,7 @@
 - **DBアクセス（Go）**: sqlc + pgx
 - **スタイリング**: Tailwind CSS v4（`bg-linear-to-*` など推奨クラスを優先）
 - **アニメーション**: Framer Motion
-- **ホスティング**: Vercel（無料プラン）。Next.js と Go を同じプロジェクトの Services で動かす（`vercel.json`）
+- **ホスティング**: Vercel（無料プラン）。Next.js と バックエンドを同じプロジェクトの Services で動かす（`vercel.json`）
 
 すべての依存サービスは**無料プラン**で運用している（有料インフラなし）。設計の詳細と、各判断で採らなかった案は [docs/backend-design.md](./docs/backend-design.md) を参照。
 
@@ -27,7 +27,7 @@
 **フロントエンド（リポジトリのルート）**:
 
 ```bash
-npm run dev           # Next.js開発サーバーを起動 (localhost:3000)。/v1 は手元の Go に転送する
+npm run dev           # Next.js開発サーバーを起動 (localhost:3000)。/v1 は手元のバックエンドに転送する
 npm run build         # 本番ビルド
 npm run lint          # ESLintを実行
 npm run type-check    # TypeScriptの型チェック（変更後は必ず実行）
@@ -79,18 +79,18 @@ flowchart LR
 ### 認証・認可
 
 - **ログイン**: Supabase Auth（Google OAuth）。Next.js の `proxy.ts` がページへのアクセス時にセッションを確かめ、未ログインなら `/login` へリダイレクトする
-- **Go の認証**: ブラウザが Supabase のアクセストークンを `Authorization: Bearer` で送り、Go が Supabase の公開鍵（JWKS）で検証する（`backend/internal/auth`）。ユーザーIDは検証したトークンからだけ取り出し、リクエストの本文やURLのIDは信用しない
+- **バックエンドの認証**: ブラウザが Supabase のアクセストークンを `Authorization: Bearer` で送り、バックエンドが Supabase の公開鍵（JWKS）で検証する（`backend/internal/auth`）。ユーザーIDは検証したトークンからだけ取り出し、リクエストの本文やURLのIDは信用しない
 - **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける
-- **認可**: Go がすべての問い合わせを `user_id` で絞り込む。DBにアクセスする関数は `userID` を必須の引数にする。他人のデータは存在しないデータと同じく 404 にする
-- **RLS**: 全テーブルで有効だが、ポリシーは1つも作らない。Supabase が公開している Data API を塞ぐためだけに使い、Go はRLSの対象外のロールで接続する
+- **認可**: バックエンドがすべての問い合わせを `user_id` で絞り込む。DBにアクセスする関数は `userID` を必須の引数にする。他人のデータは存在しないデータと同じく 404 にする
+- **RLS**: 全テーブルで有効だが、ポリシーは1つも作らない。Supabase が公開している Data API を塞ぐためだけに使い、バックエンドはRLSの対象外のロールで接続する
 - **Next.js の Supabase クライアント**: 認証（セッション・ログイン・ログアウト・メールアドレスの表示）にだけ使い、データの読み書きには使わない
 
 ### データ取得・状態管理
 
-- **ブラウザから Go のAPIを直接呼ぶ**（SPA型）: Go のAPIは `/v1/...` で Next.js と同じドメインに置かれている。`lib/api/client.ts` の生成クライアント経由で呼び、`fetch()` を直接書かない
+- **ブラウザからバックエンドのAPIを直接呼ぶ**（SPA型）: バックエンドのAPIは `/v1/...` で Next.js と同じドメインに置かれている。`lib/api/client.ts` の生成クライアント経由で呼び、`fetch()` を直接書かない
 - **サーバーのデータのキャッシュには TanStack Query を使う**（`lib/api/<機能>.ts` のフック）。更新のレスポンスで関連するキャッシュを書き換える。XPが付く操作は、レスポンスの `xp` で `applyXpResult` を呼びヘッダーの表示を更新する
 - 画面だけの状態は props と hooks で扱い、Redux・Zustand などの汎用の状態管理ライブラリは使わない
-- **ローカル開発**: `next dev` は `/v1` を `API_ORIGIN`（既定 `http://localhost:8080`）の Go に転送する
+- **ローカル開発**: `next dev` は `/v1` を `API_ORIGIN`（既定 `http://localhost:8080`）のバックエンドに転送する
 
 ### バックエンド（Go）の構成
 
@@ -117,7 +117,7 @@ backend/
 
 ### AI
 
-すべてのAI呼び出しは `backend/internal/ai` を経由する。AIへの入力は画面から受け取らず、Go が保存済みのデータから組み立て、結果の保存まで1つの操作で行う。
+すべてのAI呼び出しは `backend/internal/ai` を経由する。AIへの入力は画面から受け取らず、バックエンドが保存済みのデータから組み立て、結果の保存まで1つの操作で行う。
 
 | 機能                      | API                                      | 再実行                   |
 | ------------------------- | ---------------------------------------- | ------------------------ |
@@ -138,7 +138,7 @@ backend/
 - `profiles`: プロフィール、XP、レベル
 - `companies`: 企業（中心のエンティティ）。正規化した企業名（`normalized_name`）はユーザーごとに一意
 - `es_entries` / `interview_logs`: ES・面接ログ。`company_id` は必須
-- `calendar_events`: ユーザーが登録した予定（`company_id` は任意）。カレンダーにはESの締切も混ぜて表示する（Goが組み立てる）
+- `calendar_events`: ユーザーが登録した予定（`company_id` は任意）。カレンダーにはESの締切も混ぜて表示する（バックエンドが組み立てる）
 - `xp_logs`: XPの獲得履歴。`(user_id, action, ref_id)` がユニークで、同じ対象への二重付与をDBが防ぐ
 - `aptitude_results` / `self_analysis_results`: 1人1件
 - `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録
@@ -148,7 +148,7 @@ backend/
 
 ### APIルート
 
-Go のAPIの一覧は `backend/api/openapi.yaml` を参照する。Next.js に残っている Route Handler は次だけ:
+バックエンドのAPIの一覧は `backend/api/openapi.yaml` を参照する。Next.js に残っている Route Handler は次だけ:
 
 - `/auth/callback`, `/auth/signout`: ログイン・ログアウト（Supabase Auth）
 - `POST /api/test-support/login`: **E2Eテスト専用**。`E2E_TEST_MODE` と共有シークレットの多重ガード付きで、本番以外では絶対に有効化しない（後述の「テスト」セクション参照）
@@ -172,7 +172,7 @@ Go のAPIの一覧は `backend/api/openapi.yaml` を参照する。Next.js に�
 
 - ページレベルのレイアウト: `app/_components/layout/`（`AppLayout`）
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
-- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: Goのエラーの表示、`ai-result/`: AIの結果の表示）
+- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示）
 - APIのフック・型: `lib/api/`（生成した `schema.d.ts` とクライアント）
 
 ### ゲーミフィケーション（XPシステム）
@@ -204,7 +204,7 @@ Go のAPIの一覧は `backend/api/openapi.yaml` を参照する。Next.js に�
 - 企業を選んで作成（常に下書き）、設問と回答・本文を編集、削除
 - 提出は取り消せない（提出でXP付与）
 - AI添削
-- 締切（`deadline`）はカレンダーに表示されるが、`calendar_events` には保存せずGoがESから組み立てる
+- 締切（`deadline`）はカレンダーに表示されるが、`calendar_events` には保存せずバックエンドがESから組み立てる
 
 **企業管理**（`/companies`, `/companies/new`, `/companies/[id]`）:
 
@@ -227,12 +227,12 @@ Go のAPIの一覧は `backend/api/openapi.yaml` を参照する。Next.js に�
 - **KISS**: 複雑な解決策よりシンプルな解決策を優先する
 - **DRY**: 重複したロジックは共有のutils/componentsへ抽出する
 - **型安全性**: 変更後は必ず `npm run type-check`（Goは `go vet`）を実行する
-- **バリデーション**: ユーザー入力を信用せず、必ずGoで検証する（`openapi.yaml` の制約と service のルール）。フロントの検証は使い勝手のためだけ
+- **バリデーション**: ユーザー入力を信用せず、必ずバックエンドで検証する（`openapi.yaml` の制約と service のルール）。フロントの検証は使い勝手のためだけ
 
 **実装上の注意**:
 
-- データの読み書きとビジネスロジックは Go に置き、Next.js には置かない
-- API を足すときは `openapi.yaml` から書き、生成したインターフェースを Go で実装する
+- データの読み書きとビジネスロジックはバックエンドに置き、Next.js には置かない
+- API を足すときは `openapi.yaml` から書き、生成したインターフェースをバックエンドで実装する
 - AI呼び出しは必ず `backend/internal/ai` を経由する
 - AIキーやSMTPの設定が無くても、その機能だけが 503 を返し、サーバーは止めない
 - コンポーネントは最大200行程度。それを超えたら分割する
@@ -263,7 +263,7 @@ Go のAPIの一覧は `backend/api/openapi.yaml` を参照する。Next.js に�
 - テストは `e2e/` ディレクトリに配置する
 - 認証は「本番Supabaseに固定のテストユーザーA/Bを作成して流用」する方式。`POST /api/test-support/login` が `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致という多重ガードの下でのみ、固定ユーザーのセッションを発行する
 - `e2e/global-setup.ts` がテストユーザーの作成〜ログイン〜`storageState` 保存までを行い、`e2e/global-teardown.ts` が全テスト終了後にテストユーザーの `es_entries` を一括削除する（本番Supabase流用に伴う安全策）
-- E2Eは本番ビルドの Next.js だけを起動しており、`/v1` を受ける Go がいない。Go に移した画面（ESなど）のE2Eは、E2EでGoを起動する方法を決めるまで `test.fixme` で止めている
+- E2Eは本番ビルドの Next.js だけを起動しており、`/v1` を受けるバックエンドがいない。バックエンドに移した画面（ESなど）のE2Eは、E2Eでバックエンドを起動する方法を決めるまで `test.fixme` で止めている
 - 本番Vercel環境変数には **`E2E_TEST_MODE` を絶対に設定しない**
 - 詳細な設計・セキュリティ上の注意点は `docs/testing/e2e-test-plan.md` を参照
 
@@ -284,7 +284,7 @@ Go のAPIの一覧は `backend/api/openapi.yaml` を参照する。Next.js に�
 
 ### 環境変数
 
-Vercel の環境変数は Next.js と Go で共有される。
+Vercel の環境変数は Next.js と バックエンドで共有される。
 
 **Next.js**:
 
@@ -295,14 +295,14 @@ NEXT_PUBLIC_SITE_URL=https://job-seeker-gray.vercel.app (ローカルは localho
 API_ORIGIN=http://localhost:8080 (ローカル開発のみ。/v1 の転送先)
 ```
 
-**Go（必須）**:
+**バックエンド（必須）**:
 
 ```env
 SUPABASE_URL=https://<プロジェクトID>.supabase.co   # JWTの公開鍵（JWKS）の取得元
 DATABASE_URL=postgresql://...:6543/postgres         # Supabase の接続プーラー（トランザクションモード）
 ```
 
-**Go（任意。無ければその機能だけが 503 を返す）**:
+**バックエンド（任意。無ければその機能だけが 503 を返す）**:
 
 ```env
 AI_PROVIDER=gemini|gpt
@@ -363,7 +363,7 @@ Supabaseダッシュボード → Authentication → URL Configuration で設定
 - `/webtests`, `/webtests/new`, `/webtests/[id]` — Webテスト練習
 - `/profile` — プロフィール/目標の編集
 - `/contact` — フィードバックフォーム（ログイン済みユーザー向け）
-- `/developer` — 開発者向け管理ページ（Go が `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけサイドバーにリンクが出る）
+- `/developer` — 開発者向け管理ページ（バックエンドが `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけサイドバーにリンクが出る）
 
 すべての保護ページ: 未ログインなら `proxy.ts` が `/login` へリダイレクトする。
 
@@ -384,7 +384,7 @@ Supabaseダッシュボード → Authentication → URL Configuration で設定
 
 **避けるべきこと**:
 
-- Next.js から Supabase のデータを直接読み書きする（RLSのポリシーが無いので読めない。データは必ず Go のAPI経由）
+- Next.js から Supabase のデータを直接読み書きする（RLSのポリシーが無いので読めない。データは必ずバックエンドのAPI経由）
 - `user_id` で絞り込まない問い合わせを書く（RLSは守ってくれない）
 - 画面から受け取った文章をAIに渡す・AIの結果として保存する
 - `openapi.yaml` を変えて、生成コードを更新し忘れる

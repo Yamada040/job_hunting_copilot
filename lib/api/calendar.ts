@@ -12,7 +12,7 @@ export const calendarKeys = {
   all: ["calendar"] as const,
 };
 
-/** カレンダーの予定とESの締切（Goが日付順にまとめて返す）。 */
+/** カレンダーの予定とESの締切（バックエンドが日付順にまとめて返す）。 */
 export function useCalendarItems() {
   return useQuery({
     queryKey: calendarKeys.all,

@@ -39,7 +39,7 @@ func NewVerifier(ctx context.Context, supabaseURL string) (*Verifier, error) {
 	return &Verifier{keys: keys.Keyfunc, issuer: base + "/auth/v1"}, nil
 }
 
-// claims は、Supabase Auth のトークンのうち、Goが使う項目。
+// claims は、Supabase Auth のトークンのうち、バックエンドが使う項目。
 type claims struct {
 	jwt.RegisteredClaims
 	Email string `json:"email"`

@@ -485,7 +485,7 @@ export interface paths {
     put?: never;
     /**
      * 問題に解答する
-     * @description 正誤はGoが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
+     * @description 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
      */
     post: operations["answerWebtestQuestion"];
     delete?: never;

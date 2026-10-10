@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: |
     就活copilot のバックエンドAPI。設計は docs/backend-design.md を参照。
-    このファイルが唯一の正であり、Go のサーバーと TypeScript のクライアントはここから生成する。
+    このファイルが唯一の正であり、バックエンドのサーバーと TypeScript のクライアントはここから生成する。
 
 security:
   - bearerAuth: []
@@ -676,7 +676,7 @@ paths:
     post:
       operationId: answerWebtestQuestion
       summary: 問題に解答する
-      description: 正誤はGoが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
+      description: 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
       requestBody:
         required: true
         content:

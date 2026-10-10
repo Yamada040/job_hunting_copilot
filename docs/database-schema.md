@@ -6,7 +6,7 @@
 
 ## 方針
 
-- データの読み書きは Go だけが行う。Go はRLSの対象外のロールで接続し、すべての問い合わせを `user_id` で絞り込む
+- データの読み書きは バックエンドだけが行う。バックエンドはRLSの対象外のロールで接続し、すべての問い合わせを `user_id` で絞り込む
 - 全テーブルでRLSは有効だが、ポリシーは作らない。Supabase が公開している Data API からは `anon` / `authenticated` ロールで一切読み書きできない
 - すべての `user_id` は `auth.users(id)` を `on delete cascade` で参照し、`not null`
 - `updated_at` を持つテーブルは、`moddatetime` のトリガーで更新時刻を自動で入れる
@@ -53,7 +53,7 @@ erDiagram
 | `aptitude_results`      | id, user_id, answers(jsonb), ai_result                                                                                 | `user_id` がユニーク（1人1件）                                                                                            |
 | `self_analysis_results` | id, user_id, answers(jsonb), ai_result                                                                                 | `user_id` がユニーク（1人1件）                                                                                            |
 | `webtest_questions`     | id, user_id, title, body, test_type, choices(jsonb), answer, explanation, category, format, difficulty, time_limit     | ユーザーが自分で作る問題                                                                                                  |
-| `webtest_attempts`      | id, user_id, question_id, is_correct, time_spent                                                                       | 正誤はGoが判定する                                                                                                        |
+| `webtest_attempts`      | id, user_id, question_id, is_correct, time_spent                                                                       | 正誤はバックエンドが判定する                                                                                              |
 | `api_rate_limits`       | user_id, bucket, window_start, count                                                                                   | AIの回数制限。`(user_id, bucket)` が主キーで、1つのSQL文で加算と判定を行う                                                |
 
 ## マイグレーションの書き方

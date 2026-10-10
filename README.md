@@ -90,13 +90,13 @@ flowchart LR
 | -------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | フロントエンド | **Next.js (App Router) + TypeScript**     | 画面だけを担当する（SPA型）。TanStack Query でデータをブラウザに保持し、画面を移動しても取り直さずに済む。                                         |
 | バックエンド   | **Go**                                    | DBアクセス・外部API・ビジネスロジックを Next.js から切り離す。単一のバイナリで起動が速く、Vercel の無料枠でもコールドスタートが軽い。              |
-| API の契約     | **OpenAPI（スキーマファースト）**         | `openapi.yaml` から Go のサーバーと TypeScript の型を生成し、フロントとバックエンドの型がずれないようにする。                                      |
-| DB・認証       | **Supabase（Postgres / Auth）**           | 無料枠で Postgres と Google ログインを賄える。データの読み書きは Go に集め、Supabase は DB と認証の基盤としてだけ使う。                            |
+| API の契約     | **OpenAPI（スキーマファースト）**         | `openapi.yaml` からバックエンドのサーバーと TypeScript の型を生成し、フロントとバックエンドの型がずれないようにする。                              |
+| DB・認証       | **Supabase（Postgres / Auth）**           | 無料枠で Postgres と Google ログインを賄える。データの読み書きはバックエンドに集め、Supabase は DB と認証の基盤としてだけ使う。                    |
 | DB アクセス    | **sqlc + pgx**                            | SQL を書いて型付きの Go のコードを生成する。XP の付与のような同時実行で正しさが必要な処理を、SQL として正確に書ける。                              |
 | AI             | **Gemini / GPT（`backend/internal/ai`）** | 環境変数（`AI_PROVIDER`）でプロバイダーを切り替え、特定ベンダーへのロックインを避ける。企業分析では AI が Web 検索（Tavily）を呼びながら分析する。 |
 | スタイリング   | **Tailwind CSS v4**                       | ユーティリティファーストで UI を高速に実装でき、デザインの一貫性を保ちやすい。クエスト風 UI（`dq-*` クラス）もクラス単位で完結。                   |
 | アニメーション | **Framer Motion**                         | ゲーミフィケーション体験を支える滑らかな UI 演出を、宣言的かつ軽量に実装。                                                                         |
-| ホスティング   | **Vercel**                                | Next.js と Go を同じプロジェクト・同じドメインで動かせる（Services）。**無料枠（Hobby プラン）** でデプロイでき、インフラ管理も不要。              |
+| ホスティング   | **Vercel**                                | Next.js と バックエンドを同じプロジェクト・同じドメインで動かせる（Services）。**無料枠（Hobby プラン）** でデプロイでき、インフラ管理も不要。     |
 
 > いずれも「**無料枠だけで完結させ運用コストをゼロにする**」「マネージド/サーバーレスで個人開発でも運用負荷を下げる」「ベンダーロックインを避ける」「型安全と入力検証でデータを守る」という方針に沿って選んでいます。Supabase・Vercel・AI（Gemini 無料枠）・SMTP（Gmail）とも無料の範囲で運用でき、**追加コストなしで公開・運用** できます。
 
@@ -115,18 +115,18 @@ flowchart LR
 # DB（Docker が必要）
 supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta
 
-# Go の API（localhost:8080）
+# バックエンドの API（localhost:8080）
 cd backend
 SUPABASE_URL=... DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres go run ./cmd/server
 
-# Next.js（localhost:3000。/v1 は localhost:8080 の Go に転送される）
+# Next.js（localhost:3000。/v1 は localhost:8080 のバックエンドに転送される）
 npm install
 npm run dev
 ```
 
 ## 環境変数
 
-必要な環境変数の一覧と説明は [CLAUDE.md](CLAUDE.md) の「環境変数」を参照。Vercel では Next.js と Go が同じ環境変数を共有する。
+必要な環境変数の一覧と説明は [CLAUDE.md](CLAUDE.md) の「環境変数」を参照。Vercel では Next.js と バックエンドが同じ環境変数を共有する。
 
 ## 認証設定 (Supabase)
 
@@ -150,8 +150,8 @@ Next.js 認証コールバック: `app/auth/callback/route.ts` で `exchangeCode
 ## 開発ルール
 
 - YAGNI/DRY を徹底、MVP 以外の過剰実装は避ける。
-- データの読み書きとビジネスロジックは Go に置き、Next.js には置かない。API は `backend/api/openapi.yaml` から書く。
-- Go のすべての問い合わせは `user_id` で絞り込む（RLS のポリシーには頼らない）。
+- データの読み書きとビジネスロジックはバックエンドに置き、Next.js には置かない。API は `backend/api/openapi.yaml` から書く。
+- バックエンドのすべての問い合わせは `user_id` で絞り込む（RLS のポリシーには頼らない）。
 - Tailwind は推奨クラス（`bg-linear-to-*` など）を優先して警告を回避。
 - AI 呼び出しは `backend/internal/ai` 経由。キー未設定時は AI 機能だけが 503 を返す。
 - 詳細は [CLAUDE.md](CLAUDE.md) を参照。

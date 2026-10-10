@@ -13,7 +13,7 @@ const (
 	KindSelfAnalysis
 )
 
-// prompts は、種類ごとの指示と出力の形。入力（ESの内容など）は、Goが保存済みのデータから組み立てて後ろに付ける。
+// prompts は、種類ごとの指示と出力の形。入力（ESの内容など）は、保存済みのデータから組み立てて後ろに付ける。
 var prompts = map[Kind]struct {
 	instructions []string
 	inputLabel   string

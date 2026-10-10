@@ -5,7 +5,7 @@ import type { components, paths } from "./schema";
 
 export type Problem = components["schemas"]["Problem"];
 
-/** Go のAPIが返したエラー（RFC 9457 Problem Details）。message は利用者にそのまま見せられる日本語。 */
+/** バックエンドのAPIが返したエラー（RFC 9457 Problem Details）。message は利用者にそのまま見せられる日本語。 */
 export class ApiError extends Error {
   readonly problem: Problem;
 
@@ -30,8 +30,8 @@ const authorize: Middleware = {
 };
 
 /**
- * Go のAPIを呼ぶクライアント。パスとリクエスト・レスポンスの型は backend/api/openapi.yaml から生成した schema.d.ts に従う。
- * Go は Next.js と同じドメインの /v1 で動いている（vercel.json）ので、baseUrl は空にする。
+ * バックエンドのAPIを呼ぶクライアント。パスとリクエスト・レスポンスの型は backend/api/openapi.yaml から生成した schema.d.ts に従う。
+ * バックエンドは Next.js と同じドメインの /v1 で動いている（vercel.json）ので、baseUrl は空にする。
  */
 export const api = createClient<paths>({ baseUrl: "" });
 api.use(authorize);

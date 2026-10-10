@@ -22,7 +22,7 @@ type Props = {
 };
 
 /**
- * AIの結果の表示と実行ボタン。AIへの入力はGoが保存済みのデータから組み立てるので、
+ * AIの結果の表示と実行ボタン。AIへの入力はバックエンドが保存済みのデータから組み立てるので、
  * ここでは「実行する」操作と結果の表示だけを受け持つ（docs/backend-design.md 5章）。
  */
 export function AiResultPanel({

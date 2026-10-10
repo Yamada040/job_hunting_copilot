@@ -11,8 +11,8 @@ test.describe("ES作成 → 一覧反映", () => {
   );
   test.use({ storageState: AUTH_STORAGE_STATE_A });
 
-  // ESの画面はGoのAPI（/v1）を呼ぶが、E2Eは本番ビルドのNext.jsだけを起動しており、/v1 を受けるGoがいない。
-  // E2EでGoを起動する方法を決めたら、新しい画面（企業の選択など）に合わせて書き直して有効に戻す。
+  // ESの画面はバックエンドのAPI（/v1）を呼ぶが、E2Eは本番ビルドのNext.jsだけを起動しており、/v1 を受けるバックエンドがいない。
+  // E2Eでバックエンドを起動する方法を決めたら、新しい画面（企業の選択など）に合わせて書き直して有効に戻す。
   test.fixme("タイトルを入力して保存すると一覧に反映される", async ({ page }) => {
     const title = `${E2E_TITLE_PREFIX} タイトル-${Date.now()}`;
     const admin = createE2eAdminClient();

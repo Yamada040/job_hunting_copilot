@@ -87,7 +87,7 @@ export function useDeleteEsEntry(id: string) {
   });
 }
 
-/** AI添削を行う。結果はGoが保存し、返ってきたESでキャッシュを置き換える。 */
+/** AI添削を行う。結果はバックエンドが保存し、返ってきたESでキャッシュを置き換える。 */
 export function useReviewEsEntry(id: string) {
   const queryClient = useQueryClient();
   return useMutation({

@@ -10,7 +10,7 @@ import { ApiErrorMessage } from "@/app/_components/api-error-message";
 
 const nf = new Intl.NumberFormat("ja-JP");
 
-/** 開発者向けの利用状況。開発者かどうかはGoが判定し、開発者でなければ 403 が返るのでダッシュボードへ戻す。 */
+/** 開発者向けの利用状況。開発者かどうかはバックエンドが判定し、開発者でなければ 403 が返るのでダッシュボードへ戻す。 */
 export function DeveloperStats() {
   const router = useRouter();
   const {
