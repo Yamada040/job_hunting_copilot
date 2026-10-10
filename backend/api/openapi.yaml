@@ -146,8 +146,124 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/es-entries:
+    get:
+      operationId: listEsEntries
+      summary: 自分のESの一覧を取得する
+      description: 更新日時の新しい順。companyId を渡すとその企業のESだけに絞る。
+      parameters:
+        - name: companyId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: ESの一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EsEntry"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createEsEntry
+      summary: ESを作成する（常に下書き）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EsEntryCreate"
+      responses:
+        "201":
+          description: 作成したES
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EsEntry"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/es-entries/{esEntryId}:
+    parameters:
+      - $ref: "#/components/parameters/EsEntryId"
+    get:
+      operationId: getEsEntry
+      summary: ESを1件取得する
+      responses:
+        "200":
+          description: ES
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EsEntry"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateEsEntry
+      summary: ESを更新する
+      description: 送った項目だけを更新する。状態（下書き・提出済み）はここでは変えられず、提出は /submit で行う。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EsEntryUpdate"
+      responses:
+        "200":
+          description: 更新後のES
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EsEntry"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteEsEntry
+      summary: ESを削除する
+      responses:
+        "204":
+          description: 削除した
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/es-entries/{esEntryId}/submit:
+    parameters:
+      - $ref: "#/components/parameters/EsEntryId"
+    post:
+      operationId: submitEsEntry
+      summary: ESを提出済みにする
+      description: 提出は取り消せない（下書きには戻せない）。XPが付く（同じESには1回、1日5回まで）。提出済みのESにもう一度呼んでもエラーにはせず、XPは付かない。
+      responses:
+        "200":
+          description: 提出済みのESと、付与されたXP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EsEntrySubmitted"
+        default:
+          $ref: "#/components/responses/Problem"
+
 components:
   parameters:
+    EsEntryId:
+      name: esEntryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     CompanyId:
       name: companyId
       in: path
@@ -412,6 +528,186 @@ components:
       properties:
         company:
           $ref: "#/components/schemas/Company"
+        xp:
+          $ref: "#/components/schemas/XpResult"
+
+    CompanySummary:
+      type: object
+      description: 他の項目にひも付く企業の、表示に必要な最小限の情報
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    EsStatus:
+      type: string
+      enum: [draft, submitted]
+
+    EsQuestion:
+      type: object
+      additionalProperties: false
+      required: [prompt, answer]
+      properties:
+        prompt:
+          type: string
+          maxLength: 1000
+          description: 設問
+        answer:
+          type: string
+          maxLength: 4000
+          description: 回答（Markdown）
+
+    EsEntry:
+      type: object
+      required:
+        [
+          id,
+          company,
+          position,
+          title,
+          status,
+          questions,
+          contentMd,
+          tags,
+          deadline,
+          memo,
+          aiResult,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        company:
+          $ref: "#/components/schemas/CompanySummary"
+        position:
+          type: string
+          nullable: true
+          description: 職種・募集枠
+        title:
+          type: string
+        status:
+          $ref: "#/components/schemas/EsStatus"
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/EsQuestion"
+        contentMd:
+          type: string
+          nullable: true
+          description: 本文（設問とは別に自由に書けるMarkdown）
+        tags:
+          type: array
+          items:
+            type: string
+        deadline:
+          type: string
+          format: date
+          nullable: true
+          description: 締切日。カレンダーにも表示される
+        memo:
+          type: string
+          nullable: true
+        aiResult:
+          type: string
+          nullable: true
+          description: AI添削の添削結果
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EsEntryCreate:
+      type: object
+      additionalProperties: false
+      required: [companyId, title]
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        position:
+          type: string
+          maxLength: 100
+        questions:
+          type: array
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/EsQuestion"
+        contentMd:
+          type: string
+          maxLength: 20000
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 30
+        deadline:
+          type: string
+          format: date
+        memo:
+          type: string
+          maxLength: 2000
+
+    EsEntryUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        position:
+          type: string
+          maxLength: 100
+        questions:
+          type: array
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/EsQuestion"
+        contentMd:
+          type: string
+          maxLength: 20000
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 30
+        deadline:
+          type: string
+          format: date
+          nullable: true
+          # 「送られていない（変更しない）」と「null（締切を消す）」を区別するため nullable.Nullable にする
+          x-go-type: nullable.Nullable[string]
+          x-go-type-import:
+            path: github.com/oapi-codegen/nullable
+          x-go-type-skip-optional-pointer: true
+        memo:
+          type: string
+          maxLength: 2000
+
+    EsEntrySubmitted:
+      type: object
+      required: [esEntry, xp]
+      properties:
+        esEntry:
+          $ref: "#/components/schemas/EsEntry"
         xp:
           $ref: "#/components/schemas/XpResult"
 

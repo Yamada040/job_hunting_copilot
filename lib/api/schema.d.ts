@@ -96,6 +96,73 @@ export interface paths {
     patch: operations["updateCompany"];
     trace?: never;
   };
+  "/v1/es-entries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 自分のESの一覧を取得する
+     * @description 更新日時の新しい順。companyId を渡すとその企業のESだけに絞る。
+     */
+    get: operations["listEsEntries"];
+    put?: never;
+    /** ESを作成する（常に下書き） */
+    post: operations["createEsEntry"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/es-entries/{esEntryId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    /** ESを1件取得する */
+    get: operations["getEsEntry"];
+    put?: never;
+    post?: never;
+    /** ESを削除する */
+    delete: operations["deleteEsEntry"];
+    options?: never;
+    head?: never;
+    /**
+     * ESを更新する
+     * @description 送った項目だけを更新する。状態（下書き・提出済み）はここでは変えられず、提出は /submit で行う。
+     */
+    patch: operations["updateEsEntry"];
+    trace?: never;
+  };
+  "/v1/es-entries/{esEntryId}/submit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * ESを提出済みにする
+     * @description 提出は取り消せない（下書きには戻せない）。XPが付く（同じESには1回、1日5回まで）。提出済みのESにもう一度呼んでもエラーにはせず、XPは付かない。
+     */
+    post: operations["submitEsEntry"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -199,6 +266,73 @@ export interface components {
       company: components["schemas"]["Company"];
       xp: components["schemas"]["XpResult"];
     };
+    /** @description 他の項目にひも付く企業の、表示に必要な最小限の情報 */
+    CompanySummary: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+    };
+    /** @enum {string} */
+    EsStatus: "draft" | "submitted";
+    EsQuestion: {
+      /** @description 設問 */
+      prompt: string;
+      /** @description 回答（Markdown） */
+      answer: string;
+    };
+    EsEntry: {
+      /** Format: uuid */
+      id: string;
+      company: components["schemas"]["CompanySummary"];
+      /** @description 職種・募集枠 */
+      position: string | null;
+      title: string;
+      status: components["schemas"]["EsStatus"];
+      questions: components["schemas"]["EsQuestion"][];
+      /** @description 本文（設問とは別に自由に書けるMarkdown） */
+      contentMd: string | null;
+      tags: string[];
+      /**
+       * Format: date
+       * @description 締切日。カレンダーにも表示される
+       */
+      deadline: string | null;
+      memo: string | null;
+      /** @description AI添削の添削結果 */
+      aiResult: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    EsEntryCreate: {
+      /** Format: uuid */
+      companyId: string;
+      title: string;
+      position?: string;
+      questions?: components["schemas"]["EsQuestion"][];
+      contentMd?: string;
+      tags?: string[];
+      /** Format: date */
+      deadline?: string;
+      memo?: string;
+    };
+    EsEntryUpdate: {
+      /** Format: uuid */
+      companyId?: string;
+      title?: string;
+      position?: string;
+      questions?: components["schemas"]["EsQuestion"][];
+      contentMd?: string;
+      tags?: string[];
+      /** Format: date */
+      deadline?: string | null;
+      memo?: string;
+    };
+    EsEntrySubmitted: {
+      esEntry: components["schemas"]["EsEntry"];
+      xp: components["schemas"]["XpResult"];
+    };
     /** @description RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの */
     Problem: {
       /**
@@ -247,6 +381,7 @@ export interface components {
     };
   };
   parameters: {
+    EsEntryId: string;
     CompanyId: string;
   };
   requestBodies: never;
@@ -436,6 +571,149 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Company"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  listEsEntries: {
+    parameters: {
+      query?: {
+        companyId?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description ESの一覧 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EsEntry"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  createEsEntry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EsEntryCreate"];
+      };
+    };
+    responses: {
+      /** @description 作成したES */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EsEntry"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getEsEntry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description ES */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EsEntry"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteEsEntry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 削除した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  updateEsEntry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EsEntryUpdate"];
+      };
+    };
+    responses: {
+      /** @description 更新後のES */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EsEntry"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  submitEsEntry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 提出済みのESと、付与されたXP */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EsEntrySubmitted"];
         };
       };
       default: components["responses"]["Problem"];

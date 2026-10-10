@@ -14,6 +14,7 @@ import (
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/es"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
@@ -95,6 +96,7 @@ func run() error {
 		db:      db,
 		profile: profile.NewService(profile.NewRepository(db), cfg.developers),
 		company: company.NewService(db, xpService),
+		es:      es.NewService(db, xpService),
 	})
 	if err != nil {
 		return err

@@ -58,6 +58,24 @@ func (e CompanyStage) Valid() bool {
 	}
 }
 
+// Defines values for EsStatus.
+const (
+	Draft     EsStatus = "draft"
+	Submitted EsStatus = "submitted"
+)
+
+// Valid indicates whether the value is a known member of the EsStatus enum.
+func (e EsStatus) Valid() bool {
+	switch e {
+	case Draft:
+		return true
+	case Submitted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthStatus.
 const (
 	Ok HealthStatus = "ok"
@@ -121,6 +139,12 @@ type CompanyCreated struct {
 // CompanyStage 選考状況。日本語の表示名はフロントエンドが持つ
 type CompanyStage string
 
+// CompanySummary 他の項目にひも付く企業の、表示に必要な最小限の情報
+type CompanySummary struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
 // CompanyUpdate defines model for CompanyUpdate.
 type CompanyUpdate struct {
 	Favorite   *bool                  `json:"favorite,omitempty"`
@@ -135,6 +159,76 @@ type CompanyUpdate struct {
 	Stage *CompanyStage `json:"stage,omitempty"`
 	Url   *string       `json:"url,omitempty"`
 }
+
+// EsEntry defines model for EsEntry.
+type EsEntry struct {
+	// AiResult AI添削の添削結果
+	AiResult *string `json:"aiResult"`
+
+	// Company 他の項目にひも付く企業の、表示に必要な最小限の情報
+	Company CompanySummary `json:"company"`
+
+	// ContentMd 本文（設問とは別に自由に書けるMarkdown）
+	ContentMd *string   `json:"contentMd"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Deadline 締切日。カレンダーにも表示される
+	Deadline *openapi_types.Date `json:"deadline"`
+	Id       openapi_types.UUID  `json:"id"`
+	Memo     *string             `json:"memo"`
+
+	// Position 職種・募集枠
+	Position  *string      `json:"position"`
+	Questions []EsQuestion `json:"questions"`
+	Status    EsStatus     `json:"status"`
+	Tags      []string     `json:"tags"`
+	Title     string       `json:"title"`
+	UpdatedAt time.Time    `json:"updatedAt"`
+}
+
+// EsEntryCreate defines model for EsEntryCreate.
+type EsEntryCreate struct {
+	CompanyId openapi_types.UUID  `json:"companyId"`
+	ContentMd *string             `json:"contentMd,omitempty"`
+	Deadline  *openapi_types.Date `json:"deadline,omitempty"`
+	Memo      *string             `json:"memo,omitempty"`
+	Position  *string             `json:"position,omitempty"`
+	Questions *[]EsQuestion       `json:"questions,omitempty"`
+	Tags      *[]string           `json:"tags,omitempty"`
+	Title     string              `json:"title"`
+}
+
+// EsEntrySubmitted defines model for EsEntrySubmitted.
+type EsEntrySubmitted struct {
+	EsEntry EsEntry `json:"esEntry"`
+
+	// Xp XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+	Xp XpResult `json:"xp"`
+}
+
+// EsEntryUpdate defines model for EsEntryUpdate.
+type EsEntryUpdate struct {
+	CompanyId *openapi_types.UUID       `json:"companyId,omitempty"`
+	ContentMd *string                   `json:"contentMd,omitempty"`
+	Deadline  nullable.Nullable[string] `json:"deadline,omitempty"`
+	Memo      *string                   `json:"memo,omitempty"`
+	Position  *string                   `json:"position,omitempty"`
+	Questions *[]EsQuestion             `json:"questions,omitempty"`
+	Tags      *[]string                 `json:"tags,omitempty"`
+	Title     *string                   `json:"title,omitempty"`
+}
+
+// EsQuestion defines model for EsQuestion.
+type EsQuestion struct {
+	// Answer 回答（Markdown）
+	Answer string `json:"answer"`
+
+	// Prompt 設問
+	Prompt string `json:"prompt"`
+}
+
+// EsStatus defines model for EsStatus.
+type EsStatus string
 
 // FieldError defines model for FieldError.
 type FieldError struct {
@@ -248,9 +342,18 @@ type XpResult struct {
 // CompanyId defines model for CompanyId.
 type CompanyId = openapi_types.UUID
 
+// EsEntryId defines model for EsEntryId.
+type EsEntryId = openapi_types.UUID
+
 // ListCompaniesParams defines parameters for ListCompanies.
 type ListCompaniesParams struct {
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
+// ListEsEntriesParams defines parameters for ListEsEntries.
+type ListEsEntriesParams struct {
+	CompanyId *openapi_types.UUID `form:"companyId,omitempty" json:"companyId,omitempty"`
+	Limit     *int                `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // CreateCompanyJSONRequestBody defines body for CreateCompany for application/json ContentType.
@@ -258,6 +361,12 @@ type CreateCompanyJSONRequestBody = CompanyCreate
 
 // UpdateCompanyJSONRequestBody defines body for UpdateCompany for application/json ContentType.
 type UpdateCompanyJSONRequestBody = CompanyUpdate
+
+// CreateEsEntryJSONRequestBody defines body for CreateEsEntry for application/json ContentType.
+type CreateEsEntryJSONRequestBody = EsEntryCreate
+
+// UpdateEsEntryJSONRequestBody defines body for UpdateEsEntry for application/json ContentType.
+type UpdateEsEntryJSONRequestBody = EsEntryUpdate
 
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = ProfileUpdate
@@ -279,6 +388,24 @@ type ServerInterface interface {
 	// UpdateCompany 企業を更新する
 	// (PATCH /v1/companies/{companyId})
 	UpdateCompany(w http.ResponseWriter, r *http.Request, companyId CompanyId)
+	// ListEsEntries 自分のESの一覧を取得する
+	// (GET /v1/es-entries)
+	ListEsEntries(w http.ResponseWriter, r *http.Request, params ListEsEntriesParams)
+	// CreateEsEntry ESを作成する（常に下書き）
+	// (POST /v1/es-entries)
+	CreateEsEntry(w http.ResponseWriter, r *http.Request)
+	// DeleteEsEntry ESを削除する
+	// (DELETE /v1/es-entries/{esEntryId})
+	DeleteEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId)
+	// GetEsEntry ESを1件取得する
+	// (GET /v1/es-entries/{esEntryId})
+	GetEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId)
+	// UpdateEsEntry ESを更新する
+	// (PATCH /v1/es-entries/{esEntryId})
+	UpdateEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId)
+	// SubmitEsEntry ESを提出済みにする
+	// (POST /v1/es-entries/{esEntryId}/submit)
+	SubmitEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId)
 	// GetHealth 稼働確認
 	// (GET /v1/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -415,6 +542,170 @@ func (siw *ServerInterfaceWrapper) UpdateCompany(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateCompany(w, r, companyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListEsEntries operation middleware
+func (siw *ServerInterfaceWrapper) ListEsEntries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListEsEntriesParams
+
+	// ------------- Optional query parameter "companyId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "companyId", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "companyId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "companyId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListEsEntries(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateEsEntry operation middleware
+func (siw *ServerInterfaceWrapper) CreateEsEntry(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateEsEntry(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteEsEntry operation middleware
+func (siw *ServerInterfaceWrapper) DeleteEsEntry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "esEntryId" -------------
+	var esEntryId EsEntryId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "esEntryId", r.PathValue("esEntryId"), &esEntryId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "esEntryId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteEsEntry(w, r, esEntryId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEsEntry operation middleware
+func (siw *ServerInterfaceWrapper) GetEsEntry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "esEntryId" -------------
+	var esEntryId EsEntryId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "esEntryId", r.PathValue("esEntryId"), &esEntryId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "esEntryId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEsEntry(w, r, esEntryId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateEsEntry operation middleware
+func (siw *ServerInterfaceWrapper) UpdateEsEntry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "esEntryId" -------------
+	var esEntryId EsEntryId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "esEntryId", r.PathValue("esEntryId"), &esEntryId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "esEntryId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateEsEntry(w, r, esEntryId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitEsEntry operation middleware
+func (siw *ServerInterfaceWrapper) SubmitEsEntry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "esEntryId" -------------
+	var esEntryId EsEntryId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "esEntryId", r.PathValue("esEntryId"), &esEntryId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "esEntryId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitEsEntry(w, r, esEntryId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -594,6 +885,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/companies/{companyId}", wrapper.DeleteCompany)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/companies/{companyId}", wrapper.GetCompany)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/companies/{companyId}", wrapper.UpdateCompany)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/es-entries", wrapper.ListEsEntries)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/es-entries", wrapper.CreateEsEntry)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/es-entries/{esEntryId}", wrapper.DeleteEsEntry)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/es-entries/{esEntryId}", wrapper.GetEsEntry)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/es-entries/{esEntryId}", wrapper.UpdateEsEntry)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/es-entries/{esEntryId}/submit", wrapper.SubmitEsEntry)
 
 	return m
 }
@@ -790,6 +1087,235 @@ func (response UpdateCompanydefaultApplicationProblemPlusJSONResponse) VisitUpda
 	return err
 }
 
+type ListEsEntriesRequestObject struct {
+	Params ListEsEntriesParams
+}
+
+type ListEsEntriesResponseObject interface {
+	VisitListEsEntriesResponse(w http.ResponseWriter) error
+}
+
+type ListEsEntries200JSONResponse []EsEntry
+
+func (response ListEsEntries200JSONResponse) VisitListEsEntriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEsEntriesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListEsEntriesdefaultApplicationProblemPlusJSONResponse) VisitListEsEntriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEsEntryRequestObject struct {
+	Body *CreateEsEntryJSONRequestBody
+}
+
+type CreateEsEntryResponseObject interface {
+	VisitCreateEsEntryResponse(w http.ResponseWriter) error
+}
+
+type CreateEsEntry201JSONResponse EsEntry
+
+func (response CreateEsEntry201JSONResponse) VisitCreateEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEsEntrydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateEsEntrydefaultApplicationProblemPlusJSONResponse) VisitCreateEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteEsEntryRequestObject struct {
+	EsEntryId EsEntryId `json:"esEntryId"`
+}
+
+type DeleteEsEntryResponseObject interface {
+	VisitDeleteEsEntryResponse(w http.ResponseWriter) error
+}
+
+type DeleteEsEntry204Response struct {
+}
+
+func (response DeleteEsEntry204Response) VisitDeleteEsEntryResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteEsEntrydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteEsEntrydefaultApplicationProblemPlusJSONResponse) VisitDeleteEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEsEntryRequestObject struct {
+	EsEntryId EsEntryId `json:"esEntryId"`
+}
+
+type GetEsEntryResponseObject interface {
+	VisitGetEsEntryResponse(w http.ResponseWriter) error
+}
+
+type GetEsEntry200JSONResponse EsEntry
+
+func (response GetEsEntry200JSONResponse) VisitGetEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEsEntrydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetEsEntrydefaultApplicationProblemPlusJSONResponse) VisitGetEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateEsEntryRequestObject struct {
+	EsEntryId EsEntryId `json:"esEntryId"`
+	Body      *UpdateEsEntryJSONRequestBody
+}
+
+type UpdateEsEntryResponseObject interface {
+	VisitUpdateEsEntryResponse(w http.ResponseWriter) error
+}
+
+type UpdateEsEntry200JSONResponse EsEntry
+
+func (response UpdateEsEntry200JSONResponse) VisitUpdateEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateEsEntrydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateEsEntrydefaultApplicationProblemPlusJSONResponse) VisitUpdateEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitEsEntryRequestObject struct {
+	EsEntryId EsEntryId `json:"esEntryId"`
+}
+
+type SubmitEsEntryResponseObject interface {
+	VisitSubmitEsEntryResponse(w http.ResponseWriter) error
+}
+
+type SubmitEsEntry200JSONResponse EsEntrySubmitted
+
+func (response SubmitEsEntry200JSONResponse) VisitSubmitEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitEsEntrydefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SubmitEsEntrydefaultApplicationProblemPlusJSONResponse) VisitSubmitEsEntryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetHealthRequestObject struct {
 }
 
@@ -922,6 +1448,24 @@ type StrictServerInterface interface {
 	// UpdateCompany 企業を更新する
 	// (PATCH /v1/companies/{companyId})
 	UpdateCompany(ctx context.Context, request UpdateCompanyRequestObject) (UpdateCompanyResponseObject, error)
+	// ListEsEntries 自分のESの一覧を取得する
+	// (GET /v1/es-entries)
+	ListEsEntries(ctx context.Context, request ListEsEntriesRequestObject) (ListEsEntriesResponseObject, error)
+	// CreateEsEntry ESを作成する（常に下書き）
+	// (POST /v1/es-entries)
+	CreateEsEntry(ctx context.Context, request CreateEsEntryRequestObject) (CreateEsEntryResponseObject, error)
+	// DeleteEsEntry ESを削除する
+	// (DELETE /v1/es-entries/{esEntryId})
+	DeleteEsEntry(ctx context.Context, request DeleteEsEntryRequestObject) (DeleteEsEntryResponseObject, error)
+	// GetEsEntry ESを1件取得する
+	// (GET /v1/es-entries/{esEntryId})
+	GetEsEntry(ctx context.Context, request GetEsEntryRequestObject) (GetEsEntryResponseObject, error)
+	// UpdateEsEntry ESを更新する
+	// (PATCH /v1/es-entries/{esEntryId})
+	UpdateEsEntry(ctx context.Context, request UpdateEsEntryRequestObject) (UpdateEsEntryResponseObject, error)
+	// SubmitEsEntry ESを提出済みにする
+	// (POST /v1/es-entries/{esEntryId}/submit)
+	SubmitEsEntry(ctx context.Context, request SubmitEsEntryRequestObject) (SubmitEsEntryResponseObject, error)
 	// GetHealth 稼働確認
 	// (GET /v1/health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
@@ -1114,6 +1658,174 @@ func (sh *strictHandler) UpdateCompany(w http.ResponseWriter, r *http.Request, c
 	}
 }
 
+// ListEsEntries operation middleware
+func (sh *strictHandler) ListEsEntries(w http.ResponseWriter, r *http.Request, params ListEsEntriesParams) {
+	var request ListEsEntriesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListEsEntries(ctx, request.(ListEsEntriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListEsEntries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListEsEntriesResponseObject); ok {
+		if err := validResponse.VisitListEsEntriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateEsEntry operation middleware
+func (sh *strictHandler) CreateEsEntry(w http.ResponseWriter, r *http.Request) {
+	var request CreateEsEntryRequestObject
+
+	var body CreateEsEntryJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateEsEntry(ctx, request.(CreateEsEntryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateEsEntry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateEsEntryResponseObject); ok {
+		if err := validResponse.VisitCreateEsEntryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteEsEntry operation middleware
+func (sh *strictHandler) DeleteEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId) {
+	var request DeleteEsEntryRequestObject
+
+	request.EsEntryId = esEntryId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteEsEntry(ctx, request.(DeleteEsEntryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteEsEntry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteEsEntryResponseObject); ok {
+		if err := validResponse.VisitDeleteEsEntryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetEsEntry operation middleware
+func (sh *strictHandler) GetEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId) {
+	var request GetEsEntryRequestObject
+
+	request.EsEntryId = esEntryId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetEsEntry(ctx, request.(GetEsEntryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetEsEntry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetEsEntryResponseObject); ok {
+		if err := validResponse.VisitGetEsEntryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateEsEntry operation middleware
+func (sh *strictHandler) UpdateEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId) {
+	var request UpdateEsEntryRequestObject
+
+	request.EsEntryId = esEntryId
+
+	var body UpdateEsEntryJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateEsEntry(ctx, request.(UpdateEsEntryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateEsEntry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateEsEntryResponseObject); ok {
+		if err := validResponse.VisitUpdateEsEntryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitEsEntry operation middleware
+func (sh *strictHandler) SubmitEsEntry(w http.ResponseWriter, r *http.Request, esEntryId EsEntryId) {
+	var request SubmitEsEntryRequestObject
+
+	request.EsEntryId = esEntryId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitEsEntry(ctx, request.(SubmitEsEntryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitEsEntry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitEsEntryResponseObject); ok {
+		if err := validResponse.VisitSubmitEsEntryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetHealth operation middleware
 func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	var request GetHealthRequestObject
@@ -1198,54 +1910,68 @@ func (sh *strictHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
