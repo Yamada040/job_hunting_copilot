@@ -117,10 +117,11 @@ const supabase = await createSupabaseServerActionClient();
 
 ### データフェッチ・状態管理
 
-- **サーバーサイドファースト**: 可能な限りServer Componentでデータを取得し、propsとしてClient Componentへ渡す
-- **並列クエリ**: 関連データの取得にはServer Component内で `Promise.all()` を使う（`app/dashboard/page.tsx` 参照）
-- **外部の状態管理ライブラリは使わない**（Redux, Zustandなど）: propsとhooksのみで完結させる
-- **クライアント側のミューテーション**: `fetch()` でRoute Handlerへ POST し、レスポンスを検証してUIを更新する
+> Go移行中（[docs/backend-design.md](./docs/backend-design.md)）。移行済みの機能は下の新方式、未移行の機能は旧方式（Server Component で Supabase から取得、Route Handler へ POST）のまま。
+
+- **ブラウザから Go のAPIを直接呼ぶ**（SPA型）: Go のAPIは `/v1/...` で Next.js と同じドメインに置かれている。`lib/api/client.ts` の生成クライアント（`backend/api/openapi.yaml` から `npm run generate:api` で型を生成）経由で呼び、`fetch()` を直接書かない
+- **サーバーのデータのキャッシュには TanStack Query を使う**（`lib/api/` のフック）。更新のレスポンスで関連するキャッシュを書き換える。画面だけの状態は props と hooks で扱い、Redux・Zustand などの汎用の状態管理ライブラリは使わない
+- **ローカル開発**: `next dev` は `/v1` を `API_ORIGIN`（既定 `http://localhost:8080`）の Go に転送する
 
 ### AI連携
 

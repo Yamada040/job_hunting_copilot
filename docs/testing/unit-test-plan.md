@@ -247,7 +247,6 @@ flowchart LR
 
 | ファイル        | スキーマ                                 | 主なテストケース                                                                                        |
 | --------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `forms.ts`      | `profileFormSchema`                      | `full_name`のみで成立／`full_name`欠落でエラー／`full_name`が空白のみでエラー（トリム後min1）           |
 | `forms.ts`      | `companyFormSchema`                      | `preference`が数値文字列→数値変換／空文字→`undefined`／`favorite`が`"on"`→`true`、省略→`false`          |
 | `forms.ts`      | `esQuestionSchema` / `esQuestionsSchema` | 空配列許容／部分的なフィールドのみのオブジェクト許容                                                    |
 | `forms.ts`      | `esFormSchema`                           | `content_md`/`tags`/`intent`のデフォルト値／`title`必須                                                 |

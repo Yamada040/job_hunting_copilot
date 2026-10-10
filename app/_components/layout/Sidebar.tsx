@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, use } from "react";
 import { usePathname } from "next/navigation";
 import {
   HomeIcon,
@@ -16,6 +15,7 @@ import {
   ChartBarSquareIcon,
 } from "@heroicons/react/24/outline";
 import { clsx } from "clsx";
+import { useMe } from "@/lib/api/me";
 import { ROUTES } from "@/lib/constants/routes";
 
 interface NavItem {
@@ -117,19 +117,10 @@ const developerItem: NavItem = {
   description: "利用状況の分析",
 };
 
-/**
- * Server Component から渡された promise を use() で解決し、
- * 開発者のときだけ開発者ダッシュボードへのリンクを表示する。
- */
-function DeveloperNavLink({
-  isDeveloperPromise,
-  pathname,
-}: {
-  isDeveloperPromise: Promise<boolean>;
-  pathname: string;
-}) {
-  const isDeveloper = use(isDeveloperPromise);
-  if (!isDeveloper) return null;
+/** 開発者のときだけ、開発者ダッシュボードへのリンクを表示する。 */
+function DeveloperNavLink({ pathname }: { pathname: string }) {
+  const { data } = useMe();
+  if (!data?.isDeveloper) return null;
 
   return (
     <NavLink
@@ -139,7 +130,7 @@ function DeveloperNavLink({
   );
 }
 
-export function Sidebar({ isDeveloperPromise }: { isDeveloperPromise: Promise<boolean> }) {
+export function Sidebar() {
   const pathname = usePathname();
 
   return (
@@ -176,9 +167,7 @@ export function Sidebar({ isDeveloperPromise }: { isDeveloperPromise: Promise<bo
                 </div>
               </button>
             </form>
-            <Suspense fallback={null}>
-              <DeveloperNavLink isDeveloperPromise={isDeveloperPromise} pathname={pathname} />
-            </Suspense>
+            <DeveloperNavLink pathname={pathname} />
           </div>
         </div>
       </div>
