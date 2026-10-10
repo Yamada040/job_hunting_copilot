@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/calendar"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
@@ -19,6 +20,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/interview"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -27,6 +29,7 @@ type config struct {
 	supabaseURL string
 	databaseURL string
 	developers  []uuid.UUID
+	ai          ai.Config
 }
 
 // loadConfig は、環境変数から設定を読む。必須の値が無ければ、誤った状態で動き出さないようエラーにする。
@@ -35,6 +38,15 @@ func loadConfig() (config, error) {
 		port:        os.Getenv("PORT"),
 		supabaseURL: os.Getenv("SUPABASE_URL"),
 		databaseURL: os.Getenv("DATABASE_URL"),
+		// AIのキーは任意。無ければAI機能だけが 503 を返し、他の機能は動く（docs/backend-design.md 6章）
+		ai: ai.Config{
+			Provider:         os.Getenv("AI_PROVIDER"),
+			APIKey:           os.Getenv("AI_PROVIDER_API_KEY"),
+			Model:            os.Getenv("AI_MODEL"),
+			GPTEndpoint:      os.Getenv("AI_ENDPOINT"),
+			GeminiAPIVersion: os.Getenv("AI_API_VERSION"),
+			TavilyAPIKey:     os.Getenv("TAVILY_API_KEY"),
+		},
 	}
 	if cfg.port == "" {
 		cfg.port = "8080"
@@ -94,12 +106,15 @@ func run() error {
 	}
 	defer db.Close()
 	xpService := xp.NewService()
+	// 企業分析はWeb検索を挟んで数十秒かかるため、1回の呼び出しの上限は長めにとる（Vercelの関数の上限300秒以内）
+	aiClient := ai.NewClient(cfg.ai, &http.Client{Timeout: 90 * time.Second})
+	limiter := ratelimit.NewLimiter()
 	handler, err := newHandler(verifier, deps{
 		db:        db,
 		profile:   profile.NewService(profile.NewRepository(db), cfg.developers),
-		company:   company.NewService(db, xpService),
-		es:        es.NewService(db, xpService),
-		interview: interview.NewService(db, xpService),
+		company:   company.NewService(db, xpService, aiClient, limiter),
+		es:        es.NewService(db, xpService, aiClient, limiter),
+		interview: interview.NewService(db, xpService, aiClient, limiter),
 		calendar:  calendar.NewService(db),
 		xpLogs:    xp.Handler{Pool: db},
 	})

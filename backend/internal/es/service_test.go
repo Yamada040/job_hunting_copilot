@@ -2,16 +2,19 @@ package es
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai/aitest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -21,13 +24,20 @@ type fixture struct {
 	pool      *pgxpool.Pool
 	es        *Service
 	companies *company.Service
+	ai        *aitest.Fake
 }
 
 func setup(t *testing.T) fixture {
 	t.Helper()
 	pool := dbtest.Connect(t)
 	x := xp.NewService()
-	return fixture{pool: pool, es: NewService(pool, x), companies: company.NewService(pool, x)}
+	fake := &aitest.Fake{Reply: "添削結果"}
+	return fixture{
+		pool:      pool,
+		es:        NewService(pool, x, fake, ratelimit.NewLimiter()),
+		companies: company.NewService(pool, x, nil, nil),
+		ai:        fake,
+	}
 }
 
 func (f fixture) company(t *testing.T, userID uuid.UUID, name string) uuid.UUID {
@@ -188,5 +198,46 @@ func TestOtherUsersEntryIsNotFound(t *testing.T) {
 	list, err := f.es.List(t.Context(), bob, nil, 0)
 	if err != nil || len(list) != 0 {
 		t.Errorf("bob's list = %d entries, %v; want none", len(list), err)
+	}
+}
+
+func TestReviewSendsSavedContentToAIAndSavesResult(t *testing.T) {
+	f := setup(t)
+	userID := dbtest.CreateUser(t, f.pool)
+	companyID := f.company(t, userID, "サンプル")
+	e, err := f.es.Create(t.Context(), userID, Fields{
+		CompanyID: &companyID, Title: ptr("本選考ES"),
+		Questions: &[]Question{{Prompt: "志望動機", Answer: "貴社の事業に惹かれた"}},
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	reviewed, err := f.es.Review(t.Context(), userID, e.ID)
+	if err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+
+	if reviewed.AiResult == nil || *reviewed.AiResult != "添削結果" {
+		t.Errorf("ai result = %v, want the AI reply saved", reviewed.AiResult)
+	}
+	input := f.ai.Inputs[0]
+	for _, want := range []string{"サンプル", "志望動機", "貴社の事業に惹かれた"} {
+		if !strings.Contains(input, want) {
+			t.Errorf("AI input %q does not contain %q", input, want)
+		}
+	}
+}
+
+func TestReviewRejectsEntryWithoutContent(t *testing.T) {
+	f := setup(t)
+	userID := dbtest.CreateUser(t, f.pool)
+	e := f.entry(t, userID, f.company(t, userID, "サンプル"), "ES")
+
+	_, err := f.es.Review(t.Context(), userID, e.ID)
+
+	assertKind(t, err, platform.KindInvalid)
+	if len(f.ai.Inputs) != 0 {
+		t.Error("AI was called for an empty ES")
 	}
 }

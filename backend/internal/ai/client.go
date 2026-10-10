@@ -134,3 +134,11 @@ func postJSON(ctx context.Context, client *http.Client, url string, headers map[
 	}
 	return nil
 }
+
+// Generator は、AIを使う機能が必要とする操作。テストでは偽物に差し替える。
+type Generator interface {
+	Generate(ctx context.Context, kind Kind, input string) (string, error)
+	AnalyzeCompany(ctx context.Context, input string) (string, error)
+}
+
+var _ Generator = (*Client)(nil)

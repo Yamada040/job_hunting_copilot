@@ -32,11 +32,11 @@ func TestListMergesEventsAndESDeadlinesByDate(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
 	x := xp.NewService()
-	c, _, err := company.NewService(pool, x).Create(t.Context(), userID, company.Fields{Name: ptr("サンプル")})
+	c, _, err := company.NewService(pool, x, nil, nil).Create(t.Context(), userID, company.Fields{Name: ptr("サンプル")})
 	if err != nil {
 		t.Fatalf("create company: %v", err)
 	}
-	if _, err := es.NewService(pool, x).Create(t.Context(), userID, es.Fields{CompanyID: &c.ID, Title: ptr("本選考ES"), Deadline: day("2026-11-05")}); err != nil {
+	if _, err := es.NewService(pool, x, nil, nil).Create(t.Context(), userID, es.Fields{CompanyID: &c.ID, Title: ptr("本選考ES"), Deadline: day("2026-11-05")}); err != nil {
 		t.Fatalf("create es: %v", err)
 	}
 	s := NewService(pool)
@@ -95,7 +95,7 @@ func TestCompanyLinkIsOptionalAndMustBeOwn(t *testing.T) {
 	pool := dbtest.Connect(t)
 	alice := dbtest.CreateUser(t, pool)
 	bob := dbtest.CreateUser(t, pool)
-	c, _, err := company.NewService(pool, xp.NewService()).Create(t.Context(), alice, company.Fields{Name: ptr("サンプル")})
+	c, _, err := company.NewService(pool, xp.NewService(), nil, nil).Create(t.Context(), alice, company.Fields{Name: ptr("サンプル")})
 	if err != nil {
 		t.Fatalf("create company: %v", err)
 	}

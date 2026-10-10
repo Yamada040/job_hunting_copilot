@@ -146,6 +146,23 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/companies/{companyId}/analysis:
+    parameters:
+      - $ref: "#/components/parameters/CompanyId"
+    post:
+      operationId: analyzeCompany
+      summary: AI企業分析を行う
+      description: AIがWeb検索をしながら企業を分析し、分析結果を保存して返す。企業ごとに1回だけで、2回目は 409。完成してからまとめて返す（数十秒かかる）。
+      responses:
+        "200":
+          description: 分析結果を保存した企業
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        default:
+          $ref: "#/components/responses/Problem"
+
   /v1/es-entries:
     get:
       operationId: listEsEntries
@@ -255,6 +272,23 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/es-entries/{esEntryId}/review:
+    parameters:
+      - $ref: "#/components/parameters/EsEntryId"
+    post:
+      operationId: reviewEsEntry
+      summary: AI添削を行う
+      description: 保存済みのESの内容をAIが添削し、添削結果を保存して返す。何度でも実行でき、結果は上書きする（1日の上限あり）。
+      responses:
+        "200":
+          description: 添削結果を保存したES
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EsEntry"
+        default:
+          $ref: "#/components/responses/Problem"
+
   /v1/interview-logs:
     get:
       operationId: listInterviewLogs
@@ -345,6 +379,23 @@ paths:
       responses:
         "204":
           description: 削除した
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/interview-logs/{interviewLogId}/review:
+    parameters:
+      - $ref: "#/components/parameters/InterviewLogId"
+    post:
+      operationId: reviewInterviewLog
+      summary: AI振り返りを行う
+      description: 保存済みの面接ログをAIが振り返り、振り返り結果を保存して返す。何度でも実行でき、結果は上書きする（1日の上限あり）。
+      responses:
+        "200":
+          description: 振り返り結果を保存した面接ログ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewLog"
         default:
           $ref: "#/components/responses/Problem"
 

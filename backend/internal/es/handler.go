@@ -119,6 +119,18 @@ func (h Handler) SubmitEsEntry(ctx context.Context, req openapi.SubmitEsEntryReq
 	return openapi.SubmitEsEntry200JSONResponse{EsEntry: toAPI(entry), Xp: xp.ToAPI(reward)}, nil
 }
 
+func (h Handler) ReviewEsEntry(ctx context.Context, req openapi.ReviewEsEntryRequestObject) (openapi.ReviewEsEntryResponseObject, error) {
+	userID, err := auth.RequireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	entry, err := h.Service.Review(ctx, userID, req.EsEntryId)
+	if err != nil {
+		return nil, err
+	}
+	return openapi.ReviewEsEntry200JSONResponse(toAPI(entry)), nil
+}
+
 func (h Handler) DeleteEsEntry(ctx context.Context, req openapi.DeleteEsEntryRequestObject) (openapi.DeleteEsEntryResponseObject, error) {
 	userID, err := auth.RequireUserID(ctx)
 	if err != nil {

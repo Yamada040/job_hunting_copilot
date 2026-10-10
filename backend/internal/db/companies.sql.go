@@ -164,6 +164,25 @@ func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([
 	return items, nil
 }
 
+const setCompanyAiResultOnce = `-- name: SetCompanyAiResultOnce :execrows
+update companies set ai_result = $1 where id = $2 and user_id = $3 and ai_result is null
+`
+
+type SetCompanyAiResultOnceParams struct {
+	AiResult *string
+	ID       uuid.UUID
+	UserID   uuid.UUID
+}
+
+// 企業分析は企業ごとに1回だけ（docs/backend-design.md 3章）。同時に2回実行されても、先に保存した方だけを残す
+func (q *Queries) SetCompanyAiResultOnce(ctx context.Context, arg SetCompanyAiResultOnceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setCompanyAiResultOnce, arg.AiResult, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateCompany = `-- name: UpdateCompany :one
 update companies set
   name            = case when $1::boolean       then $2::text            else name end,

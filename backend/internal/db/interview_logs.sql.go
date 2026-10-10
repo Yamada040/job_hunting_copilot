@@ -156,6 +156,24 @@ func (q *Queries) ListInterviewLogs(ctx context.Context, arg ListInterviewLogsPa
 	return items, nil
 }
 
+const setInterviewAiResult = `-- name: SetInterviewAiResult :execrows
+update interview_logs set ai_result = $1 where id = $2 and user_id = $3
+`
+
+type SetInterviewAiResultParams struct {
+	AiResult *string
+	ID       uuid.UUID
+	UserID   uuid.UUID
+}
+
+func (q *Queries) SetInterviewAiResult(ctx context.Context, arg SetInterviewAiResultParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setInterviewAiResult, arg.AiResult, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateInterviewLog = `-- name: UpdateInterviewLog :execrows
 update interview_logs set
   company_id     = case when $1::boolean     then $2::uuid               else company_id end,

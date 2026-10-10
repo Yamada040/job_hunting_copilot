@@ -96,6 +96,28 @@ export interface paths {
     patch: operations["updateCompany"];
     trace?: never;
   };
+  "/v1/companies/{companyId}/analysis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        companyId: components["parameters"]["CompanyId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI企業分析を行う
+     * @description AIがWeb検索をしながら企業を分析し、分析結果を保存して返す。企業ごとに1回だけで、2回目は 409。完成してからまとめて返す（数十秒かかる）。
+     */
+    post: operations["analyzeCompany"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/es-entries": {
     parameters: {
       query?: never;
@@ -163,6 +185,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/es-entries/{esEntryId}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI添削を行う
+     * @description 保存済みのESの内容をAIが添削し、添削結果を保存して返す。何度でも実行でき、結果は上書きする（1日の上限あり）。
+     */
+    post: operations["reviewEsEntry"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/interview-logs": {
     parameters: {
       query?: never;
@@ -209,6 +253,28 @@ export interface paths {
      * @description 送った項目だけを更新する。
      */
     patch: operations["updateInterviewLog"];
+    trace?: never;
+  };
+  "/v1/interview-logs/{interviewLogId}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        interviewLogId: components["parameters"]["InterviewLogId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * AI振り返りを行う
+     * @description 保存済みの面接ログをAIが振り返り、振り返り結果を保存して返す。何度でも実行でき、結果は上書きする（1日の上限あり）。
+     */
+    post: operations["reviewInterviewLog"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/v1/calendar-events": {
@@ -807,6 +873,29 @@ export interface operations {
       default: components["responses"]["Problem"];
     };
   };
+  analyzeCompany: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        companyId: components["parameters"]["CompanyId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 分析結果を保存した企業 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
   listEsEntries: {
     parameters: {
       query?: {
@@ -950,6 +1039,29 @@ export interface operations {
       default: components["responses"]["Problem"];
     };
   };
+  reviewEsEntry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 添削結果を保存したES */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EsEntry"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
   listInterviewLogs: {
     parameters: {
       query?: {
@@ -1059,6 +1171,29 @@ export interface operations {
     };
     responses: {
       /** @description 更新後の面接ログ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InterviewLog"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  reviewInterviewLog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        interviewLogId: components["parameters"]["InterviewLogId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 振り返り結果を保存した面接ログ */
       200: {
         headers: {
           [name: string]: unknown;

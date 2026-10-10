@@ -13,9 +13,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -48,13 +50,23 @@ type Fields struct {
 }
 
 type Service struct {
-	pool *pgxpool.Pool
-	xp   *xp.Service
+	pool    *pgxpool.Pool
+	xp      *xp.Service
+	ai      ai.Generator
+	limiter *ratelimit.Limiter
 }
 
-func NewService(pool *pgxpool.Pool, xp *xp.Service) *Service {
-	return &Service{pool: pool, xp: xp}
+func NewService(pool *pgxpool.Pool, xp *xp.Service, ai ai.Generator, limiter *ratelimit.Limiter) *Service {
+	return &Service{pool: pool, xp: xp, ai: ai, limiter: limiter}
 }
+
+// 面接形式と手応えの、AIに渡すときの表記
+var (
+	formatLabels = map[db.InterviewFormat]string{
+		db.InterviewFormatInPerson: "対面", db.InterviewFormatOnline: "オンライン", db.InterviewFormatHybrid: "ハイブリッド",
+	}
+	ratingLabels = map[string]string{"good": "良い", "average": "普通", "bad": "悪い"}
+)
 
 // List は、ユーザーの面接ログを面接日の新しい順に返す。companyID を渡すとその企業の面接ログだけに絞る。
 func (s *Service) List(ctx context.Context, userID uuid.UUID, companyID *uuid.UUID, limit int) ([]Log, error) {
@@ -178,6 +190,58 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, f Fields) (L
 		return err
 	})
 	return log, err
+}
+
+// Review は、保存済みの面接ログをAIに振り返らせ、振り返り結果を保存する。何度でも実行でき、結果は上書きする。
+func (s *Service) Review(ctx context.Context, userID, id uuid.UUID) (Log, error) {
+	q := db.New(s.pool)
+	log, err := get(ctx, q, userID, id)
+	if err != nil {
+		return Log{}, err
+	}
+	if err := s.limiter.Hit(ctx, q, userID, ratelimit.AIBurst, ratelimit.AIDaily); err != nil {
+		return Log{}, err
+	}
+	text, err := s.ai.Generate(ctx, ai.KindInterviewReview, reviewInput(log))
+	if err != nil {
+		return Log{}, err
+	}
+	n, err := q.SetInterviewAiResult(ctx, db.SetInterviewAiResultParams{ID: id, UserID: userID, AiResult: &text})
+	if err != nil {
+		return Log{}, fmt.Errorf("save interview review: %w", err)
+	}
+	if n == 0 {
+		return Log{}, notFound()
+	}
+	return get(ctx, q, userID, id)
+}
+
+// reviewInput は、AI振り返りに渡す文章を作る。
+func reviewInput(l Log) string {
+	lines := []string{"企業: " + l.CompanyName}
+	if l.Round != nil {
+		lines = append(lines, "面接の回次: "+*l.Round)
+	}
+	if l.Format != nil {
+		lines = append(lines, "面接形式: "+formatLabels[*l.Format])
+	}
+	if l.InterviewDate != nil {
+		lines = append(lines, "実施日: "+l.InterviewDate.Format(time.DateOnly))
+	}
+	for i, q := range l.Questions {
+		line := fmt.Sprintf("Q%d: %s\nA%d: %s", i+1, q.Question, i+1, q.Answer)
+		if label, ok := ratingLabels[q.Rating]; ok {
+			line += "（手応え: " + label + "）"
+		}
+		lines = append(lines, line)
+	}
+	if l.Improvement != nil {
+		lines = append(lines, "次回改善したい点: "+*l.Improvement)
+	}
+	if l.Unexpected != nil {
+		lines = append(lines, "想定外だった質問・論点: "+*l.Unexpected)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (s *Service) Delete(ctx context.Context, userID, id uuid.UUID) error {
