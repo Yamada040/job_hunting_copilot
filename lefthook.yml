@@ -1,0 +1,13 @@
+# コミットの前に、秘密の値が含まれていないかを確かめる（npm install でフックが入る）
+pre-commit:
+  commands:
+    # gitleaks は文字のファイルの中身しか見ず、圧縮された tfplan などは素通りするため、ファイル名でも止める
+    secret-files:
+      run: sh scripts/check-secret-files.sh {staged_files}
+    gitleaks:
+      run: |
+        if ! command -v gitleaks >/dev/null 2>&1; then
+          echo "gitleaks が見つかりません。brew install gitleaks でインストールしてください"
+          exit 1
+        fi
+        gitleaks git --pre-commit --staged --redact --no-banner --verbose

@@ -48,6 +48,8 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres go tes
 golangci-lint run ./...
 ```
 
+**コミットの前に秘密の値を止めるフック**: `npm install` で lefthook がフックを入れる。コミットのたびに、gitleaks が中身を、`scripts/check-secret-files.sh` がファイル名（`.env*`・`*.tfvars`・`tfplan`・state など）を確かめ、秘密の値があれば止める。gitleaks は `brew install gitleaks` で入れる（無いとコミットできない）
+
 **コミット前には必ず以下を実行する**:
 
 ```bash
