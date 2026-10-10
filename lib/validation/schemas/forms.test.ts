@@ -4,25 +4,9 @@ import {
   esFormSchema,
   esQuestionSchema,
   esQuestionsSchema,
-  profileFormSchema,
   webtestAnswerFormSchema,
   webtestQuestionFormSchema,
 } from "./forms";
-
-describe("profileFormSchema", () => {
-  it("accepts full_name alone", () => {
-    const result = profileFormSchema.parse({ full_name: "山田太郎" });
-    expect(result.full_name).toBe("山田太郎");
-  });
-
-  it("rejects a missing full_name", () => {
-    expect(() => profileFormSchema.parse({})).toThrow();
-  });
-
-  it("rejects a whitespace-only full_name", () => {
-    expect(() => profileFormSchema.parse({ full_name: "   " })).toThrow();
-  });
-});
 
 describe("companyFormSchema", () => {
   const base = { name: "テスト株式会社" };

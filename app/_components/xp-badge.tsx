@@ -1,113 +1,30 @@
 "use client";
 
 import Image from "next/image";
-import { Suspense, use, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 
-import { computeLevel, levelThresholds, XP_PER_LEVEL } from "@/lib/xp/compute-level";
-import { consumeXpStatusCookie, XP_UPDATED_EVENT } from "@/lib/xp/level-up-signal";
-
-export type ProfileLite = {
-  userId: string | null;
-  xp: number | null;
-  level: number | null;
-};
-
-const PROFILE_CACHE_KEY = "profile-lite";
-const profileCacheKey = (userId: string) => `profile-lite:${userId}`;
-
-const subscribeNoop = () => () => {};
-
-function cacheProfile(profile: ProfileLite | null) {
-  try {
-    sessionStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile ?? null));
-    if (profile?.userId) {
-      sessionStorage.setItem(profileCacheKey(profile.userId), JSON.stringify(profile));
-    }
-  } catch {
-    // fail silently
-  }
-}
-
-function readCachedProfileRaw(): string | null {
-  try {
-    return sessionStorage.getItem(PROFILE_CACHE_KEY);
-  } catch {
-    return null;
-  }
-}
+import { useMe } from "@/lib/api/me";
+import { levelThresholds, XP_PER_LEVEL } from "@/lib/xp/compute-level";
 
 /**
- * Server Component から渡された promise を use() で解決して表示する。
- * 解決値は sessionStorage にキャッシュし、ページ遷移中の
- * Suspense fallback（XpBadgeFallback）でのちらつき防止に使う。
+ * ヘッダーのレベル・XPの表示。値は TanStack Query の useMe のキャッシュから読むので、
+ * XPが付く操作のレスポンスでキャッシュが書き換われば、取り直さずに表示が変わる。
  */
-function XpBadgeResolved({ profilePromise }: { profilePromise: Promise<ProfileLite | null> }) {
-  const data = use(profilePromise);
+export function XpBadge() {
+  const { data } = useMe();
+  const level = data?.level;
 
-  return <XpBadgeView key={`${data?.userId ?? "guest"}:${data?.xp ?? 0}:${data?.level ?? 0}`} data={data} />;
-}
-
-/**
- * Suspense fallback。前回表示時の sessionStorage キャッシュがあれば
- * それを表示してちらつきを防ぐ（初回はデフォルト表示）。
- */
-function XpBadgeFallback() {
-  // SSR では null（デフォルト表示）、クライアントでは sessionStorage を
-  // 参照してハイドレーション不整合なく前回値を表示する。
-  const raw = useSyncExternalStore(subscribeNoop, readCachedProfileRaw, () => null);
-
-  const cached = useMemo(() => {
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as ProfileLite | null;
-    } catch {
-      return null;
-    }
-  }, [raw]);
-
-  return <XpBadgeStatus data={cached} />;
-}
-
-export function XpBadge({ profilePromise }: { profilePromise: Promise<ProfileLite | null> }) {
-  return (
-    <Suspense fallback={<XpBadgeFallback />}>
-      <XpBadgeResolved profilePromise={profilePromise} />
-    </Suspense>
-  );
-}
-
-function XpBadgeView({ data }: { data: ProfileLite | null }) {
-  const [displayData, setDisplayData] = useState<ProfileLite | null>(data);
+  // レベルが上がったことを、前回の描画時のレベルと比べて検出する（初回の読み込みでは演出しない）
+  const [prevLevel, setPrevLevel] = useState(level);
   const [levelUp, setLevelUp] = useState<number | null>(null);
-
-  useEffect(() => {
-    cacheProfile(displayData);
-  }, [displayData]);
-
-  useEffect(() => {
-    const applyXpStatus = () => {
-      const status = consumeXpStatusCookie();
-      if (!status) return;
-
-      const profile: ProfileLite = {
-        userId: data?.userId ?? null,
-        xp: status.xp,
-        level: status.level,
-      };
-      setDisplayData(profile);
-      if (status.leveledUp) {
-        setLevelUp(status.leveledUp);
-      }
-    };
-
-    applyXpStatus();
-    window.addEventListener(XP_UPDATED_EVENT, applyXpStatus);
-    return () => window.removeEventListener(XP_UPDATED_EVENT, applyXpStatus);
-  }, [data?.userId]);
+  if (level !== prevLevel) {
+    if (prevLevel !== undefined && level !== undefined && level > prevLevel) setLevelUp(level);
+    setPrevLevel(level);
+  }
 
   return (
     <>
-      <XpBadgeStatus data={displayData} />
+      <XpBadgeStatus xp={data?.xp ?? 0} level={level ?? 1} />
 
       {/* 2. レベルアップ演出：モーダル（全画面中央） */}
       {levelUp && (
@@ -156,21 +73,16 @@ function XpBadgeView({ data }: { data: ProfileLite | null }) {
   );
 }
 
-function XpBadgeStatus({ data }: { data: ProfileLite | null }) {
-  const { xp, level, progress, xpIntoLevel, xpToNext } = useMemo(() => {
-    const currentXp = data?.xp ?? 0;
-    // DB の level は古い計算式で保存されている可能性があるため、常に XP から導出する
-    const lvl = computeLevel(currentXp);
-    const { prev, next } = levelThresholds(lvl);
-    const into = currentXp - prev;
+function XpBadgeStatus({ xp, level }: { xp: number; level: number }) {
+  const { progress, xpIntoLevel, xpToNext } = useMemo(() => {
+    const { prev, next } = levelThresholds(level);
+    const into = xp - prev;
     return {
-      xp: currentXp,
-      level: lvl,
       progress: Math.min(1, into / XP_PER_LEVEL),
       xpIntoLevel: into,
-      xpToNext: Math.max(0, next - currentXp),
+      xpToNext: Math.max(0, next - xp),
     };
-  }, [data]);
+  }, [xp, level]);
 
   return (
     <div className="flex min-w-[600px] flex-1 items-center gap-4 rounded-md px-2 py-1">

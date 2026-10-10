@@ -17,6 +17,10 @@ jobs:
       - run: npm run lint
       - run: npm run type-check
       - run: npm run format:check
+      - name: APIの型が openapi.yaml と一致しているか確認
+        run: |
+          npm run generate:api
+          git diff --exit-code -- lib/api/schema.d.ts
 
   build:
     runs-on: ubuntu-latest

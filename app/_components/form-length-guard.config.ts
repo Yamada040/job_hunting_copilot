@@ -9,16 +9,6 @@ export const COMPANY_FIELDS = [
   { name: "stage", label: "選考状況" },
 ] as const;
 
-export const PROFILE_FIELDS = [
-  { name: "full_name", label: "氏名" },
-  { name: "university", label: "大学" },
-  { name: "faculty", label: "学部/学科" },
-  { name: "avatar_id", label: "アバター" },
-  { name: "target_industry", label: "志望業界" },
-  { name: "career_axis", label: "就活の軸" },
-  { name: "goal_state", label: "就活で達成したい状態" },
-] as const;
-
 export const ES_NEW_FIELDS = [
   { name: "company_name", label: "企業名" },
   { name: "title", label: "タイトル" },

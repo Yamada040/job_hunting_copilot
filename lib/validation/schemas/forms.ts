@@ -9,16 +9,6 @@ import {
   requiredTrimmedString,
 } from "@/lib/validation";
 
-export const profileFormSchema = z.object({
-  full_name: requiredTrimmedString,
-  university: optionalTrimmedString,
-  faculty: optionalTrimmedString,
-  avatar_id: optionalTrimmedString,
-  target_industry: optionalTrimmedString,
-  career_axis: optionalTrimmedString,
-  goal_state: optionalTrimmedString,
-});
-
 export const companyFormSchema = z.object({
   name: requiredTrimmedString,
   industry: optionalTrimmedString,
