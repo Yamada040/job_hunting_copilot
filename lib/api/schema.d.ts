@@ -163,6 +163,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/interview-logs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 自分の面接ログの一覧を取得する
+     * @description 面接日の新しい順。companyId を渡すとその企業の面接ログだけに絞る。
+     */
+    get: operations["listInterviewLogs"];
+    put?: never;
+    /**
+     * 面接ログを作成する
+     * @description XPが付く（同じ面接ログには1回）。
+     */
+    post: operations["createInterviewLog"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/interview-logs/{interviewLogId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        interviewLogId: components["parameters"]["InterviewLogId"];
+      };
+      cookie?: never;
+    };
+    /** 面接ログを1件取得する */
+    get: operations["getInterviewLog"];
+    put?: never;
+    post?: never;
+    /** 面接ログを削除する */
+    delete: operations["deleteInterviewLog"];
+    options?: never;
+    head?: never;
+    /**
+     * 面接ログを更新する
+     * @description 送った項目だけを更新する。
+     */
+    patch: operations["updateInterviewLog"];
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -333,6 +381,68 @@ export interface components {
       esEntry: components["schemas"]["EsEntry"];
       xp: components["schemas"]["XpResult"];
     };
+    /**
+     * @description 面接形式（対面・オンライン・ハイブリッド）
+     * @enum {string}
+     */
+    InterviewFormat: "in_person" | "online" | "hybrid";
+    /**
+     * @description その質問への受け答えの手応え
+     * @enum {string}
+     */
+    InterviewRating: "good" | "average" | "bad";
+    InterviewQuestion: {
+      question: string;
+      answer: string;
+      rating?: components["schemas"]["InterviewRating"];
+    };
+    InterviewLog: {
+      /** Format: uuid */
+      id: string;
+      company: components["schemas"]["CompanySummary"];
+      format: components["schemas"]["InterviewFormat"] | null;
+      /** @description 面接の回次（一次・二次・最終など） */
+      round: string | null;
+      /** Format: date */
+      interviewDate: string | null;
+      questions: components["schemas"]["InterviewQuestion"][];
+      /** @description 次回改善したい点 */
+      improvement: string | null;
+      /** @description 想定外だった質問・論点 */
+      unexpected: string | null;
+      /** @description AI振り返りの振り返り結果 */
+      aiResult: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    InterviewLogCreate: {
+      /** Format: uuid */
+      companyId: string;
+      format: components["schemas"]["InterviewFormat"];
+      round: string;
+      /** Format: date */
+      interviewDate: string;
+      questions: components["schemas"]["InterviewQuestion"][];
+      improvement?: string;
+      unexpected?: string;
+    };
+    InterviewLogUpdate: {
+      /** Format: uuid */
+      companyId?: string;
+      format?: components["schemas"]["InterviewFormat"];
+      round?: string;
+      /** Format: date */
+      interviewDate?: string;
+      questions?: components["schemas"]["InterviewQuestion"][];
+      improvement?: string;
+      unexpected?: string;
+    };
+    InterviewLogCreated: {
+      interviewLog: components["schemas"]["InterviewLog"];
+      xp: components["schemas"]["XpResult"];
+    };
     /** @description RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの */
     Problem: {
       /**
@@ -381,6 +491,7 @@ export interface components {
     };
   };
   parameters: {
+    InterviewLogId: string;
     EsEntryId: string;
     CompanyId: string;
   };
@@ -714,6 +825,126 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["EsEntrySubmitted"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  listInterviewLogs: {
+    parameters: {
+      query?: {
+        companyId?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 面接ログの一覧 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InterviewLog"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  createInterviewLog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InterviewLogCreate"];
+      };
+    };
+    responses: {
+      /** @description 作成した面接ログと、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InterviewLogCreated"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getInterviewLog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        interviewLogId: components["parameters"]["InterviewLogId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 面接ログ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InterviewLog"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteInterviewLog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        interviewLogId: components["parameters"]["InterviewLogId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 削除した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  updateInterviewLog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        interviewLogId: components["parameters"]["InterviewLogId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InterviewLogUpdate"];
+      };
+    };
+    responses: {
+      /** @description 更新後の面接ログ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InterviewLog"];
         };
       };
       default: components["responses"]["Problem"];

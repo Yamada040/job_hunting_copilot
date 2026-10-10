@@ -255,8 +255,108 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/interview-logs:
+    get:
+      operationId: listInterviewLogs
+      summary: 自分の面接ログの一覧を取得する
+      description: 面接日の新しい順。companyId を渡すとその企業の面接ログだけに絞る。
+      parameters:
+        - name: companyId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: 面接ログの一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InterviewLog"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createInterviewLog
+      summary: 面接ログを作成する
+      description: XPが付く（同じ面接ログには1回）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewLogCreate"
+      responses:
+        "201":
+          description: 作成した面接ログと、付与されたXP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewLogCreated"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/interview-logs/{interviewLogId}:
+    parameters:
+      - $ref: "#/components/parameters/InterviewLogId"
+    get:
+      operationId: getInterviewLog
+      summary: 面接ログを1件取得する
+      responses:
+        "200":
+          description: 面接ログ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewLog"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateInterviewLog
+      summary: 面接ログを更新する
+      description: 送った項目だけを更新する。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewLogUpdate"
+      responses:
+        "200":
+          description: 更新後の面接ログ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewLog"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteInterviewLog
+      summary: 面接ログを削除する
+      responses:
+        "204":
+          description: 削除した
+        default:
+          $ref: "#/components/responses/Problem"
+
 components:
   parameters:
+    InterviewLogId:
+      name: interviewLogId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     EsEntryId:
       name: esEntryId
       in: path
@@ -708,6 +808,143 @@ components:
       properties:
         esEntry:
           $ref: "#/components/schemas/EsEntry"
+        xp:
+          $ref: "#/components/schemas/XpResult"
+
+    InterviewFormat:
+      type: string
+      description: 面接形式（対面・オンライン・ハイブリッド）
+      enum: [in_person, online, hybrid]
+
+    InterviewRating:
+      type: string
+      description: その質問への受け答えの手応え
+      enum: [good, average, bad]
+
+    InterviewQuestion:
+      type: object
+      additionalProperties: false
+      required: [question, answer]
+      properties:
+        question:
+          type: string
+          maxLength: 1000
+        answer:
+          type: string
+          maxLength: 4000
+        rating:
+          $ref: "#/components/schemas/InterviewRating"
+
+    InterviewLog:
+      type: object
+      required:
+        [id, company, format, round, interviewDate, questions, improvement, unexpected, aiResult, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        company:
+          $ref: "#/components/schemas/CompanySummary"
+        format:
+          allOf:
+            - $ref: "#/components/schemas/InterviewFormat"
+          nullable: true
+        round:
+          type: string
+          nullable: true
+          description: 面接の回次（一次・二次・最終など）
+        interviewDate:
+          type: string
+          format: date
+          nullable: true
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewQuestion"
+        improvement:
+          type: string
+          nullable: true
+          description: 次回改善したい点
+        unexpected:
+          type: string
+          nullable: true
+          description: 想定外だった質問・論点
+        aiResult:
+          type: string
+          nullable: true
+          description: AI振り返りの振り返り結果
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    InterviewLogCreate:
+      type: object
+      additionalProperties: false
+      required: [companyId, format, round, interviewDate, questions]
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        format:
+          $ref: "#/components/schemas/InterviewFormat"
+        round:
+          type: string
+          minLength: 1
+          maxLength: 50
+        interviewDate:
+          type: string
+          format: date
+        questions:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/InterviewQuestion"
+        improvement:
+          type: string
+          maxLength: 2000
+        unexpected:
+          type: string
+          maxLength: 2000
+
+    InterviewLogUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        format:
+          $ref: "#/components/schemas/InterviewFormat"
+        round:
+          type: string
+          minLength: 1
+          maxLength: 50
+        interviewDate:
+          type: string
+          format: date
+        questions:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/InterviewQuestion"
+        improvement:
+          type: string
+          maxLength: 2000
+        unexpected:
+          type: string
+          maxLength: 2000
+
+    InterviewLogCreated:
+      type: object
+      required: [interviewLog, xp]
+      properties:
+        interviewLog:
+          $ref: "#/components/schemas/InterviewLog"
         xp:
           $ref: "#/components/schemas/XpResult"
 

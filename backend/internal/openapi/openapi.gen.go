@@ -91,6 +91,48 @@ func (e HealthStatus) Valid() bool {
 	}
 }
 
+// Defines values for InterviewFormat.
+const (
+	Hybrid   InterviewFormat = "hybrid"
+	InPerson InterviewFormat = "in_person"
+	Online   InterviewFormat = "online"
+)
+
+// Valid indicates whether the value is a known member of the InterviewFormat enum.
+func (e InterviewFormat) Valid() bool {
+	switch e {
+	case Hybrid:
+		return true
+	case InPerson:
+		return true
+	case Online:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InterviewRating.
+const (
+	Average InterviewRating = "average"
+	Bad     InterviewRating = "bad"
+	Good    InterviewRating = "good"
+)
+
+// Valid indicates whether the value is a known member of the InterviewRating enum.
+func (e InterviewRating) Valid() bool {
+	switch e {
+	case Average:
+		return true
+	case Bad:
+		return true
+	case Good:
+		return true
+	default:
+		return false
+	}
+}
+
 // Company defines model for Company.
 type Company struct {
 	// AiResult AI企業分析の分析結果
@@ -247,6 +289,79 @@ type Health struct {
 // HealthStatus defines model for Health.Status.
 type HealthStatus string
 
+// InterviewFormat 面接形式（対面・オンライン・ハイブリッド）
+type InterviewFormat string
+
+// InterviewLog defines model for InterviewLog.
+type InterviewLog struct {
+	// AiResult AI振り返りの振り返り結果
+	AiResult *string `json:"aiResult"`
+
+	// Company 他の項目にひも付く企業の、表示に必要な最小限の情報
+	Company   CompanySummary     `json:"company"`
+	CreatedAt time.Time          `json:"createdAt"`
+	Format    *InterviewFormat   `json:"format"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Improvement 次回改善したい点
+	Improvement   *string             `json:"improvement"`
+	InterviewDate *openapi_types.Date `json:"interviewDate"`
+	Questions     []InterviewQuestion `json:"questions"`
+
+	// Round 面接の回次（一次・二次・最終など）
+	Round *string `json:"round"`
+
+	// Unexpected 想定外だった質問・論点
+	Unexpected *string   `json:"unexpected"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
+// InterviewLogCreate defines model for InterviewLogCreate.
+type InterviewLogCreate struct {
+	CompanyId openapi_types.UUID `json:"companyId"`
+
+	// Format 面接形式（対面・オンライン・ハイブリッド）
+	Format        InterviewFormat     `json:"format"`
+	Improvement   *string             `json:"improvement,omitempty"`
+	InterviewDate openapi_types.Date  `json:"interviewDate"`
+	Questions     []InterviewQuestion `json:"questions"`
+	Round         string              `json:"round"`
+	Unexpected    *string             `json:"unexpected,omitempty"`
+}
+
+// InterviewLogCreated defines model for InterviewLogCreated.
+type InterviewLogCreated struct {
+	InterviewLog InterviewLog `json:"interviewLog"`
+
+	// Xp XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す
+	Xp XpResult `json:"xp"`
+}
+
+// InterviewLogUpdate defines model for InterviewLogUpdate.
+type InterviewLogUpdate struct {
+	CompanyId *openapi_types.UUID `json:"companyId,omitempty"`
+
+	// Format 面接形式（対面・オンライン・ハイブリッド）
+	Format        *InterviewFormat     `json:"format,omitempty"`
+	Improvement   *string              `json:"improvement,omitempty"`
+	InterviewDate *openapi_types.Date  `json:"interviewDate,omitempty"`
+	Questions     *[]InterviewQuestion `json:"questions,omitempty"`
+	Round         *string              `json:"round,omitempty"`
+	Unexpected    *string              `json:"unexpected,omitempty"`
+}
+
+// InterviewQuestion defines model for InterviewQuestion.
+type InterviewQuestion struct {
+	Answer   string `json:"answer"`
+	Question string `json:"question"`
+
+	// Rating その質問への受け答えの手応え
+	Rating *InterviewRating `json:"rating,omitempty"`
+}
+
+// InterviewRating その質問への受け答えの手応え
+type InterviewRating string
+
 // Me defines model for Me.
 type Me struct {
 	// AvatarId アバター
@@ -345,6 +460,9 @@ type CompanyId = openapi_types.UUID
 // EsEntryId defines model for EsEntryId.
 type EsEntryId = openapi_types.UUID
 
+// InterviewLogId defines model for InterviewLogId.
+type InterviewLogId = openapi_types.UUID
+
 // ListCompaniesParams defines parameters for ListCompanies.
 type ListCompaniesParams struct {
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
@@ -352,6 +470,12 @@ type ListCompaniesParams struct {
 
 // ListEsEntriesParams defines parameters for ListEsEntries.
 type ListEsEntriesParams struct {
+	CompanyId *openapi_types.UUID `form:"companyId,omitempty" json:"companyId,omitempty"`
+	Limit     *int                `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListInterviewLogsParams defines parameters for ListInterviewLogs.
+type ListInterviewLogsParams struct {
 	CompanyId *openapi_types.UUID `form:"companyId,omitempty" json:"companyId,omitempty"`
 	Limit     *int                `form:"limit,omitempty" json:"limit,omitempty"`
 }
@@ -367,6 +491,12 @@ type CreateEsEntryJSONRequestBody = EsEntryCreate
 
 // UpdateEsEntryJSONRequestBody defines body for UpdateEsEntry for application/json ContentType.
 type UpdateEsEntryJSONRequestBody = EsEntryUpdate
+
+// CreateInterviewLogJSONRequestBody defines body for CreateInterviewLog for application/json ContentType.
+type CreateInterviewLogJSONRequestBody = InterviewLogCreate
+
+// UpdateInterviewLogJSONRequestBody defines body for UpdateInterviewLog for application/json ContentType.
+type UpdateInterviewLogJSONRequestBody = InterviewLogUpdate
 
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = ProfileUpdate
@@ -409,6 +539,21 @@ type ServerInterface interface {
 	// GetHealth 稼働確認
 	// (GET /v1/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// ListInterviewLogs 自分の面接ログの一覧を取得する
+	// (GET /v1/interview-logs)
+	ListInterviewLogs(w http.ResponseWriter, r *http.Request, params ListInterviewLogsParams)
+	// CreateInterviewLog 面接ログを作成する
+	// (POST /v1/interview-logs)
+	CreateInterviewLog(w http.ResponseWriter, r *http.Request)
+	// DeleteInterviewLog 面接ログを削除する
+	// (DELETE /v1/interview-logs/{interviewLogId})
+	DeleteInterviewLog(w http.ResponseWriter, r *http.Request, interviewLogId InterviewLogId)
+	// GetInterviewLog 面接ログを1件取得する
+	// (GET /v1/interview-logs/{interviewLogId})
+	GetInterviewLog(w http.ResponseWriter, r *http.Request, interviewLogId InterviewLogId)
+	// UpdateInterviewLog 面接ログを更新する
+	// (PATCH /v1/interview-logs/{interviewLogId})
+	UpdateInterviewLog(w http.ResponseWriter, r *http.Request, interviewLogId InterviewLogId)
 	// GetMe 自分のプロフィールとXP・レベルを取得する
 	// (GET /v1/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
@@ -729,6 +874,144 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListInterviewLogs operation middleware
+func (siw *ServerInterfaceWrapper) ListInterviewLogs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListInterviewLogsParams
+
+	// ------------- Optional query parameter "companyId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "companyId", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "companyId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "companyId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListInterviewLogs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateInterviewLog operation middleware
+func (siw *ServerInterfaceWrapper) CreateInterviewLog(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateInterviewLog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteInterviewLog operation middleware
+func (siw *ServerInterfaceWrapper) DeleteInterviewLog(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "interviewLogId" -------------
+	var interviewLogId InterviewLogId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "interviewLogId", r.PathValue("interviewLogId"), &interviewLogId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "interviewLogId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteInterviewLog(w, r, interviewLogId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetInterviewLog operation middleware
+func (siw *ServerInterfaceWrapper) GetInterviewLog(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "interviewLogId" -------------
+	var interviewLogId InterviewLogId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "interviewLogId", r.PathValue("interviewLogId"), &interviewLogId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "interviewLogId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInterviewLog(w, r, interviewLogId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateInterviewLog operation middleware
+func (siw *ServerInterfaceWrapper) UpdateInterviewLog(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "interviewLogId" -------------
+	var interviewLogId InterviewLogId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "interviewLogId", r.PathValue("interviewLogId"), &interviewLogId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "interviewLogId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateInterviewLog(w, r, interviewLogId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMe operation middleware
 func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
 
@@ -891,6 +1174,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/es-entries/{esEntryId}", wrapper.GetEsEntry)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/es-entries/{esEntryId}", wrapper.UpdateEsEntry)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/es-entries/{esEntryId}/submit", wrapper.SubmitEsEntry)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/interview-logs", wrapper.ListInterviewLogs)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/interview-logs", wrapper.CreateInterviewLog)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/interview-logs/{interviewLogId}", wrapper.DeleteInterviewLog)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/interview-logs/{interviewLogId}", wrapper.GetInterviewLog)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/interview-logs/{interviewLogId}", wrapper.UpdateInterviewLog)
 
 	return m
 }
@@ -1354,6 +1642,196 @@ func (response GetHealthdefaultApplicationProblemPlusJSONResponse) VisitGetHealt
 	return err
 }
 
+type ListInterviewLogsRequestObject struct {
+	Params ListInterviewLogsParams
+}
+
+type ListInterviewLogsResponseObject interface {
+	VisitListInterviewLogsResponse(w http.ResponseWriter) error
+}
+
+type ListInterviewLogs200JSONResponse []InterviewLog
+
+func (response ListInterviewLogs200JSONResponse) VisitListInterviewLogsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListInterviewLogsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListInterviewLogsdefaultApplicationProblemPlusJSONResponse) VisitListInterviewLogsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateInterviewLogRequestObject struct {
+	Body *CreateInterviewLogJSONRequestBody
+}
+
+type CreateInterviewLogResponseObject interface {
+	VisitCreateInterviewLogResponse(w http.ResponseWriter) error
+}
+
+type CreateInterviewLog201JSONResponse InterviewLogCreated
+
+func (response CreateInterviewLog201JSONResponse) VisitCreateInterviewLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateInterviewLogdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateInterviewLogdefaultApplicationProblemPlusJSONResponse) VisitCreateInterviewLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteInterviewLogRequestObject struct {
+	InterviewLogId InterviewLogId `json:"interviewLogId"`
+}
+
+type DeleteInterviewLogResponseObject interface {
+	VisitDeleteInterviewLogResponse(w http.ResponseWriter) error
+}
+
+type DeleteInterviewLog204Response struct {
+}
+
+func (response DeleteInterviewLog204Response) VisitDeleteInterviewLogResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteInterviewLogdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response DeleteInterviewLogdefaultApplicationProblemPlusJSONResponse) VisitDeleteInterviewLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInterviewLogRequestObject struct {
+	InterviewLogId InterviewLogId `json:"interviewLogId"`
+}
+
+type GetInterviewLogResponseObject interface {
+	VisitGetInterviewLogResponse(w http.ResponseWriter) error
+}
+
+type GetInterviewLog200JSONResponse InterviewLog
+
+func (response GetInterviewLog200JSONResponse) VisitGetInterviewLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInterviewLogdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetInterviewLogdefaultApplicationProblemPlusJSONResponse) VisitGetInterviewLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInterviewLogRequestObject struct {
+	InterviewLogId InterviewLogId `json:"interviewLogId"`
+	Body           *UpdateInterviewLogJSONRequestBody
+}
+
+type UpdateInterviewLogResponseObject interface {
+	VisitUpdateInterviewLogResponse(w http.ResponseWriter) error
+}
+
+type UpdateInterviewLog200JSONResponse InterviewLog
+
+func (response UpdateInterviewLog200JSONResponse) VisitUpdateInterviewLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInterviewLogdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateInterviewLogdefaultApplicationProblemPlusJSONResponse) VisitUpdateInterviewLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetMeRequestObject struct {
 }
 
@@ -1469,6 +1947,21 @@ type StrictServerInterface interface {
 	// GetHealth 稼働確認
 	// (GET /v1/health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// ListInterviewLogs 自分の面接ログの一覧を取得する
+	// (GET /v1/interview-logs)
+	ListInterviewLogs(ctx context.Context, request ListInterviewLogsRequestObject) (ListInterviewLogsResponseObject, error)
+	// CreateInterviewLog 面接ログを作成する
+	// (POST /v1/interview-logs)
+	CreateInterviewLog(ctx context.Context, request CreateInterviewLogRequestObject) (CreateInterviewLogResponseObject, error)
+	// DeleteInterviewLog 面接ログを削除する
+	// (DELETE /v1/interview-logs/{interviewLogId})
+	DeleteInterviewLog(ctx context.Context, request DeleteInterviewLogRequestObject) (DeleteInterviewLogResponseObject, error)
+	// GetInterviewLog 面接ログを1件取得する
+	// (GET /v1/interview-logs/{interviewLogId})
+	GetInterviewLog(ctx context.Context, request GetInterviewLogRequestObject) (GetInterviewLogResponseObject, error)
+	// UpdateInterviewLog 面接ログを更新する
+	// (PATCH /v1/interview-logs/{interviewLogId})
+	UpdateInterviewLog(ctx context.Context, request UpdateInterviewLogRequestObject) (UpdateInterviewLogResponseObject, error)
 	// GetMe 自分のプロフィールとXP・レベルを取得する
 	// (GET /v1/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
@@ -1850,6 +2343,148 @@ func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListInterviewLogs operation middleware
+func (sh *strictHandler) ListInterviewLogs(w http.ResponseWriter, r *http.Request, params ListInterviewLogsParams) {
+	var request ListInterviewLogsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListInterviewLogs(ctx, request.(ListInterviewLogsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListInterviewLogs")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListInterviewLogsResponseObject); ok {
+		if err := validResponse.VisitListInterviewLogsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateInterviewLog operation middleware
+func (sh *strictHandler) CreateInterviewLog(w http.ResponseWriter, r *http.Request) {
+	var request CreateInterviewLogRequestObject
+
+	var body CreateInterviewLogJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateInterviewLog(ctx, request.(CreateInterviewLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateInterviewLog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateInterviewLogResponseObject); ok {
+		if err := validResponse.VisitCreateInterviewLogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteInterviewLog operation middleware
+func (sh *strictHandler) DeleteInterviewLog(w http.ResponseWriter, r *http.Request, interviewLogId InterviewLogId) {
+	var request DeleteInterviewLogRequestObject
+
+	request.InterviewLogId = interviewLogId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteInterviewLog(ctx, request.(DeleteInterviewLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteInterviewLog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteInterviewLogResponseObject); ok {
+		if err := validResponse.VisitDeleteInterviewLogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetInterviewLog operation middleware
+func (sh *strictHandler) GetInterviewLog(w http.ResponseWriter, r *http.Request, interviewLogId InterviewLogId) {
+	var request GetInterviewLogRequestObject
+
+	request.InterviewLogId = interviewLogId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInterviewLog(ctx, request.(GetInterviewLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInterviewLog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetInterviewLogResponseObject); ok {
+		if err := validResponse.VisitGetInterviewLogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateInterviewLog operation middleware
+func (sh *strictHandler) UpdateInterviewLog(w http.ResponseWriter, r *http.Request, interviewLogId InterviewLogId) {
+	var request UpdateInterviewLogRequestObject
+
+	request.InterviewLogId = interviewLogId
+
+	var body UpdateInterviewLogJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateInterviewLog(ctx, request.(UpdateInterviewLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateInterviewLog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateInterviewLogResponseObject); ok {
+		if err := validResponse.VisitUpdateInterviewLogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetMe operation middleware
 func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	var request GetMeRequestObject
@@ -1910,68 +2545,78 @@ func (sh *strictHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

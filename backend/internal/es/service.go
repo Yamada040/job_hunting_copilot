@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
@@ -96,7 +97,7 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (Entry
 	var entry Entry
 	err = platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
-		if err := checkCompany(ctx, q, userID, *f.CompanyID); err != nil {
+		if err := company.EnsureOwned(ctx, q, userID, *f.CompanyID); err != nil {
 			return err
 		}
 		id, err := q.CreateEsEntry(ctx, db.CreateEsEntryParams{
@@ -137,7 +138,7 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, f Fields) (E
 	err := platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
 		if f.CompanyID != nil {
-			if err := checkCompany(ctx, q, userID, *f.CompanyID); err != nil {
+			if err := company.EnsureOwned(ctx, q, userID, *f.CompanyID); err != nil {
 				return err
 			}
 		}
@@ -222,22 +223,6 @@ func get(ctx context.Context, q *db.Queries, userID, id uuid.UUID) (Entry, error
 		return Entry{}, fmt.Errorf("get es entry: %w", err)
 	}
 	return toEntry(row.EsEntry, row.CompanyName)
-}
-
-// 他人の企業を指定された場合も「存在しない企業」として扱い、ひも付けさせない
-func checkCompany(ctx context.Context, q *db.Queries, userID, companyID uuid.UUID) error {
-	ok, err := q.CompanyExists(ctx, db.CompanyExistsParams{ID: companyID, UserID: userID})
-	if err != nil {
-		return fmt.Errorf("check company: %w", err)
-	}
-	if !ok {
-		return &platform.Error{
-			Kind:    platform.KindInvalid,
-			Message: "入力内容に誤りがあります",
-			Fields:  []platform.FieldError{{Field: "companyId", Message: "企業が見つかりません"}},
-		}
-	}
-	return nil
 }
 
 func toEntry(row db.EsEntry, companyName string) (Entry, error) {

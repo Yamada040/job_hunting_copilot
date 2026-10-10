@@ -37,7 +37,6 @@ flowchart TD
         B2["schemas/ai.ts"]
         B3["schemas/api.ts"]
         B4["schemas/contact.ts"]
-        B5["schemas/interviews.ts"]
     end
 
     subgraph Phase3["Phase 3 : モック/DIが必要なロジック"]
@@ -245,16 +244,15 @@ flowchart LR
 
 各スキーマについて **正常系1〜2ケース＋境界値／異常系** を用意する。
 
-| ファイル        | スキーマ                    | 主なテストケース                                                                                        |
-| --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `forms.ts`      | `webtestQuestionFormSchema` | `title`/`body`/`answer`必須（空白のみで失敗）／`time_limit`が負の文字列でエラー                         |
-| `forms.ts`      | `webtestAnswerFormSchema`   | `answer`省略時`""`／`time_spent`が`""`で`undefined`扱い                                                 |
-| `ai.ts`         | `aiRequestSchema`           | `input`8000文字ちょうどはOK、8001文字でエラー／トリム後空文字でエラー／`kind`が不正なenum値でエラー     |
-| `ai.ts`         | `idAndSummarySchema`        | 必須文字列の欠落でエラー                                                                                |
-| `api.ts`        | `answersPayloadSchema`      | 任意キー・任意値のレコードを許容                                                                        |
-| `api.ts`        | `calendarEventSchema`       | `date`/`title`必須／`company`等が`null`許容                                                             |
-| `contact.ts`    | `contactRequestSchema`      | `subject`120文字境界／`message`2000文字境界／日本語エラーメッセージが期待通り返る                       |
-| `interviews.ts` | `interviewRequestSchema`    | `questions`が配列直接指定／`{items, reflection}`形式のどちらも許容（union）／`rating`に不正な値でエラー |
+| ファイル     | スキーマ                    | 主なテストケース                                                                                    |
+| ------------ | --------------------------- | --------------------------------------------------------------------------------------------------- |
+| `forms.ts`   | `webtestQuestionFormSchema` | `title`/`body`/`answer`必須（空白のみで失敗）／`time_limit`が負の文字列でエラー                     |
+| `forms.ts`   | `webtestAnswerFormSchema`   | `answer`省略時`""`／`time_spent`が`""`で`undefined`扱い                                             |
+| `ai.ts`      | `aiRequestSchema`           | `input`8000文字ちょうどはOK、8001文字でエラー／トリム後空文字でエラー／`kind`が不正なenum値でエラー |
+| `ai.ts`      | `idAndSummarySchema`        | 必須文字列の欠落でエラー                                                                            |
+| `api.ts`     | `answersPayloadSchema`      | 任意キー・任意値のレコードを許容                                                                    |
+| `api.ts`     | `calendarEventSchema`       | `date`/`title`必須／`company`等が`null`許容                                                         |
+| `contact.ts` | `contactRequestSchema`      | `subject`120文字境界／`message`2000文字境界／日本語エラーメッセージが期待通り返る                   |
 
 ### Phase 3: モック/DIが必要なロジック
 
