@@ -39,26 +39,44 @@ func NewVerifier(ctx context.Context, supabaseURL string) (*Verifier, error) {
 	return &Verifier{keys: keys.Keyfunc, issuer: base + "/auth/v1"}, nil
 }
 
+// claims は、Supabase Auth のトークンのうち、Goが使う項目。
+type claims struct {
+	jwt.RegisteredClaims
+	Email string `json:"email"`
+}
+
+// User は、トークンから分かるログイン中のユーザー。
+type User struct {
+	ID    uuid.UUID
+	Email string
+}
+
 // UserID は、トークンを検証してユーザーID（sub）を返す。
 func (v *Verifier) UserID(token string) (uuid.UUID, error) {
-	claims := jwt.RegisteredClaims{}
-	_, err := jwt.ParseWithClaims(token, &claims, v.keys,
+	u, err := v.User(token)
+	return u.ID, err
+}
+
+// User は、トークンを検証してユーザーIDとメールアドレスを返す。
+func (v *Verifier) User(token string) (User, error) {
+	c := claims{}
+	_, err := jwt.ParseWithClaims(token, &c, v.keys,
 		jwt.WithValidMethods([]string{"ES256", "RS256"}),
 		jwt.WithIssuer(v.issuer),
 		jwt.WithAudience(audience),
 		jwt.WithExpirationRequired(),
 	)
 	if err != nil {
-		return uuid.Nil, err
+		return User{}, err
 	}
-	id, err := uuid.Parse(claims.Subject)
+	id, err := uuid.Parse(c.Subject)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("token subject is not a user id: %w", err)
+		return User{}, fmt.Errorf("token subject is not a user id: %w", err)
 	}
-	return id, nil
+	return User{ID: id, Email: c.Email}, nil
 }
 
-type userIDKey struct{}
+type userKey struct{}
 
 // Authenticate は、Authorization ヘッダーにトークンがあれば検証し、ユーザーIDをコンテキストに入れる。
 // トークンが無いリクエストはそのまま通し、ログインが必要かどうかは OpenAPI の security を見る RequireUser に任せる。
@@ -70,21 +88,27 @@ func (v *Verifier) Authenticate(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		userID, err := v.UserID(token)
+		user, err := v.User(token)
 		if err != nil {
 			platform.Logger(r.Context()).Info("invalid access token", "error", err)
 			platform.WriteError(w, r, &platform.Error{Kind: platform.KindUnauthorized, Message: "ログインが必要です"})
 			return
 		}
-		ctx := context.WithValue(r.Context(), userIDKey{}, userID)
+		ctx := context.WithValue(r.Context(), userKey{}, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 // UserID は、Authenticate が検証したユーザーIDを返す。ログインしていなければ ok は false。
 func UserID(ctx context.Context) (uuid.UUID, bool) {
-	id, ok := ctx.Value(userIDKey{}).(uuid.UUID)
-	return id, ok
+	u, ok := ctx.Value(userKey{}).(User)
+	return u.ID, ok
+}
+
+// Email は、Authenticate が検証したユーザーのメールアドレスを返す。トークンに無ければ空文字。
+func Email(ctx context.Context) string {
+	u, _ := ctx.Value(userKey{}).(User)
+	return u.Email
 }
 
 // RequireUserID は、ログインが必要な操作の handler でユーザーIDを取り出す。

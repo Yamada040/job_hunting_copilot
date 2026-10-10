@@ -611,8 +611,128 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/webtest-questions:
+    get:
+      operationId: listWebtestQuestions
+      summary: 自分が作ったWebテストの問題の一覧を取得する
+      description: 作成日時の新しい順。testType を渡すとその種類の問題だけに絞る。
+      parameters:
+        - name: testType
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 50
+      responses:
+        "200":
+          description: 問題の一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebtestQuestionSummary"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createWebtestQuestion
+      summary: Webテストの問題を作る
+      description: XPが付く（1日3回まで）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebtestQuestionCreate"
+      responses:
+        "201":
+          description: 作った問題と、付与されたXP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebtestQuestionCreated"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/webtest-questions/{webtestQuestionId}:
+    parameters:
+      - $ref: "#/components/parameters/WebtestQuestionId"
+    get:
+      operationId: getWebtestQuestion
+      summary: 問題と、これまでの解答の記録を取得する
+      responses:
+        "200":
+          description: 問題と解答の記録
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebtestQuestionDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/webtest-questions/{webtestQuestionId}/attempts:
+    parameters:
+      - $ref: "#/components/parameters/WebtestQuestionId"
+    post:
+      operationId: answerWebtestQuestion
+      summary: 問題に解答する
+      description: 正誤はGoが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebtestAnswer"
+      responses:
+        "201":
+          description: 解答の記録と、付与されたXP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebtestAnswered"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/contact:
+    post:
+      operationId: sendContact
+      summary: 問い合わせを運営にメールで送る
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactRequest"
+      responses:
+        "204":
+          description: 送信した
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/admin/stats:
+    get:
+      operationId: getAdminStats
+      summary: 利用状況の集計を取得する（開発者のみ）
+      description: 開発者でなければ 403。「直近」は7日間、「今日」は日本時間の今日。
+      responses:
+        "200":
+          description: 利用状況
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+        default:
+          $ref: "#/components/responses/Problem"
+
 components:
   parameters:
+    WebtestQuestionId:
+      name: webtestQuestionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     CalendarEventId:
       name: calendarEventId
       in: path
@@ -1494,6 +1614,202 @@ components:
           $ref: "#/components/schemas/SelfAnalysisResult"
         xp:
           $ref: "#/components/schemas/XpResult"
+
+    WebtestQuestionSummary:
+      type: object
+      required: [id, title, testType, category, format, difficulty, timeLimit, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        testType:
+          type: string
+          nullable: true
+          description: テストの種類（SPI・玉手箱など）
+        category:
+          type: string
+          nullable: true
+        format:
+          type: string
+          nullable: true
+        difficulty:
+          type: string
+          nullable: true
+        timeLimit:
+          type: integer
+          nullable: true
+          description: 制限時間（秒）
+        createdAt:
+          type: string
+          format: date-time
+
+    WebtestQuestionDetail:
+      allOf:
+        - $ref: "#/components/schemas/WebtestQuestionSummary"
+        - type: object
+          required: [body, choices, answer, explanation, attempts]
+          properties:
+            body:
+              type: string
+            choices:
+              type: array
+              items:
+                type: string
+            answer:
+              type: string
+            explanation:
+              type: string
+              nullable: true
+            attempts:
+              type: array
+              description: 解答の記録（新しい順）
+              items:
+                $ref: "#/components/schemas/WebtestAttempt"
+
+    WebtestQuestionCreate:
+      type: object
+      additionalProperties: false
+      required: [title, body, answer]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 500
+        choices:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            maxLength: 500
+        explanation:
+          type: string
+          maxLength: 5000
+        testType:
+          type: string
+          maxLength: 50
+        category:
+          type: string
+          maxLength: 50
+        format:
+          type: string
+          maxLength: 50
+        difficulty:
+          type: string
+          maxLength: 50
+        timeLimit:
+          type: integer
+          minimum: 0
+          maximum: 3600
+
+    WebtestQuestionCreated:
+      type: object
+      required: [question, xp]
+      properties:
+        question:
+          $ref: "#/components/schemas/WebtestQuestionDetail"
+        xp:
+          $ref: "#/components/schemas/XpResult"
+
+    WebtestAttempt:
+      type: object
+      required: [id, isCorrect, timeSpent, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        isCorrect:
+          type: boolean
+        timeSpent:
+          type: integer
+          nullable: true
+          description: かかった時間（秒）
+        createdAt:
+          type: string
+          format: date-time
+
+    WebtestAnswer:
+      type: object
+      additionalProperties: false
+      required: [answer]
+      properties:
+        answer:
+          type: string
+          maxLength: 500
+        timeSpent:
+          type: integer
+          minimum: 0
+          maximum: 36000
+
+    WebtestAnswered:
+      type: object
+      required: [attempt, xp]
+      properties:
+        attempt:
+          $ref: "#/components/schemas/WebtestAttempt"
+        xp:
+          $ref: "#/components/schemas/XpResult"
+
+    ContactRequest:
+      type: object
+      additionalProperties: false
+      required: [subject, message]
+      properties:
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 120
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+
+    AdminStats:
+      type: object
+      required:
+        [
+          totalUsers,
+          newUsers7d,
+          activeUsers7d,
+          activeUsersToday,
+          totalEs,
+          esCreated7d,
+          totalCompanies,
+          companiesCreated7d,
+          totalInterviews,
+          interviewsCreated7d,
+        ]
+      properties:
+        totalUsers:
+          type: integer
+        newUsers7d:
+          type: integer
+        activeUsers7d:
+          type: integer
+          description: 直近7日間にXPを獲得したユーザー数
+        activeUsersToday:
+          type: integer
+        totalEs:
+          type: integer
+        esCreated7d:
+          type: integer
+        totalCompanies:
+          type: integer
+        companiesCreated7d:
+          type: integer
+        totalInterviews:
+          type: integer
+        interviewsCreated7d:
+          type: integer
 
     Problem:
       type: object

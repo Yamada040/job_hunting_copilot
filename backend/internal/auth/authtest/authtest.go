@@ -71,3 +71,18 @@ func (i *Issuer) Sign(t *testing.T, claims jwt.RegisteredClaims) string {
 	}
 	return signed
 }
+
+// SignWithEmail は、claims にメールアドレスを加えたトークンを返す（Supabase Auth のトークンは email を含む）。
+func (i *Issuer) SignWithEmail(t *testing.T, claims jwt.RegisteredClaims, email string) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, struct {
+		jwt.RegisteredClaims
+		Email string `json:"email"`
+	}{claims, email})
+	token.Header["kid"] = keyID
+	signed, err := token.SignedString(i.key)
+	if err != nil {
+		t.Fatalf("sign token: %v", err)
+	}
+	return signed
+}

@@ -429,6 +429,108 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/webtest-questions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 自分が作ったWebテストの問題の一覧を取得する
+     * @description 作成日時の新しい順。testType を渡すとその種類の問題だけに絞る。
+     */
+    get: operations["listWebtestQuestions"];
+    put?: never;
+    /**
+     * Webテストの問題を作る
+     * @description XPが付く（1日3回まで）。
+     */
+    post: operations["createWebtestQuestion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/webtest-questions/{webtestQuestionId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    /** 問題と、これまでの解答の記録を取得する */
+    get: operations["getWebtestQuestion"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/webtest-questions/{webtestQuestionId}/attempts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * 問題に解答する
+     * @description 正誤はGoが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
+     */
+    post: operations["answerWebtestQuestion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/contact": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 問い合わせを運営にメールで送る */
+    post: operations["sendContact"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/admin/stats": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 利用状況の集計を取得する（開発者のみ）
+     * @description 開発者でなければ 403。「直近」は7日間、「今日」は日本時間の今日。
+     */
+    get: operations["getAdminStats"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -786,6 +888,78 @@ export interface components {
       result: components["schemas"]["SelfAnalysisResult"];
       xp: components["schemas"]["XpResult"];
     };
+    WebtestQuestionSummary: {
+      /** Format: uuid */
+      id: string;
+      title: string;
+      /** @description テストの種類（SPI・玉手箱など） */
+      testType: string | null;
+      category: string | null;
+      format: string | null;
+      difficulty: string | null;
+      /** @description 制限時間（秒） */
+      timeLimit: number | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    WebtestQuestionDetail: components["schemas"]["WebtestQuestionSummary"] & {
+      body: string;
+      choices: string[];
+      answer: string;
+      explanation: string | null;
+      /** @description 解答の記録（新しい順） */
+      attempts: components["schemas"]["WebtestAttempt"][];
+    };
+    WebtestQuestionCreate: {
+      title: string;
+      body: string;
+      answer: string;
+      choices?: string[];
+      explanation?: string;
+      testType?: string;
+      category?: string;
+      format?: string;
+      difficulty?: string;
+      timeLimit?: number;
+    };
+    WebtestQuestionCreated: {
+      question: components["schemas"]["WebtestQuestionDetail"];
+      xp: components["schemas"]["XpResult"];
+    };
+    WebtestAttempt: {
+      /** Format: uuid */
+      id: string;
+      isCorrect: boolean;
+      /** @description かかった時間（秒） */
+      timeSpent: number | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    WebtestAnswer: {
+      answer: string;
+      timeSpent?: number;
+    };
+    WebtestAnswered: {
+      attempt: components["schemas"]["WebtestAttempt"];
+      xp: components["schemas"]["XpResult"];
+    };
+    ContactRequest: {
+      subject: string;
+      message: string;
+    };
+    AdminStats: {
+      totalUsers: number;
+      newUsers7d: number;
+      /** @description 直近7日間にXPを獲得したユーザー数 */
+      activeUsers7d: number;
+      activeUsersToday: number;
+      totalEs: number;
+      esCreated7d: number;
+      totalCompanies: number;
+      companiesCreated7d: number;
+      totalInterviews: number;
+      interviewsCreated7d: number;
+    };
     /** @description RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの */
     Problem: {
       /**
@@ -834,6 +1008,7 @@ export interface components {
     };
   };
   parameters: {
+    WebtestQuestionId: string;
     CalendarEventId: string;
     InterviewLogId: string;
     EsEntryId: string;
@@ -1616,6 +1791,148 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SelfAnalysisResult"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  listWebtestQuestions: {
+    parameters: {
+      query?: {
+        testType?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 問題の一覧 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestQuestionSummary"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  createWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WebtestQuestionCreate"];
+      };
+    };
+    responses: {
+      /** @description 作った問題と、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestQuestionCreated"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 問題と解答の記録 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestQuestionDetail"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  answerWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WebtestAnswer"];
+      };
+    };
+    responses: {
+      /** @description 解答の記録と、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestAnswered"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  sendContact: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContactRequest"];
+      };
+    };
+    responses: {
+      /** @description 送信した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getAdminStats: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 利用状況 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminStats"];
         };
       };
       default: components["responses"]["Problem"];

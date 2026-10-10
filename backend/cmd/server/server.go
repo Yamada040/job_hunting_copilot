@@ -4,16 +4,19 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/admin"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/assessment"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/calendar"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/contact"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/es"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/health"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/interview"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/webtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -27,6 +30,9 @@ type (
 	calendarHandler   = calendar.Handler
 	xpHandler         = xp.Handler
 	assessmentHandler = assessment.Handler
+	webtestHandler    = webtest.Handler
+	contactHandler    = contact.Handler
+	adminHandler      = admin.Handler
 )
 
 // server は、機能ごとの handler を埋め込んで、生成された StrictServerInterface をまとめて満たす。
@@ -39,6 +45,9 @@ type server struct {
 	calendarHandler
 	xpHandler
 	assessmentHandler
+	webtestHandler
+	contactHandler
+	adminHandler
 }
 
 // deps は、handler が使う依存。main で組み立て、テストでは偽物に差し替える。
@@ -51,6 +60,9 @@ type deps struct {
 	calendar   *calendar.Service
 	xpLogs     xp.Handler
 	assessment assessment.Handler
+	webtest    *webtest.Service
+	contact    contact.Handler
+	admin      admin.Handler
 }
 
 var _ openapi.StrictServerInterface = server{}
@@ -72,6 +84,9 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 		calendarHandler:   calendar.Handler{Service: d.calendar},
 		xpHandler:         d.xpLogs,
 		assessmentHandler: d.assessment,
+		webtestHandler:    webtest.Handler{Service: d.webtest},
+		contactHandler:    d.contact,
+		adminHandler:      d.admin,
 	}
 	strict := openapi.NewStrictHandlerWithOptions(srv, nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  writeRequestError,

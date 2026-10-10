@@ -12,16 +12,19 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/admin"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/assessment"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/calendar"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/contact"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/es"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/interview"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/webtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -31,6 +34,7 @@ type config struct {
 	databaseURL string
 	developers  []uuid.UUID
 	ai          ai.Config
+	smtp        contact.SMTPConfig
 }
 
 // loadConfig は、環境変数から設定を読む。必須の値が無ければ、誤った状態で動き出さないようエラーにする。
@@ -47,6 +51,14 @@ func loadConfig() (config, error) {
 			GPTEndpoint:      os.Getenv("AI_ENDPOINT"),
 			GeminiAPIVersion: os.Getenv("AI_API_VERSION"),
 			TavilyAPIKey:     os.Getenv("TAVILY_API_KEY"),
+		},
+		// SMTPの設定も任意。無ければ問い合わせだけが 503 を返す
+		smtp: contact.SMTPConfig{
+			Host: os.Getenv("SMTP_HOST"),
+			Port: os.Getenv("SMTP_PORT"),
+			User: os.Getenv("SMTP_USER"),
+			Pass: os.Getenv("SMTP_PASS"),
+			To:   os.Getenv("CONTACT_TO_EMAIL"),
 		},
 	}
 	if cfg.port == "" {
@@ -110,9 +122,10 @@ func run() error {
 	// 企業分析はWeb検索を挟んで数十秒かかるため、1回の呼び出しの上限は長めにとる（Vercelの関数の上限300秒以内）
 	aiClient := ai.NewClient(cfg.ai, &http.Client{Timeout: 90 * time.Second})
 	limiter := ratelimit.NewLimiter()
+	profiles := profile.NewService(profile.NewRepository(db), cfg.developers)
 	handler, err := newHandler(verifier, deps{
 		db:        db,
-		profile:   profile.NewService(profile.NewRepository(db), cfg.developers),
+		profile:   profiles,
 		company:   company.NewService(db, xpService, aiClient, limiter),
 		es:        es.NewService(db, xpService, aiClient, limiter),
 		interview: interview.NewService(db, xpService, aiClient, limiter),
@@ -122,6 +135,9 @@ func run() error {
 			Aptitude:     assessment.NewAptitudeService(db, xpService, aiClient, limiter),
 			SelfAnalysis: assessment.NewSelfAnalysisService(db, xpService, aiClient, limiter),
 		},
+		webtest: webtest.NewService(db, xpService),
+		contact: contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP},
+		admin:   admin.Handler{Pool: db, IsDeveloper: profiles.IsDeveloper, Now: time.Now},
 	})
 	if err != nil {
 		return err
