@@ -1,32 +1,6 @@
 import { z } from "zod";
 
-import {
-  optionalNonNegativeNumber,
-  optionalString,
-  optionalTrimmedString,
-  requiredTrimmedString,
-} from "@/lib/validation";
-
-export const esQuestionSchema = z.object({
-  id: z.string().optional(),
-  prompt: z.string().optional(),
-  answer_md: z.string().optional(),
-});
-
-export const esQuestionsSchema = z.array(esQuestionSchema);
-
-export const esFormSchema = z.object({
-  company_name: optionalTrimmedString,
-  selection_status: optionalTrimmedString,
-  company_url: optionalTrimmedString,
-  memo: optionalTrimmedString,
-  deadline: optionalTrimmedString,
-  title: requiredTrimmedString,
-  content_md: optionalString.default(""),
-  tags: optionalString.default(""),
-  questions_json: optionalString,
-  intent: optionalString.default("save"),
-});
+import { optionalNonNegativeNumber, optionalString, requiredTrimmedString } from "@/lib/validation";
 
 export const webtestQuestionFormSchema = z.object({
   title: requiredTrimmedString,

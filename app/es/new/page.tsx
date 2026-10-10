@@ -1,96 +1,16 @@
-﻿import Link from "next/link";
-import { ArrowLeftIcon, HomeIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
-
-import { createEs } from "../actions";
-import { ROUTES } from "@/lib/constants/routes";
-import { QuestionsEditor } from "../_components/questions-editor";
 import { AppLayout } from "@/app/_components/layout";
-import { FormLengthGuard } from "@/app/_components/form-length-guard";
-import { ES_NEW_FIELDS, MAX_TEXT_LEN } from "@/app/_components/form-length-guard.config";
+import { EsHeaderActions } from "../_components/es-header-actions";
+import { NewEsForm } from "../_components/new-es-form";
 
-export default async function NewEsPage() {
-  const initialQuestions = [
-    { id: crypto.randomUUID(), prompt: "自己PR・強み・成果", answer_md: "" },
-    { id: crypto.randomUUID(), prompt: "志望動機", answer_md: "" },
-  ];
-
-  const headerActions = (
-    <div className="flex flex-wrap gap-3">
-      <Link href={ROUTES.HOME} className="sidebar-link-style text-sm">
-        <HomeIcon className="h-4 w-4" />
-        MVPへ
-      </Link>
-      <Link href={ROUTES.DASHBOARD} className="sidebar-link-style text-sm">
-        <ArrowUturnLeftIcon className="h-4 w-4" />
-        ダッシュボードへ
-      </Link>
-      <Link href={ROUTES.ES} className="sidebar-link-style text-sm">
-        <ArrowLeftIcon className="h-4 w-4" />
-        一覧へ戻る
-      </Link>
-    </div>
-  );
-
+export default function NewEsPage() {
   return (
     <AppLayout
-      headerTitle="ESを新規作成"
-      headerDescription="企業情報とES回答を登録し、AI添削に備えます"
-      headerActions={headerActions}
+      headerTitle="ESを作成"
+      headerDescription="企業を選び、設問と回答を書いて保存します"
+      headerActions={<EsHeaderActions />}
       className="flex flex-col gap-8"
     >
-      <div className="rounded-xl border border-[#3f3f46] bg-[#111111] p-6 text-sm text-white">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">ES入力</h2>
-          <p className="text-sm text-white/70">企業名や職種、提出日を入れておくと、後の提出管理が明確になります。</p>
-        </div>
-
-        <form
-          id="es-form-new"
-          action={createEs}
-          className="space-y-4 rounded-lg border border-[#3f3f46] bg-[#1a1a1a] p-4"
-        >
-          <div className="space-y-2">
-            <label className="block text-xs text-white/70">企業名</label>
-            <input name="company_name" className="dq-input text-sm" placeholder="例）Alpha SaaS" />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-xs text-white/70">タイトル*</label>
-            <input name="title" required className="dq-input text-sm" placeholder="例）Alpha SaaS 新卒向けES" />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="block space-y-1 text-xs text-white/70">
-              職種 / 募集枠
-              <input name="selection_status" className="dq-input text-sm" placeholder="書類選考用エンジニア枠 など" />
-            </label>
-            <label className="block space-y-1 text-xs text-white/70">
-              企業ホームページURL
-              <input name="company_url" className="dq-input text-sm" placeholder="https://example.com" />
-            </label>
-            <label className="block space-y-1 text-xs text-white/70">
-              メモ
-              <input name="memo" className="dq-input text-sm" placeholder="選考メモや提出状況など" />
-            </label>
-            <label className="block space-y-1 text-xs text-white/70">
-              締切日（任意）
-              <input type="date" name="deadline" className="dq-input text-sm" />
-            </label>
-          </div>
-
-          <QuestionsEditor initialQuestions={initialQuestions} />
-
-          <div className="flex justify-wrap gap-3">
-            <button type="submit" className="sidebar-link-style text-sm">
-              下書きとして保存
-            </button>
-            <Link href={ROUTES.ES} className="sidebar-link-style text-sm">
-              キャンセル
-            </Link>
-          </div>
-        </form>
-        <FormLengthGuard formId="es-form-new" maxLen={MAX_TEXT_LEN} fields={ES_NEW_FIELDS} />
-      </div>
+      <NewEsForm />
     </AppLayout>
   );
 }

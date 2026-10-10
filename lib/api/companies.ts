@@ -65,3 +65,6 @@ export function useDeleteCompany(id: string) {
     },
   });
 }
+
+/** ESなど他の項目にひも付く企業の、表示に必要な最小限の情報。 */
+export type CompanySummary = components["schemas"]["CompanySummary"];

@@ -1,25 +1,10 @@
 ﻿import Link from "next/link";
 import { PlusIcon, ArrowUturnLeftIcon, HomeIcon } from "@heroicons/react/24/outline";
-import { Database } from "@/lib/database.types";
 import { ROUTES } from "@/lib/constants/routes";
-import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
 import { AppLayout } from "@/app/_components/layout";
 import { EsListClient } from "./_components/es-list-client";
 
-type EsRow = Database["public"]["Tables"]["es_entries"]["Row"];
-
-export default async function EsListPage() {
-  const supabase = await createSupabaseReadonlyClient();
-  const { data: userData } = await supabase.auth.getUser();
-
-  const { data: esData } = await supabase
-    .from("es_entries")
-    .select("*")
-    .eq("user_id", userData.user!.id)
-    .order("updated_at", { ascending: false })
-    .limit(50);
-  const esList: EsRow[] = esData ?? [];
-
+export default function EsListPage() {
   const headerActions = (
     <div className="flex flex-wrap gap-3">
       <Link href={ROUTES.HOME} className="sidebar-link-style text-sm">
@@ -50,7 +35,7 @@ export default async function EsListPage() {
           <p className="text-sm text-white/70">下書きと提出済みをタブレス表示。</p>
         </div>
         <div className="mt-4 rounded-lg border border-[#3f3f46] bg-[#1a1a1a] p-4">
-          <EsListClient initialItems={esList} />
+          <EsListClient />
         </div>
       </div>
     </AppLayout>
