@@ -45,6 +45,57 @@ export interface paths {
     patch: operations["updateMe"];
     trace?: never;
   };
+  "/v1/companies": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 自分の企業の一覧を取得する
+     * @description 更新日時の新しい順。q を渡すと、正規化した企業名の部分一致で絞り込む（企業の候補の表示に使う）。
+     */
+    get: operations["listCompanies"];
+    put?: never;
+    /**
+     * 企業を登録する
+     * @description 正規化した企業名が同じ企業がすでにあれば 409 を返す。登録でXPが付く（1日5回まで）。
+     */
+    post: operations["createCompany"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/companies/{companyId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        companyId: components["parameters"]["CompanyId"];
+      };
+      cookie?: never;
+    };
+    /** 企業を1件取得する */
+    get: operations["getCompany"];
+    put?: never;
+    post?: never;
+    /**
+     * 企業を削除する
+     * @description ひも付くES・面接ログ・カレンダーの予定も一緒に削除される。
+     */
+    delete: operations["deleteCompany"];
+    options?: never;
+    head?: never;
+    /**
+     * 企業を更新する
+     * @description 送った項目だけを更新する。文字列の項目は空文字で、志望度は null で空にできる。
+     */
+    patch: operations["updateCompany"];
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -85,6 +136,68 @@ export interface components {
       targetIndustry?: string;
       careerAxis?: string;
       goalState?: string;
+    };
+    /** @description XPが付く操作での、XP付与の結果。付与されなかった場合も awarded を 0 にして現在の値を返す */
+    XpResult: {
+      /** @description この操作で付与されたXP */
+      awarded: number;
+      /** @description 付与後の合計XP */
+      total: number;
+      /** @description 付与後のレベル */
+      level: number;
+      /** @description この操作でレベルが上がったか */
+      leveledUp: boolean;
+    };
+    /**
+     * @description 選考状況。日本語の表示名はフロントエンドが持つ
+     * @enum {string}
+     */
+    CompanyStage: "not_entered" | "entered" | "screening" | "interviewing" | "offered" | "rejected" | "declined";
+    Company: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      industry: string | null;
+      url: string | null;
+      mypageId: string | null;
+      mypageUrl: string | null;
+      memo: string | null;
+      stage: components["schemas"]["CompanyStage"];
+      /** @description 志望度（1〜5） */
+      preference: number | null;
+      favorite: boolean;
+      /** @description AI企業分析の分析結果 */
+      aiResult: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    CompanyCreate: {
+      name: string;
+      industry?: string;
+      url?: string;
+      mypageId?: string;
+      mypageUrl?: string;
+      memo?: string;
+      stage?: components["schemas"]["CompanyStage"];
+      preference?: number;
+      favorite?: boolean;
+    };
+    CompanyUpdate: {
+      name?: string;
+      industry?: string;
+      url?: string;
+      mypageId?: string;
+      mypageUrl?: string;
+      memo?: string;
+      stage?: components["schemas"]["CompanyStage"];
+      preference?: number | null;
+      favorite?: boolean;
+    };
+    CompanyCreated: {
+      company: components["schemas"]["Company"];
+      xp: components["schemas"]["XpResult"];
     };
     /** @description RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの */
     Problem: {
@@ -133,7 +246,9 @@ export interface components {
       };
     };
   };
-  parameters: never;
+  parameters: {
+    CompanyId: string;
+  };
   requestBodies: never;
   headers: never;
   pathItems: never;
@@ -202,6 +317,125 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Me"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  listCompanies: {
+    parameters: {
+      query?: {
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 企業の一覧 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  createCompany: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyCreate"];
+      };
+    };
+    responses: {
+      /** @description 登録した企業と、付与されたXP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyCreated"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getCompany: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        companyId: components["parameters"]["CompanyId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 企業 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteCompany: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        companyId: components["parameters"]["CompanyId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 削除した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  updateCompany: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        companyId: components["parameters"]["CompanyId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyUpdate"];
+      };
+    };
+    responses: {
+      /** @description 更新後の企業 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
         };
       };
       default: components["responses"]["Problem"];

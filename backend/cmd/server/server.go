@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/health"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
@@ -15,18 +16,21 @@ import (
 type (
 	healthHandler  = health.Handler
 	profileHandler = profile.Handler
+	companyHandler = company.Handler
 )
 
 // server は、機能ごとの handler を埋め込んで、生成された StrictServerInterface をまとめて満たす。
 type server struct {
 	healthHandler
 	profileHandler
+	companyHandler
 }
 
 // deps は、handler が使う依存。main で組み立て、テストでは偽物に差し替える。
 type deps struct {
 	db      health.Pinger
 	profile *profile.Service
+	company *company.Service
 }
 
 var _ openapi.StrictServerInterface = server{}
@@ -42,6 +46,7 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 	srv := server{
 		healthHandler:  health.Handler{DB: d.db},
 		profileHandler: profile.Handler{Service: d.profile},
+		companyHandler: company.Handler{Service: d.company},
 	}
 	strict := openapi.NewStrictHandlerWithOptions(srv, nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  writeRequestError,

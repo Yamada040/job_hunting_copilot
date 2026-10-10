@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 )
 
 type Repository struct {
@@ -37,31 +38,24 @@ func (r *Repository) Update(ctx context.Context, userID uuid.UUID, u Update) (Pr
 	row, err := r.q.UpdateProfile(ctx, db.UpdateProfileParams{
 		ID:                userID,
 		SetFullName:       u.FullName != nil,
-		FullName:          blankToNil(u.FullName),
+		FullName:          platform.EmptyToNil(u.FullName),
 		SetUniversity:     u.University != nil,
-		University:        blankToNil(u.University),
+		University:        platform.EmptyToNil(u.University),
 		SetFaculty:        u.Faculty != nil,
-		Faculty:           blankToNil(u.Faculty),
+		Faculty:           platform.EmptyToNil(u.Faculty),
 		SetAvatarID:       u.AvatarID != nil,
-		AvatarID:          blankToNil(u.AvatarID),
+		AvatarID:          platform.EmptyToNil(u.AvatarID),
 		SetTargetIndustry: u.TargetIndustry != nil,
-		TargetIndustry:    blankToNil(u.TargetIndustry),
+		TargetIndustry:    platform.EmptyToNil(u.TargetIndustry),
 		SetCareerAxis:     u.CareerAxis != nil,
-		CareerAxis:        blankToNil(u.CareerAxis),
+		CareerAxis:        platform.EmptyToNil(u.CareerAxis),
 		SetGoalState:      u.GoalState != nil,
-		GoalState:         blankToNil(u.GoalState),
+		GoalState:         platform.EmptyToNil(u.GoalState),
 	})
 	if err != nil {
 		return Profile{}, fmt.Errorf("update profile: %w", err)
 	}
 	return fromRow(row), nil
-}
-
-func blankToNil(s *string) *string {
-	if s == nil || *s == "" {
-		return nil
-	}
-	return s
 }
 
 func fromRow(row db.Profile) Profile {

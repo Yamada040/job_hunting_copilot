@@ -2,7 +2,6 @@ package profile
 
 import (
 	"context"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -35,20 +34,16 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (Profile, error) {
 // Update は、前後の空白を取り除いてからプロフィールを更新する。氏名は空にできない。
 func (s *Service) Update(ctx context.Context, userID uuid.UUID, u Update) (Profile, error) {
 	u = Update{
-		FullName:       trim(u.FullName),
-		University:     trim(u.University),
-		Faculty:        trim(u.Faculty),
-		AvatarID:       trim(u.AvatarID),
-		TargetIndustry: trim(u.TargetIndustry),
-		CareerAxis:     trim(u.CareerAxis),
-		GoalState:      trim(u.GoalState),
+		FullName:       platform.TrimPtr(u.FullName),
+		University:     platform.TrimPtr(u.University),
+		Faculty:        platform.TrimPtr(u.Faculty),
+		AvatarID:       platform.TrimPtr(u.AvatarID),
+		TargetIndustry: platform.TrimPtr(u.TargetIndustry),
+		CareerAxis:     platform.TrimPtr(u.CareerAxis),
+		GoalState:      platform.TrimPtr(u.GoalState),
 	}
 	if u.FullName != nil && *u.FullName == "" {
-		return Profile{}, &platform.Error{
-			Kind:    platform.KindInvalid,
-			Message: "入力内容に誤りがあります",
-			Fields:  []platform.FieldError{{Field: "fullName", Message: "氏名を入力してください"}},
-		}
+		return Profile{}, platform.Required("fullName", "氏名")
 	}
 	return s.store.Update(ctx, userID, u)
 }
@@ -56,12 +51,4 @@ func (s *Service) Update(ctx context.Context, userID uuid.UUID, u Update) (Profi
 // IsDeveloper は、ユーザーが開発者向けの画面を使えるかを返す。
 func (s *Service) IsDeveloper(userID uuid.UUID) bool {
 	return s.developers[userID]
-}
-
-func trim(s *string) *string {
-	if s == nil {
-		return nil
-	}
-	t := strings.TrimSpace(*s)
-	return &t
 }
