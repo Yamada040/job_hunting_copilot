@@ -1,0 +1,29 @@
+name: Migrate
+
+# dev へのマージで、未適用のマイグレーションを本番の Supabase に適用する（docs/backend-design.md 7章）。
+# Vercel のデプロイとの順番は保証されないため、マイグレーションは1つ前のバージョンのコードでも動く形で書くこと。
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "supabase/migrations/**"
+
+concurrency:
+  group: migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # Secrets が未設定のまま黙って飛ばすと、本番にマイグレーションが当たっていないことに気づけないため、失敗させる
+      - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      - run: supabase db push

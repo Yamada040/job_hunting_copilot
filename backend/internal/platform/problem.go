@@ -20,6 +20,7 @@ var problemKinds = map[Kind]problemKind{
 	KindNotFound:     {http.StatusNotFound, "not_found"},
 	KindConflict:     {http.StatusConflict, "conflict"},
 	KindRateLimited:  {http.StatusTooManyRequests, "rate_limited"},
+	KindUnavailable:  {http.StatusServiceUnavailable, "unavailable"},
 }
 
 // WriteError は、エラーを RFC 9457 の Problem Details として書き出す。エラーからHTTPのレスポンスへの変換はすべてここを通す。
