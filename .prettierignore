@@ -7,8 +7,10 @@ coverage
 supabase/.branches
 supabase/.temp
 
-# Terraform が手元に作るファイル
+# Terraform が手元に作るファイル（state は秘密の値を含み、git の対象外）
 infra/.terraform
+infra/*.tfstate
+infra/*.tfstate.*
 
 # 手元・CI専用の JWT の署名鍵
 supabase/signing_keys.json

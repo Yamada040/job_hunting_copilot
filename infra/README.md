@@ -5,7 +5,7 @@ Vercel・GitHub・Supabase の設定を Terraform で管理する（Issue #134�
 | ファイル      | 管理するもの                                                                      |
 | ------------- | --------------------------------------------------------------------------------- |
 | `vercel.tf`   | Vercel の環境変数（Production・Preview・Development）                             |
-| `github.tf`   | GitHub Actions の Secrets、dev ブランチのルールセット                             |
+| `github.tf`   | GitHub Actions の Secrets、dev ブランチのルールセット、Dependabot の脆弱性の検知  |
 | `supabase.tf` | Supabase Auth（サイトURL・リダイレクト先・ログイン方法）、Data API の公開スキーマ |
 
 管理しないもの: Supabase のプロジェクト自体と JWT の署名鍵・APIキー、Google Cloud の OAuth クライアント、外部APIのキーの発行。
