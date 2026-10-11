@@ -111,19 +111,30 @@ flowchart LR
 
 ## セットアップ
 
+Docker と [mise](https://mise.jdx.dev/) が必要。
+
 ```bash
-# DB と認証（Docker が必要）。署名鍵は最初の1回だけ作る
-npm run supabase:signing-key
-supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta
-
-# バックエンドの API（localhost:8080）
-cd backend
-SUPABASE_URL=... DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres go run ./cmd/server
-
-# Next.js（localhost:3000。/v1 は localhost:8080 のバックエンドに転送される）
+mise install   # Node（.nvmrc）・Go・golangci-lint を入れる
 npm install
-npm run dev
+mise run dev   # 手元の Supabase・バックエンド（localhost:8080）・Next.js（localhost:3000）をまとめて起動する
 ```
+
+`mise run dev` は手元の Supabase（`supabase start`）にだけつなぎ、`.env.local` に本番の値があってもそちらは使わない。DB・バックエンド・画面を個別に起動するときは `mise run db` / `mise run dev:api` / `mise run dev:web`。
+
+### 手元で Google ログインする
+
+手元の Supabase の Google ログインは、開発用の OAuth クライアントが無いと Google の画面でエラーになる（E2E はログインしないので不要）。
+
+1. Google Cloud Console で OAuth クライアント（ウェブアプリケーション）を作り、承認済みのリダイレクト URI に `http://127.0.0.1:54321/auth/v1/callback` を登録する
+2. リポジトリのルートに `mise.local.toml` を作り、値を置く（Git には入らない）
+
+   ```toml
+   [env]
+   SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID = "<クライアント ID>"
+   SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET = "<クライアント シークレット>"
+   ```
+
+3. 起動中なら `supabase stop` してから `mise run dev`（Supabase は起動時にだけ設定を読む）
 
 ## 環境変数
 
