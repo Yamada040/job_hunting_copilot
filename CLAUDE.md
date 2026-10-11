@@ -93,6 +93,7 @@ flowchart LR
 - **ブラウザからバックエンドのAPIを直接呼ぶ**（SPA型）: バックエンドのAPIは `/v1/...` で Next.js と同じドメインに置かれている。`lib/api/client.ts` の生成クライアント経由で呼び、`fetch()` を直接書かない
 - **サーバーのデータのキャッシュには TanStack Query を使う**（`lib/api/<機能>.ts` のフック）。更新のレスポンスで関連するキャッシュを書き換える。XPが付く操作は、レスポンスの `xp` で `applyXpResult` を呼びヘッダーの表示を更新する
 - 画面だけの状態は props と hooks で扱い、Redux・Zustand などの汎用の状態管理ライブラリは使わない
+- **ブラウザに保存してよい値**: 業務データはバックエンドのDBを正とし、`localStorage` / `sessionStorage` に保存しない。ブラウザに残すのは、Supabase Auth のCookie（ログインセッション）と、端末ごとの表示設定である `localStorage` の `sidebar-open`（サイドバーの開閉）だけ。開閉状態を端末間で同期したくなったら、`profiles` の設定としてバックエンドに移す
 - **ローカル開発**: `next dev` は `/v1` を `API_ORIGIN`（既定 `http://localhost:8080`）のバックエンドに転送する
 
 ### バックエンド（Go）の構成
