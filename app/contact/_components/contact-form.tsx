@@ -2,6 +2,10 @@
 
 import { useActionState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { api, ApiError, unwrap } from "@/lib/api/client";
 import { useMe } from "@/lib/api/me";
 import { contactRequestSchema } from "@/lib/validation/schemas/contact";
@@ -65,54 +69,54 @@ export function ContactForm({ accountName, email }: ContactFormProps) {
   return (
     <form action={formAction} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block space-y-1 text-xs text-white/70">
-          登録ユーザー名
-          <input value={displayName || "未設定"} disabled className="dq-input text-sm" />
-        </label>
-        <label className="block space-y-1 text-xs text-white/70">
-          ログインメール
-          <input value={email} disabled className="dq-input text-sm" />
-        </label>
+        <div className="space-y-1">
+          <Label htmlFor="contact-account-name" className="text-xs text-muted-foreground">
+            登録ユーザー名
+          </Label>
+          <Input id="contact-account-name" value={displayName || "未設定"} disabled />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="contact-email" className="text-xs text-muted-foreground">
+            ログインメール
+          </Label>
+          <Input id="contact-email" value={email} disabled />
+        </div>
       </div>
 
-      <label className="block space-y-1 text-xs text-white/70">
-        件名
-        <input
+      <div className="space-y-1">
+        <Label htmlFor="contact-subject" className="text-xs text-muted-foreground">
+          件名
+        </Label>
+        <Input
+          id="contact-subject"
           name="subject"
           defaultValue={preservedValues?.subject}
-          className="dq-input text-sm"
           placeholder="例）ログインについて"
           required
         />
-      </label>
+      </div>
 
-      <label className="block space-y-1 text-xs text-white/70">
-        お問い合わせ内容
-        <textarea
+      <div className="space-y-1">
+        <Label htmlFor="contact-message" className="text-xs text-muted-foreground">
+          お問い合わせ内容
+        </Label>
+        <Textarea
+          id="contact-message"
           name="message"
           rows={8}
           defaultValue={preservedValues?.message}
-          className="dq-input text-sm"
           placeholder="お問い合わせ内容をご記入ください"
           required
         />
-      </label>
+      </div>
 
-      {submitState?.status === "error" ? (
-        <p className="text-xs text-rose-700 dark:text-rose-300">{submitState.message}</p>
-      ) : null}
-      {submitState?.status === "success" ? (
-        <p className="text-xs text-emerald-700 dark:text-emerald-300">{submitState.message}</p>
-      ) : null}
+      {submitState?.status === "error" ? <p className="text-xs text-destructive">{submitState.message}</p> : null}
+      {submitState?.status === "success" ? <p className="text-xs text-emerald-600">{submitState.message}</p> : null}
       <div className="flex items-center justify-between gap-4">
-        <p className="text-xs text-white/60">送信内容には登録ユーザー名とログインメールが含まれます。</p>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="sidebar-link-style text-sm disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <p className="text-xs text-muted-foreground">送信内容には登録ユーザー名とログインメールが含まれます。</p>
+        <Button type="submit" variant="quest" disabled={isPending}>
           {isPending ? "送信状態を確認中..." : "送信する"}
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -16,7 +16,7 @@
 - **DB・認証**: Supabase（Postgres と Auth のみ。Google OAuth）。スキーマは Supabase CLI のマイグレーションで管理する
 - **データ取得**: TanStack Query + openapi-fetch（`lib/api/`）
 - **DBアクセス（Go）**: sqlc + pgx
-- **スタイリング**: Tailwind CSS v4（`bg-linear-to-*` など推奨クラスを優先）
+- **スタイリング**: Tailwind CSS v4（`bg-linear-to-*` など推奨クラスを優先）+ shadcn/ui（`components/ui/`）
 - **アニメーション**: Framer Motion
 - **ホスティング**: Vercel（無料プラン）。Next.js と バックエンドを同じプロジェクトの Services で動かす（`vercel.json`）
 
@@ -165,20 +165,25 @@ backend/
 
 - 推奨クラスを使う（`bg-linear-to-r`, `text-balance`, `text-wrap` など）
 - v3の非推奨構文は警告を避けるため使わない
-- テーマ: ライトモードは `<html>` に `theme-light` クラスを付与する方式（`app/globals.css` で属性セレクタによる上書きを実装。ハードコードされた色クラスに強く依存しており脆弱— Issue #116参照）
+- 色: `app/globals.css` の shadcn の変数（白い窓・空色の枠・濃い紺の文字）を使い、`text-foreground` / `text-muted-foreground` / `bg-card` / `border` などのトークンで書く。`text-white` や `bg-[#111111]` のような色の直書きはしない。ダークモードは用意していない
+
+**shadcn/ui**:
+
+- 部品は `./node_modules/.bin/shadcn add <名前>` で `components/ui/` に追加する。select はフォームの値を保つため Radix の Select ではなく `NativeSelect` を使う
+- `window.confirm` は使わず `app/_components/confirm-dialog.tsx`（`ConfirmDialog`）、モーダルは `Dialog` を使う
 
 **DQ風UI**（ドラゴンクエスト風）:
 
-- `dq-window`, `dq-title`, `dq-item`: クエストログパネル
-- `dq-button`, `dq-button-secondary`: スタイル付きボタン
-- `dq-menu-item`: ホバー状態を持つメニュー項目（左向き三角 `▶` がホバーで右へ移動）
+- `QuestWindow`（`app/_components/quest-window.tsx`）: 枠に見出しが割り込む窓。見出しの無い窓・パネルは `Card`（淡い面は `variant="muted"`）
+- `Button` の `variant="quest"` / `"quest-muted"`: 枠の無い文字だけのボタン（左向き三角 `▶` がホバーで右へ移動）
 - 用語: 「クエスト」「ログ」「追加へ」など
 
 **コンポーネント構成**:
 
 - ページレベルのレイアウト: `app/_components/layout/`（`AppLayout`）
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
-- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示）
+- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示、`QuestWindow`、`ConfirmDialog`）
+- shadcn/ui の部品: `components/ui/`
 - APIのフック・型: `lib/api/`（生成した `schema.d.ts` とクライアント）
 
 ### ゲーミフィケーション（XPシステム）
@@ -246,8 +251,8 @@ backend/
 
 **UIの一貫性**:
 
-- DQ-window/buttonクラスをベースにする
-- メニュー項目は左向き三角のホバー効果を使う（ボックス状のボタンにしない）
+- shadcn/ui の部品（`Card`・`QuestWindow`・`Button` の quest）をベースにする
+- メニュー項目は左向き三角のホバー効果（`variant="quest"`）を使う（ボックス状のボタンにしない）
 - クエスト/ログ用語を使う
 
 ### テスト

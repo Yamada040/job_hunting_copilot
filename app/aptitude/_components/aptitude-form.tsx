@@ -5,14 +5,18 @@ import { useState } from "react";
 import { useAptitudeResult, useDiagnoseAptitude, useSubmitAptitude, type AptitudeResult } from "@/lib/api/assessments";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
+import { ConfirmDialog } from "@/app/_components/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Answers } from "../types";
 import { defaultAnswers, interestOptions, mbtiOptions, strengthOptions, valueOptions } from "./aptitude-constants";
+import { CheckboxGroup, SelectBox, TextArea } from "./aptitude-fields";
 
 export default function AptitudeForm() {
   const { data: result, error, isPending } = useAptitudeResult();
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (isPending) return <div className="dq-card p-6 text-sm text-white">読み込み中…</div>;
+  if (isPending) return <Card className="px-6 text-sm">読み込み中…</Card>;
   return <AptitudeFormLoaded result={result} />;
 }
 
@@ -41,21 +45,21 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
     setAnswers((prev) => ({ ...prev, [key]: value }));
   };
 
-  const saveAction = () => {
-    if (!window.confirm("回答は1回だけ保存できます。この内容で保存しますか？")) return;
-    submit.mutate(answers);
-  };
   const saving = submit.isPending;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
-      <div className="dq-card p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="theme-readable text-lg font-semibold">質問リスト</h2>
-        </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2 className="text-lg font-semibold">質問リスト</h2>
+          </CardTitle>
+        </CardHeader>
 
-        <div className="mt-4 space-y-4">
-          <div className="dq-panel px-3 py-2 text-xs font-semibold text-yellow-200">※ 現在は一回しかできません。</div>
+        <CardContent className="space-y-4">
+          <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-sky-700">
+            ※ 現在は一回しかできません。
+          </Card>
           <CheckboxGroup
             label="興味のある領域（複数選択可）"
             options={interestOptions}
@@ -106,18 +110,21 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
           />
           <TextArea label="補足メモ" value={answers.otherNotes} onChange={(v) => handleChange("otherNotes", v)} />
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={saveAction}
-              disabled={saving || locked}
-              className="dq-button disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {locked ? "実施済み" : saving ? "保存中..." : "保存する"}
-            </button>
+            <ConfirmDialog
+              trigger={
+                <Button type="button" variant="quest" disabled={saving || locked}>
+                  {locked ? "実施済み" : saving ? "保存中..." : "保存する"}
+                </Button>
+              }
+              title="回答を保存しますか？"
+              description="回答は1回だけ保存できます。この内容で保存しますか？"
+              confirmLabel="保存する"
+              onConfirm={() => submit.mutate(answers)}
+            />
           </div>
           <ApiErrorMessage error={submit.error} />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <AiResultPanel
         title="AI適性診断"
@@ -131,76 +138,5 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
         blockedReason={locked ? undefined : "回答を保存すると実行できます"}
       />
     </div>
-  );
-}
-
-function CheckboxGroup({
-  label,
-  options,
-  selected,
-  onToggle,
-}: {
-  label: string;
-  options: string[];
-  selected: string[];
-  onToggle: (value: string) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <p className="theme-readable text-sm font-semibold">{label}</p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {options.map((opt) => (
-          <label
-            key={opt}
-            className="dq-panel flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-white transition hover:text-yellow-400"
-          >
-            <input
-              type="checkbox"
-              checked={selected.includes(opt)}
-              onChange={() => onToggle(opt)}
-              className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400"
-            />
-            <span>{opt}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <label className="block space-y-2">
-      <span className="theme-readable text-sm font-medium">{label}</span>
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className="dq-input text-sm" />
-    </label>
-  );
-}
-
-function SelectBox({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-  placeholder?: string;
-}) {
-  return (
-    <label className="block space-y-2">
-      <span className="theme-readable text-sm font-medium">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="dq-input text-sm">
-        <option value="">{placeholder || "選択してください"}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }

@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { CompanySummary } from "@/lib/api/companies";
 import type { EsEntry, EsQuestion } from "@/lib/api/es";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { CompanyPicker } from "@/app/_components/company-picker";
+import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { QuestionsEditor } from "./questions-editor";
 
 export type EsFormValues = {
@@ -45,115 +51,136 @@ type Props = {
 export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQuestions = [] }: Props) {
   const [company, setCompany] = useState<CompanySummary | null>(initial?.company ?? null);
   const [questions, setQuestions] = useState<EsQuestion[]>(initial?.questions ?? defaultQuestions);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const readValues = (formElement: HTMLFormElement): EsFormValues => {
+    const form = new FormData(formElement);
+    const text = (name: string) => String(form.get(name) ?? "");
+    return {
+      companyId: company?.id ?? "",
+      title: text("title"),
+      position: text("position"),
+      deadline: text("deadline") || null,
+      memo: text("memo"),
+      tags: text("tags")
+        .split(/[,、]/)
+        .map((t) => t.trim())
+        .filter(Boolean),
+      questions,
+      contentMd: text("contentMd"),
+    };
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
-    const submit = submitter?.value === "submit";
-    if (submit && !window.confirm("提出すると下書きに戻せません。提出しますか？")) return;
-    const form = new FormData(e.currentTarget);
-    const text = (name: string) => String(form.get(name) ?? "");
-    onSubmit(
-      {
-        companyId: company?.id ?? "",
-        title: text("title"),
-        position: text("position"),
-        deadline: text("deadline") || null,
-        memo: text("memo"),
-        tags: text("tags")
-          .split(/[,、]/)
-          .map((t) => t.trim())
-          .filter(Boolean),
-        questions,
-        contentMd: text("contentMd"),
-      },
-      submit,
-    );
+    onSubmit(readValues(e.currentTarget), false);
+  };
+
+  // 提出のボタンは確認ダイアログを開くだけの type="button" でブラウザの入力チェックが走らないので、開く前に確かめる。
+  // 入力に誤りがあればクリックの既定の動作を止め、ダイアログを開かない
+  const checkBeforeConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!formRef.current?.reportValidity()) e.preventDefault();
+  };
+
+  const handleConfirmSubmit = () => {
+    if (formRef.current) onSubmit(readValues(formRef.current), true);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="dq-card space-y-6 p-8">
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-2">
-          <span className="text-sm font-medium text-white">企業</span>
-          <CompanyPicker value={company} onChange={setCompany} />
+    <Card className="px-8 py-8">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            {/* 企業の欄は CompanyPicker の入力が aria-label="企業" を持つので、ここを label にすると名前が二重になる */}
+            <span className="text-sm font-medium">企業</span>
+            <CompanyPicker value={company} onChange={setCompany} />
+          </div>
+          <Field
+            label="タイトル"
+            name="title"
+            defaultValue={initial?.title}
+            maxLength={100}
+            required
+            placeholder="例）本選考ES"
+          />
+          <Field
+            label="職種・募集枠"
+            name="position"
+            defaultValue={initial?.position}
+            maxLength={100}
+            placeholder="例）エンジニア職"
+          />
+          <Field label="締切日" name="deadline" type="date" defaultValue={initial?.deadline} />
+          <Field
+            label="タグ（カンマ区切り）"
+            name="tags"
+            defaultValue={initial?.tags.join(", ")}
+            placeholder="例）IT, 第一志望"
+          />
+          <Field label="メモ" name="memo" defaultValue={initial?.memo} maxLength={2000} placeholder="選考メモなど" />
         </div>
-        <Field
-          label="タイトル"
-          name="title"
-          defaultValue={initial?.title}
-          maxLength={100}
-          required
-          placeholder="例）本選考ES"
-        />
-        <Field
-          label="職種・募集枠"
-          name="position"
-          defaultValue={initial?.position}
-          maxLength={100}
-          placeholder="例）エンジニア職"
-        />
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-white">締切日</span>
-          <input type="date" name="deadline" defaultValue={initial?.deadline ?? ""} className="dq-input text-sm" />
-        </label>
-        <Field
-          label="タグ（カンマ区切り）"
-          name="tags"
-          defaultValue={initial?.tags.join(", ")}
-          placeholder="例）IT, 第一志望"
-        />
-        <Field label="メモ" name="memo" defaultValue={initial?.memo} maxLength={2000} placeholder="選考メモなど" />
-      </div>
 
-      <QuestionsEditor questions={questions} onChange={setQuestions} />
+        <QuestionsEditor questions={questions} onChange={setQuestions} />
 
-      <label className="block space-y-2">
-        <span className="text-sm font-medium text-white">本文（設問とは別に自由に書けます）</span>
-        <textarea
-          name="contentMd"
-          defaultValue={initial?.contentMd ?? ""}
-          maxLength={20000}
-          rows={8}
-          className="dq-input text-sm"
-        />
-      </label>
+        <div className="space-y-2">
+          <Label htmlFor="es-contentMd">本文（設問とは別に自由に書けます）</Label>
+          <Textarea
+            id="es-contentMd"
+            name="contentMd"
+            defaultValue={initial?.contentMd ?? ""}
+            maxLength={20000}
+            rows={8}
+            className="min-h-44"
+          />
+        </div>
 
-      <ApiErrorMessage error={error} labels={ES_FIELD_LABELS} />
+        <ApiErrorMessage error={error} labels={ES_FIELD_LABELS} />
 
-      <div className="flex flex-wrap gap-3">
-        <button type="submit" value="save" className="dq-button-secondary" disabled={pending || !company}>
-          {pending ? "保存中…" : "下書きとして保存"}
-        </button>
-        {canSubmit && (
-          <button type="submit" value="submit" className="dq-button" disabled={pending || !company}>
-            保存して提出する
-          </button>
-        )}
-      </div>
-    </form>
+        <div className="flex flex-wrap gap-3">
+          <Button type="submit" variant="quest-muted" disabled={pending || !company}>
+            {pending ? "保存中…" : "下書きとして保存"}
+          </Button>
+          {canSubmit && (
+            <ConfirmDialog
+              trigger={
+                <Button type="button" variant="quest" disabled={pending || !company} onClick={checkBeforeConfirm}>
+                  保存して提出する
+                </Button>
+              }
+              title="ESを提出しますか？"
+              description="提出すると下書きに戻せません。"
+              confirmLabel="提出する"
+              onConfirm={handleConfirmSubmit}
+            />
+          )}
+        </div>
+      </form>
+    </Card>
   );
 }
 
 function Field(props: {
   label: string;
   name: string;
+  type?: string;
   defaultValue?: string | null;
   maxLength?: number;
   required?: boolean;
   placeholder?: string;
 }) {
+  const id = `es-${props.name}`;
   return (
-    <label className="block space-y-2">
-      <span className="text-sm font-medium text-white">{props.label}</span>
-      <input
+    <div className="space-y-2">
+      <Label htmlFor={id}>{props.label}</Label>
+      <Input
+        id={id}
         name={props.name}
+        type={props.type}
         defaultValue={props.defaultValue ?? ""}
         maxLength={props.maxLength}
         required={props.required}
         placeholder={props.placeholder}
-        className="dq-input text-sm"
       />
-    </label>
+    </div>
   );
 }

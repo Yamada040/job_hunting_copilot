@@ -1,5 +1,11 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import type { Company, CompanyStage } from "@/lib/api/companies";
 import { COMPANY_STAGES, COMPANY_STAGE_LABELS } from "@/lib/companies/stages";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
@@ -65,69 +71,83 @@ export function CompanyForm({ initial, submitLabel, pending, error, onSubmit }: 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="dq-card space-y-6 p-8">
-      <div className="grid gap-6 md:grid-cols-2">
-        {textFields.map((f) => (
-          <label key={f.name} className="block space-y-2">
-            <span className="text-sm font-medium text-white">{COMPANY_FIELD_LABELS[f.name]}</span>
+    <Card className="p-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          {textFields.map((f) => (
+            <div key={f.name} className="space-y-2">
+              <Label htmlFor={`company-${f.name}`}>{COMPANY_FIELD_LABELS[f.name]}</Label>
+              <Input
+                id={`company-${f.name}`}
+                name={f.name}
+                defaultValue={initial?.[f.name] ?? ""}
+                maxLength={f.maxLength}
+                required={"required" in f}
+                placeholder={f.placeholder}
+              />
+            </div>
+          ))}
+          <div className="space-y-2">
+            <Label htmlFor="company-stage">{COMPANY_FIELD_LABELS.stage}</Label>
+            <NativeSelect
+              id="company-stage"
+              name="stage"
+              defaultValue={initial?.stage ?? "not_entered"}
+              className="w-full"
+            >
+              {COMPANY_STAGES.map((stage) => (
+                <NativeSelectOption key={stage} value={stage}>
+                  {COMPANY_STAGE_LABELS[stage]}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="company-preference">{COMPANY_FIELD_LABELS.preference}（1〜5）</Label>
+            <NativeSelect
+              id="company-preference"
+              name="preference"
+              defaultValue={initial?.preference ?? ""}
+              className="w-full"
+            >
+              <NativeSelectOption value="">未設定</NativeSelectOption>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <NativeSelectOption key={n} value={n}>
+                  {n}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          {/* FormData の favorite で値を読むので、Radix の Checkbox ではなくネイティブの checkbox のままにする */}
+          <Label className="self-end font-normal">
             <input
-              name={f.name}
-              defaultValue={initial?.[f.name] ?? ""}
-              maxLength={f.maxLength}
-              required={"required" in f}
-              placeholder={f.placeholder}
-              className="dq-input text-sm"
+              type="checkbox"
+              name="favorite"
+              defaultChecked={initial?.favorite ?? false}
+              className="h-4 w-4 accent-sky-500"
             />
-          </label>
-        ))}
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-white">{COMPANY_FIELD_LABELS.stage}</span>
-          <select name="stage" defaultValue={initial?.stage ?? "not_entered"} className="dq-input text-sm">
-            {COMPANY_STAGES.map((stage) => (
-              <option key={stage} value={stage}>
-                {COMPANY_STAGE_LABELS[stage]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-white">{COMPANY_FIELD_LABELS.preference}（1〜5）</span>
-          <select name="preference" defaultValue={initial?.preference ?? ""} className="dq-input text-sm">
-            <option value="">未設定</option>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-2 self-end text-sm text-white">
-          <input
-            type="checkbox"
-            name="favorite"
-            defaultChecked={initial?.favorite ?? false}
-            className="h-4 w-4 accent-amber-300"
+            お気に入り
+          </Label>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="company-memo">{COMPANY_FIELD_LABELS.memo}</Label>
+          <Textarea
+            id="company-memo"
+            name="memo"
+            defaultValue={initial?.memo ?? ""}
+            maxLength={2000}
+            rows={4}
+            className="min-h-24"
           />
-          お気に入り
-        </label>
-      </div>
+        </div>
 
-      <label className="block space-y-2">
-        <span className="text-sm font-medium text-white">{COMPANY_FIELD_LABELS.memo}</span>
-        <textarea
-          name="memo"
-          defaultValue={initial?.memo ?? ""}
-          maxLength={2000}
-          rows={4}
-          className="dq-input text-sm"
-        />
-      </label>
+        <ApiErrorMessage error={error} labels={COMPANY_FIELD_LABELS} />
 
-      <ApiErrorMessage error={error} labels={COMPANY_FIELD_LABELS} />
-
-      <button type="submit" className="dq-button" disabled={pending}>
-        {pending ? "保存中…" : submitLabel}
-      </button>
-    </form>
+        <Button type="submit" variant="quest" disabled={pending}>
+          {pending ? "保存中…" : submitLabel}
+        </Button>
+      </form>
+    </Card>
   );
 }

@@ -39,6 +39,13 @@ api.use(authorize);
 /** openapi-fetch の結果からデータを取り出す。エラーなら ApiError を投げ、TanStack Query のエラーとして扱えるようにする。 */
 export async function unwrap<T>(result: Promise<{ data?: T; error?: unknown }>): Promise<T> {
   const { data, error } = await result;
-  if (error !== undefined) throw new ApiError(error as Problem);
-  return data as T;
+  if (error === undefined) return data as T;
+  // バックエンドに届かないと、手前（Next.js の転送や Vercel）が Problem ではないテキストのエラーを返す。
+  // それを ApiError にすると見せる文が空になるので、通信の失敗として扱う
+  if (!isProblem(error)) throw new Error("バックエンドのAPIに接続できませんでした", { cause: error });
+  throw new ApiError(error);
+}
+
+function isProblem(value: unknown): value is Problem {
+  return typeof value === "object" && value !== null && typeof (value as Problem).title === "string";
 }

@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ApiError } from "@/lib/api/client";
 
 /**
@@ -8,20 +9,22 @@ export function ApiErrorMessage({ error, labels = {} }: { error: unknown; labels
   if (!error) return null;
   if (!(error instanceof ApiError)) {
     return (
-      <p role="alert" className="text-sm text-rose-300">
-        通信に失敗しました。時間をおいて再度お試しください。
-      </p>
+      <Alert variant="destructive">
+        <AlertDescription>通信に失敗しました。時間をおいて再度お試しください。</AlertDescription>
+      </Alert>
     );
   }
   const { title, errors } = error.problem;
   return (
-    <div role="alert" className="space-y-1 text-sm text-rose-300">
-      <p>{title}</p>
-      {errors?.map((e) => (
-        <p key={e.field}>
-          {labels[e.field] ?? e.field}: {e.message}
-        </p>
-      ))}
-    </div>
+    <Alert variant="destructive">
+      <AlertDescription className="[&_p:not(:last-child)]:mb-1">
+        <p>{title}</p>
+        {errors?.map((e) => (
+          <p key={e.field}>
+            {labels[e.field] ?? e.field}: {e.message}
+          </p>
+        ))}
+      </AlertDescription>
+    </Alert>
   );
 }

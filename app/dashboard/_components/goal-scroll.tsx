@@ -15,7 +15,7 @@ export function GoalScroll({ targetIndustry, careerAxis, goalState }: GoalScroll
         {/* 1. 縦幅を抑えた横長の巻き物コンテナ */}
         <div className="relative aspect-[16/8] w-full drop-shadow-lg sm:aspect-[2048/750]">
           <Image
-            src="/parchment.png"
+            src="/parchment.webp"
             alt="巻物"
             fill
             sizes="(max-width: 920px) 90vw, 920px"
@@ -81,7 +81,6 @@ export function GoalScroll({ targetIndustry, careerAxis, goalState }: GoalScroll
               alt="勇者"
               width={112}
               height={112}
-              unoptimized
               className="pointer-events-none absolute -bottom-2 right-12 hidden h-28 w-28 drop-shadow-md md:block pixel-art"
               style={{ imageRendering: "pixelated" }}
             />

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { clsx } from "clsx";
+import { cn } from "@/lib/utils";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs, Header } from "./Header";
 import { XpBadge } from "../xp-badge";
@@ -51,15 +51,13 @@ export function AppLayoutClient({
   const shouldShowSidebar = showSidebar && isSidebarOpen;
 
   return (
-    <div className="relative min-h-screen overflow-hidden text-slate-900">
-      <div className="pointer-events-none absolute inset-0 -z-10" />
-
+    <div className="relative min-h-screen overflow-hidden">
       {shouldShowSidebar && <Sidebar />}
       {showSidebar ? (
         <button
           type="button"
           onClick={() => setIsSidebarOpen((prev) => !prev)}
-          className="fixed left-6 top-6 z-[60] flex h-10 w-10 items-center justify-center text-sky-700 transition-colors hover:text-sky-500"
+          className="fixed left-6 top-6 z-[60] flex h-10 w-10 items-center justify-center text-primary transition-colors hover:text-sky-500"
           aria-label={isSidebarOpen ? "サイドバーを閉じる" : "サイドバーを開く"}
         >
           <span className="flex h-4 w-4 flex-col items-center justify-between">
@@ -71,7 +69,7 @@ export function AppLayoutClient({
       ) : null}
 
       <div
-        className={clsx("min-h-screen transition-[margin] duration-300", {
+        className={cn("min-h-screen transition-[margin] duration-300", {
           "ml-60": shouldShowSidebar,
           "ml-0": !shouldShowSidebar,
         })}
@@ -85,12 +83,12 @@ export function AppLayoutClient({
           />
         )}
 
-        <main className={clsx("mx-auto max-w-7xl px-6 pb-8 pt-24 sm:px-10 sm:pb-12", className)}>
+        <main className={cn("mx-auto max-w-7xl px-6 pb-8 pt-24 sm:px-10 sm:pb-12", className)}>
           <Breadcrumbs />
           {(headerTitle || headerDescription) && (
             <div className="mt-4">
-              {headerTitle && <h1 className="theme-readable text-lg font-semibold">{headerTitle}</h1>}
-              {headerDescription && <p className="theme-readable-muted mt-1 text-sm">{headerDescription}</p>}
+              {headerTitle && <h1 className="text-lg font-semibold">{headerTitle}</h1>}
+              {headerDescription && <p className="mt-1 text-sm text-muted-foreground">{headerDescription}</p>}
             </div>
           )}
           {children}

@@ -1,3 +1,10 @@
+import { useId } from "react";
+
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
+
 type CheckboxGroupProps = {
   label: string;
   options: string[];
@@ -6,23 +13,24 @@ type CheckboxGroupProps = {
 };
 
 export function CheckboxGroup({ label, options, selected, onToggle }: CheckboxGroupProps) {
+  const id = useId();
   return (
     <div className="space-y-2">
-      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{label}</p>
+      <p className="text-sm font-semibold">{label}</p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {options.map((opt) => (
-          <label
-            key={opt}
-            className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition hover:border-amber-200 hover:bg-amber-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        {options.map((option, index) => (
+          <Label
+            key={option}
+            htmlFor={`${id}-${index}`}
+            className="cursor-pointer rounded-lg border bg-secondary/60 px-3 py-2 font-normal transition hover:text-sky-500"
           >
-            <input
-              type="checkbox"
-              checked={selected.includes(opt)}
-              onChange={() => onToggle(opt)}
-              className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+            <Checkbox
+              id={`${id}-${index}`}
+              checked={selected.includes(option)}
+              onCheckedChange={() => onToggle(option)}
             />
-            <span>{opt}</span>
-          </label>
+            <span>{option}</span>
+          </Label>
         ))}
       </div>
     </div>
@@ -36,16 +44,12 @@ type TextAreaProps = {
 };
 
 export function TextArea({ label, value, onChange }: TextAreaProps) {
+  const id = useId();
   return (
-    <label className="block space-y-2">
-      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</span>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={3}
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-amber-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-      />
-    </label>
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} rows={3} />
+    </div>
   );
 }
 
@@ -58,21 +62,18 @@ type SelectBoxProps = {
 };
 
 export function SelectBox({ label, value, onChange, options, placeholder }: SelectBoxProps) {
+  const id = useId();
   return (
-    <label className="block space-y-2">
-      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-amber-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-      >
-        <option value="">{placeholder || "選択してください"}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <NativeSelect id={id} value={value} onChange={(e) => onChange(e.target.value)} className="w-full">
+        <NativeSelectOption value="">{placeholder || "選択してください"}</NativeSelectOption>
+        {options.map((option) => (
+          <NativeSelectOption key={option} value={option}>
+            {option}
+          </NativeSelectOption>
         ))}
-      </select>
-    </label>
+      </NativeSelect>
+    </div>
   );
 }

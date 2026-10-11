@@ -1,25 +1,22 @@
 import Link from "next/link";
-import { ArrowUturnLeftIcon, HomeIcon, PlusIcon } from "@heroicons/react/24/outline";
 
 import { AppLayout } from "@/app/_components/layout";
+import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constants/routes";
 import { WebtestList } from "./_components/webtest-list";
 
 export default function WebtestsPage() {
   const headerActions = (
     <div className="flex flex-wrap gap-3">
-      <Link href={ROUTES.DASHBOARD} className="dq-button-secondary">
-        <ArrowUturnLeftIcon className="h-4 w-4" />
-        ダッシュボードへ
-      </Link>
-      <Link href={ROUTES.HOME} className="dq-button-secondary">
-        <HomeIcon className="h-4 w-4" />
-        MVPホーム
-      </Link>
-      <Link href={ROUTES.WEBTESTS_NEW} className="dq-button">
-        <PlusIcon className="h-4 w-4" />
-        問題を追加
-      </Link>
+      <Button asChild variant="quest-muted">
+        <Link href={ROUTES.DASHBOARD}>ダッシュボードへ</Link>
+      </Button>
+      <Button asChild variant="quest-muted">
+        <Link href={ROUTES.HOME}>MVPホーム</Link>
+      </Button>
+      <Button asChild variant="quest">
+        <Link href={ROUTES.WEBTESTS_NEW}>問題を追加</Link>
+      </Button>
     </div>
   );
 

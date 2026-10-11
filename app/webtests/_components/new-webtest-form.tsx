@@ -2,6 +2,11 @@
 
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useCreateWebtestQuestion } from "@/lib/api/webtests";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
@@ -49,42 +54,48 @@ export function NewWebtestForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="dq-card space-y-4 p-6">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field name="title" label="タイトル" maxLength={100} required placeholder="例）表の読み取り（売上推移）" />
-        <Field name="category" label="カテゴリ" placeholder="非言語 / 言語 / 英語 など" />
-      </div>
-      <div className="grid gap-4 md:grid-cols-4">
-        <Field name="testType" label="テスト形式" placeholder="SPI / 玉手箱 / TG-WEB など" />
-        <Field name="format" label="形式" placeholder="表/グラフ/文章/計算 など" />
-        <Field name="difficulty" label="難易度" placeholder="易 / 普通 / 難" />
-        <Field name="timeLimit" label="制限時間（秒）" placeholder="60" type="number" />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-800">
-          問題文 <span className="text-rose-500">*</span>
-        </label>
-        <textarea name="body" required rows={6} className="dq-input text-sm" placeholder="表や文章の内容を記載" />
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-800">選択肢（改行区切り）</label>
-          <textarea name="choices" rows={4} className="dq-input text-sm" placeholder="A)\nB)\nC)\nD)" />
+    <Card className="p-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field name="title" label="タイトル" maxLength={100} required placeholder="例）表の読み取り（売上推移）" />
+          <Field name="category" label="カテゴリ" placeholder="非言語 / 言語 / 英語 など" />
         </div>
-        <Field name="answer" label="正解" maxLength={500} required placeholder="例）C" />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-800">解説（任意）</label>
-        <textarea name="explanation" rows={4} className="dq-input text-sm" placeholder="解答の考え方や計算手順を記載" />
-      </div>
-      <ApiErrorMessage error={createQuestion.error} labels={FIELD_LABELS} />
-      <div className="pt-2 flex justify-start">
-        <button type="submit" className="dq-button" disabled={createQuestion.isPending}>
-          {createQuestion.isPending ? "保存中…" : "保存する"}
-        </button>
-      </div>
-    </form>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Field name="testType" label="テスト形式" placeholder="SPI / 玉手箱 / TG-WEB など" />
+          <Field name="format" label="形式" placeholder="表/グラフ/文章/計算 など" />
+          <Field name="difficulty" label="難易度" placeholder="易 / 普通 / 難" />
+          <Field name="timeLimit" label="制限時間（秒）" placeholder="60" type="number" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="webtest-body">
+            問題文 <RequiredMark />
+          </Label>
+          <Textarea id="webtest-body" name="body" required rows={6} placeholder="表や文章の内容を記載" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="webtest-choices">選択肢（改行区切り）</Label>
+            <Textarea id="webtest-choices" name="choices" rows={4} placeholder="A)\nB)\nC)\nD)" />
+          </div>
+          <Field name="answer" label="正解" maxLength={500} required placeholder="例）C" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="webtest-explanation">解説（任意）</Label>
+          <Textarea id="webtest-explanation" name="explanation" rows={4} placeholder="解答の考え方や計算手順を記載" />
+        </div>
+        <ApiErrorMessage error={createQuestion.error} labels={FIELD_LABELS} />
+        <div className="flex justify-start pt-2">
+          <Button type="submit" variant="quest" disabled={createQuestion.isPending}>
+            {createQuestion.isPending ? "保存中…" : "保存する"}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
+}
+
+function RequiredMark() {
+  return <span className="text-destructive">*</span>;
 }
 
 function Field({
@@ -102,20 +113,14 @@ function Field({
   type?: string;
   maxLength?: number;
 }) {
+  const id = `webtest-${name}`;
   return (
-    <label className="block space-y-2">
-      <span className="text-sm font-medium text-slate-800">
+    <div className="space-y-2">
+      <Label htmlFor={id}>
         {label}
-        {required ? <span className="text-rose-500"> *</span> : null}
-      </span>
-      <input
-        name={name}
-        type={type}
-        required={required}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        className="dq-input text-sm"
-      />
-    </label>
+        {required ? <RequiredMark /> : null}
+      </Label>
+      <Input id={id} name={name} type={type} required={required} placeholder={placeholder} maxLength={maxLength} />
+    </div>
   );
 }

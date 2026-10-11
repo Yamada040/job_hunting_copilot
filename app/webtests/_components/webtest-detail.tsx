@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { useAnswerWebtestQuestion, useWebtestQuestion } from "@/lib/api/webtests";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 
@@ -11,7 +17,7 @@ export function WebtestDetail({ id }: { id: string }) {
   const [status, setStatus] = useState<"correct" | "incorrect" | null>(null);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!question) return <div className="dq-card p-6 text-sm text-white">読み込み中…</div>;
+  if (!question) return <Card className="p-6 text-sm">読み込み中…</Card>;
   const attempts = question.attempts.slice(0, 5);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -27,87 +33,112 @@ export function WebtestDetail({ id }: { id: string }) {
 
   return (
     <>
-      <h2 className="text-lg font-semibold text-white">{question.title}</h2>
+      <h2 className="text-lg font-semibold">{question.title}</h2>
       {status === "correct" ? (
-        <div className="dq-panel px-4 py-3 text-sm text-emerald-200">正解です！</div>
+        <Card variant="muted" className="px-4 py-3 text-sm text-emerald-600">
+          正解です！
+        </Card>
       ) : status === "incorrect" ? (
-        <div className="dq-panel px-4 py-3 text-sm text-rose-200">不正解です。もう一度チャレンジしましょう。</div>
+        <Card variant="muted" className="px-4 py-3 text-sm text-destructive">
+          不正解です。もう一度チャレンジしましょう。
+        </Card>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
-        <div className="dq-card space-y-4 p-6">
-          <div className="flex flex-wrap gap-2 text-xs text-white/70">
-            <Badge label="テスト形式" value={question.testType ?? "未設定"} />
-            <Badge label="カテゴリ" value={question.category ?? "未設定"} />
-            <Badge label="形式" value={question.format ?? "未設定"} />
-            <Badge label="難易度" value={question.difficulty ?? "未設定"} />
-            <Badge label="制限" value={question.timeLimit ? `${question.timeLimit}s` : "任意"} />
+        <Card className="gap-4 p-6">
+          <div className="flex flex-wrap gap-2">
+            <QuestionAttribute label="テスト形式" value={question.testType ?? "未設定"} />
+            <QuestionAttribute label="カテゴリ" value={question.category ?? "未設定"} />
+            <QuestionAttribute label="形式" value={question.format ?? "未設定"} />
+            <QuestionAttribute label="難易度" value={question.difficulty ?? "未設定"} />
+            <QuestionAttribute label="制限" value={question.timeLimit ? `${question.timeLimit}s` : "任意"} />
           </div>
-          <p className="whitespace-pre-line text-sm leading-6 text-white/90">{question.body}</p>
+          <p className="whitespace-pre-line text-sm leading-6">{question.body}</p>
 
-          <form onSubmit={handleSubmit} className="dq-panel space-y-3 p-4">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-white">解答</label>
-              {question.choices.length > 0 ? (
-                <select name="answer" className="dq-input text-sm" required>
-                  <option value="">選択してください</option>
-                  {question.choices.map((c, idx) => (
-                    <option key={`${idx}-${c}`} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input name="answer" required maxLength={500} className="dq-input text-sm" placeholder="解答を入力" />
-              )}
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs text-white/70">解答時間（秒） 任意</label>
-              <input type="number" name="timeSpent" min={0} max={36000} className="dq-input text-sm" placeholder="60" />
-            </div>
-            <div className="pt-2 flex justify-start">
-              <button type="submit" className="dq-button" disabled={answer.isPending}>
-                {answer.isPending ? "送信中…" : "解答を送信"}
-              </button>
-            </div>
-          </form>
+          <Card variant="muted" className="p-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="webtest-answer" className="font-semibold">
+                  解答
+                </Label>
+                {question.choices.length > 0 ? (
+                  <NativeSelect id="webtest-answer" name="answer" required className="w-full bg-background">
+                    <NativeSelectOption value="">選択してください</NativeSelectOption>
+                    {question.choices.map((c, idx) => (
+                      <NativeSelectOption key={`${idx}-${c}`} value={c}>
+                        {c}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                ) : (
+                  <Input
+                    id="webtest-answer"
+                    name="answer"
+                    required
+                    maxLength={500}
+                    placeholder="解答を入力"
+                    className="bg-background"
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="webtest-time-spent" className="text-xs text-muted-foreground">
+                  解答時間（秒） 任意
+                </Label>
+                <Input
+                  id="webtest-time-spent"
+                  type="number"
+                  name="timeSpent"
+                  min={0}
+                  max={36000}
+                  placeholder="60"
+                  className="bg-background"
+                />
+              </div>
+              <div className="flex justify-start pt-2">
+                <Button type="submit" variant="quest" disabled={answer.isPending}>
+                  {answer.isPending ? "送信中…" : "解答を送信"}
+                </Button>
+              </div>
+            </form>
+          </Card>
 
           <ApiErrorMessage error={answer.error} />
 
           {question.explanation ? (
-            <div className="dq-panel p-4 text-sm text-white/80">
-              <p className="text-xs font-semibold text-white/70">解説</p>
-              <p className="mt-1 whitespace-pre-line leading-6">{question.explanation}</p>
-            </div>
+            <Card variant="muted" className="gap-1 p-4 text-sm">
+              <p className="text-xs font-semibold text-muted-foreground">解説</p>
+              <p className="whitespace-pre-line leading-6">{question.explanation}</p>
+            </Card>
           ) : null}
-        </div>
+        </Card>
 
-        <div className="dq-card space-y-3 p-4">
-          <p className="text-sm font-semibold text-white">最近の解答 (5件)</p>
-          <div className="space-y-2 text-xs text-white/70">
+        <Card className="gap-3 p-4">
+          <p className="text-sm font-semibold">最近の解答 (5件)</p>
+          <div className="space-y-2 text-xs">
             {attempts.length === 0 ? (
-              <p className="text-white/60">まだ解答履歴がありません。</p>
+              <p className="text-muted-foreground">まだ解答履歴がありません。</p>
             ) : (
               attempts.map((a) => (
-                <div key={a.id} className="dq-panel flex items-center justify-between px-3 py-2">
-                  <span className={a.isCorrect ? "text-emerald-200" : "text-rose-200"}>
+                <Card key={a.id} variant="muted" className="flex-row items-center justify-between px-3 py-2">
+                  <span className={a.isCorrect ? "text-emerald-600" : "text-destructive"}>
                     {a.isCorrect ? "正解" : "不正解"}
                   </span>
-                  <span className="text-white/60">
+                  <span className="text-muted-foreground">
                     {a.timeSpent ? `${a.timeSpent}s` : "-"} / {new Date(a.createdAt).toLocaleDateString()}
                   </span>
-                </div>
+                </Card>
               ))
             )}
           </div>
-        </div>
+        </Card>
       </div>
     </>
   );
 }
 
-const Badge = ({ label, value }: { label: string; value: string }) => (
-  <span className="rounded-full border border-white/30 bg-white/10 px-2 py-1 text-[11px] text-white/80">
+const QuestionAttribute = ({ label, value }: { label: string; value: string }) => (
+  <Badge variant="outline" className="text-[11px]">
     {label}: {value}
-  </span>
+  </Badge>
 );

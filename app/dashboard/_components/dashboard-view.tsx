@@ -9,6 +9,8 @@ import { useMe } from "@/lib/api/me";
 import { useXpLogs, XP_ACTION_LABELS } from "@/lib/api/xp";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { Card } from "@/components/ui/card";
+import { QuestWindow } from "@/app/_components/quest-window";
 import { toCalendarEvent } from "./calendar/types";
 import { EventListModal } from "./event-list-modal";
 import { GoalScroll } from "./goal-scroll";
@@ -88,28 +90,26 @@ export function DashboardView() {
 
       {/* カレンダー + サイドカラム */}
       <section className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-        <div className="relative rounded-xl border border-[#3f3f46] bg-[#111111] p-4">
-          <span className="dq-title">クエストカレンダー</span>
-          <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">
+        <QuestWindow title="クエストカレンダー">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
             ES / 面接 / インターン
           </div>
-          <div className="mt-3 rounded-2xl border border-[#3f3f46] bg-[#1a1a1a] p-3 shadow-inner">
+          <Card variant="muted" className="rounded-2xl px-3 shadow-inner">
             <InteractiveCalendar events={calendarEvents} />
-          </div>
-        </div>
+          </Card>
+        </QuestWindow>
 
         <div className="space-y-6">
           {/* Urgent */}
           <EventListModal
             events={calendarEvents}
             trigger={
-              <div className="relative cursor-pointer rounded-xl border border-[#3f3f46] bg-[#111111] p-4 transition hover:scale-[1.02]">
-                <span className="dq-title">至急クエスト</span>
-                <div className="mt-3 space-y-3">
+              <QuestWindow title="至急クエスト" className="cursor-pointer transition hover:scale-[1.02]">
+                <div className="space-y-3">
                   {urgentEvents.map((evt) => (
                     <div
                       key={evt.id}
-                      className="group flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold text-white transition hover:text-yellow-400"
+                      className="group flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold transition hover:text-sky-500"
                     >
                       <span
                         aria-hidden
@@ -117,30 +117,29 @@ export function DashboardView() {
                       >
                         ▶
                       </span>
-                      <label className="cursor-pointer text-sm font-bold">
+                      <span className="text-sm font-bold">
                         {evt.company || evt.title} ({evt.date})
-                      </label>
+                      </span>
                     </div>
                   ))}
                   {urgentEvents.length === 0 && (
-                    <div className="py-2 text-center text-xs text-white/60">直近の 締切は ないようだ。</div>
+                    <div className="py-2 text-center text-xs text-muted-foreground">直近の 締切は ないようだ。</div>
                   )}
                 </div>
-              </div>
+              </QuestWindow>
             }
           />
 
           {/* Next actions */}
           <SimpleListModal
             trigger={
-              <div className="relative cursor-pointer rounded-xl border border-[#3f3f46] bg-[#111111] p-4 transition hover:scale-[1.02]">
-                <span className="dq-title">次のクエスト</span>
-                <div className="mt-3 space-y-3">
+              <QuestWindow title="次のクエスト" className="cursor-pointer transition hover:scale-[1.02]">
+                <div className="space-y-3">
                   {nextActions.map((action) => (
                     <Link
                       key={`${action.title}-${action.href}-${action.subtitle}`}
                       href={action.href}
-                      className="group flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold text-white transition hover:text-yellow-400"
+                      className="group flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold transition hover:text-sky-500"
                     >
                       <span
                         aria-hidden
@@ -148,14 +147,16 @@ export function DashboardView() {
                       >
                         ▶
                       </span>
-                      <label className="cursor-pointer text-sm font-bold">{action.subtitle}</label>
+                      <span className="text-sm font-bold">{action.subtitle}</span>
                     </Link>
                   ))}
                   {nextActions.length === 0 && (
-                    <div className="py-2 text-center text-xs text-white/60">なすべきことは すべて おわった。</div>
+                    <div className="py-2 text-center text-xs text-muted-foreground">
+                      なすべきことは すべて おわった。
+                    </div>
                   )}
                 </div>
-              </div>
+              </QuestWindow>
             }
             items={nextActions.map((action) => ({
               title: action.title,
@@ -168,28 +169,27 @@ export function DashboardView() {
           {/* 最近のXP獲得 */}
           <SimpleListModal
             trigger={
-              <div className="relative cursor-pointer rounded-xl border border-[#3f3f46] bg-[#111111] p-4 transition hover:scale-[1.02]">
-                <span className="dq-title">戦歴ログ</span>
-                <div className="mt-3 space-y-2">
+              <QuestWindow title="戦歴ログ" className="cursor-pointer transition hover:scale-[1.02]">
+                <div className="space-y-2">
                   {recentXpLogs.map((log, idx) => (
                     <div
                       key={`${log.createdAt}-${idx}`}
-                      className="dq-item justify-between border-b border-white/10 last:border-0"
+                      className="flex items-center justify-between gap-2 border-b py-1 transition-colors last:border-0 hover:text-sky-500"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-yellow-400">●</span>
+                        <span className="text-[10px] text-sky-500">●</span>
                         <span className="text-sm">+{log.xp} XP</span>
                       </div>
-                      <span className="text-[10px] opacity-60">{XP_ACTION_LABELS[log.action]}</span>
+                      <span className="text-[10px] text-muted-foreground">{XP_ACTION_LABELS[log.action]}</span>
                     </div>
                   ))}
                   {recentXpLogs.length === 0 && (
-                    <div className="py-2 text-center text-xs text-white/60">
+                    <div className="py-2 text-center text-xs text-muted-foreground">
                       まだXPはありません。ES提出や面接ログでXPを獲得できます。
                     </div>
                   )}
                 </div>
-              </div>
+              </QuestWindow>
             }
             items={allXpLogs.map((log) => ({
               title: `+${log.xp} XP`,

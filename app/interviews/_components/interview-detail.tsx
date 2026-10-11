@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { TrashIcon } from "@heroicons/react/24/outline";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   useDeleteInterviewLog,
   useInterviewLog,
@@ -13,27 +14,36 @@ import {
 } from "@/lib/api/interviews";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { InterviewForm } from "./interview-form";
 
 export function InterviewDetail({ id }: { id: string }) {
   const { data: log, error } = useInterviewLog(id);
+  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
+  const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!log) return <p className="dq-card p-8 text-sm text-white">読み込み中…</p>;
+  if (!log) return <Card className="p-8 text-sm">読み込み中…</Card>;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return <InterviewDetailLoaded key={log.updatedAt} log={log} />;
+  return <InterviewDetailLoaded key={log.updatedAt} log={log} saved={saved} onSavedChange={setSaved} />;
 }
 
-function InterviewDetailLoaded({ log }: { log: InterviewLog }) {
+function InterviewDetailLoaded({
+  log,
+  saved,
+  onSavedChange: setSaved,
+}: {
+  log: InterviewLog;
+  saved: boolean;
+  onSavedChange: (saved: boolean) => void;
+}) {
   const router = useRouter();
   const updateLog = useUpdateInterviewLog(log.id);
   const deleteLog = useDeleteInterviewLog(log.id);
   const reviewLog = useReviewInterviewLog(log.id);
-  const [saved, setSaved] = useState(false);
 
   const handleDelete = () => {
-    if (!window.confirm(`${log.company.name}の${log.round ?? ""}面接ログを削除します。よろしいですか？`)) return;
     deleteLog.mutate(undefined, { onSuccess: () => router.push(ROUTES.INTERVIEWS) });
   };
 
@@ -49,7 +59,7 @@ function InterviewDetailLoaded({ log }: { log: InterviewLog }) {
           updateLog.mutate(values, { onSuccess: () => setSaved(true) });
         }}
       />
-      {saved && <p className="text-sm text-emerald-300">保存しました</p>}
+      {saved && <p className="text-sm text-emerald-600">保存しました</p>}
 
       <AiResultPanel
         title="AI振り返り"
@@ -62,10 +72,23 @@ function InterviewDetailLoaded({ log }: { log: InterviewLog }) {
       />
 
       <div className="space-y-2">
-        <button type="button" onClick={handleDelete} disabled={deleteLog.isPending} className="dq-button-secondary">
-          <TrashIcon className="h-4 w-4" />
-          {deleteLog.isPending ? "削除中…" : "この面接ログを削除する"}
-        </button>
+        <ConfirmDialog
+          title="面接ログを削除しますか？"
+          description={`${log.company.name}の${log.round ?? ""}面接ログを削除します。よろしいですか？`}
+          confirmLabel="削除する"
+          destructive
+          onConfirm={handleDelete}
+          trigger={
+            <Button
+              type="button"
+              variant="quest"
+              disabled={deleteLog.isPending}
+              className="text-destructive hover:text-destructive/80"
+            >
+              {deleteLog.isPending ? "削除中…" : "この面接ログを削除する"}
+            </Button>
+          }
+        />
         <ApiErrorMessage error={deleteLog.error} />
       </div>
     </div>

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { CheckIcon, ClipboardDocumentIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { sanitizeMarkdown } from "./sanitize";
 
@@ -45,37 +47,49 @@ export function AiResultPanel({
     setCopied(true);
   };
 
+  const runAction = (
+    <div className="space-y-1">
+      <Button type="button" variant="quest" onClick={onRun} disabled={pending || !!blockedReason}>
+        {pending ? "AIが処理中です（数十秒かかることがあります）…" : runLabel}
+      </Button>
+      {blockedReason && <p className="text-xs text-muted-foreground">{blockedReason}</p>}
+    </div>
+  );
+
   return (
-    <section className="dq-card space-y-4 p-6 text-white">
-      <div>
-        <h2 className="flex items-center gap-2 text-base font-semibold">
-          <SparklesIcon className="h-5 w-5 text-yellow-300" />
-          {title}
-        </h2>
-        <p className="mt-1 text-xs text-white/70">{description}</p>
-      </div>
-
-      {!done && (
-        <div className="space-y-1">
-          <button type="button" onClick={onRun} disabled={pending || !!blockedReason} className="dq-button">
-            {pending ? "AIが処理中です（数十秒かかることがあります）…" : runLabel}
-          </button>
-          {blockedReason && <p className="text-xs text-white/60">{blockedReason}</p>}
-        </div>
-      )}
-      <ApiErrorMessage error={error} />
-
-      {text && (
-        <div className="space-y-2 rounded-xl border border-white/20 bg-black/40 p-4">
-          <div className="flex justify-end">
-            <button type="button" onClick={copy} className="sidebar-link-style text-xs">
-              {copied ? <CheckIcon className="h-4 w-4" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
-              {copied ? "コピー済み" : "コピー"}
-            </button>
+    <Card className="gap-4 py-6">
+      <CardHeader className="px-6">
+        <CardTitle>
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            <SparklesIcon className="h-5 w-5 text-sky-500" />
+            {title}
+          </h2>
+        </CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 px-6">
+        {text ? (
+          !done && runAction
+        ) : (
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-secondary/60 px-4 py-6 text-center">
+            <p className="text-sm text-muted-foreground">まだ結果はありません。実行すると、ここに表示されます。</p>
+            {runAction}
           </div>
-          <div className="whitespace-pre-line text-sm leading-6">{text}</div>
-        </div>
-      )}
-    </section>
+        )}
+        <ApiErrorMessage error={error} />
+
+        {text && (
+          <Card variant="muted" className="gap-2 px-4">
+            <div className="flex justify-end">
+              <Button type="button" variant="quest" size="xs" onClick={copy}>
+                {copied ? <CheckIcon className="h-4 w-4" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
+                {copied ? "コピー済み" : "コピー"}
+              </Button>
+            </div>
+            <div className="whitespace-pre-line text-sm leading-6">{text}</div>
+          </Card>
+        )}
+      </CardContent>
+    </Card>
   );
 }

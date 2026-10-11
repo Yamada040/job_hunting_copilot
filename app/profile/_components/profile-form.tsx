@@ -6,6 +6,12 @@ import { useState } from "react";
 
 import { useMe, useUpdateMe, type Me, type ProfileUpdate } from "@/lib/api/me";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 
 // backend/api/openapi.yaml の ProfileUpdate の maxLength と同じ値（超えた入力はバックエンドが400で拒否する）
 const MAX_LENGTH = 100;
@@ -16,7 +22,7 @@ const avatarOptions = [
 ];
 
 const textFields = [
-  { name: "fullName", label: "氏名", placeholder: "例）山田 太郎" },
+  { name: "fullName", label: "氏名", placeholder: "例）山田 太郎", required: true },
   { name: "university", label: "大学", placeholder: "例）○○大学" },
   { name: "faculty", label: "学部・学科", placeholder: "例）経済学部 経済学科" },
   { name: "targetIndustry", label: "志望業界（任意）", placeholder: "例）IT、コンサル、メーカー など" },
@@ -25,16 +31,29 @@ const textFields = [
 
 export function ProfileForm({ email }: { email: string }) {
   const { data, error } = useMe();
+  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
+  const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!data) return <p className="dq-card p-8 text-sm text-white">読み込み中…</p>;
+  if (!data) return <Card className="px-8 text-sm">読み込み中…</Card>;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return <ProfileFormFields key={JSON.stringify(data)} me={data} email={email} />;
+  return (
+    <ProfileFormFields key={JSON.stringify(data)} me={data} email={email} saved={saved} onSavedChange={setSaved} />
+  );
 }
 
-function ProfileFormFields({ me, email }: { me: Me; email: string }) {
+function ProfileFormFields({
+  me,
+  email,
+  saved,
+  onSavedChange: setSaved,
+}: {
+  me: Me;
+  email: string;
+  saved: boolean;
+  onSavedChange: (saved: boolean) => void;
+}) {
   const updateMe = useUpdateMe();
-  const [saved, setSaved] = useState(false);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,81 +75,82 @@ function ProfileFormFields({ me, email }: { me: Me; email: string }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="dq-card p-8">
-      <div className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          {textFields.map((field) => (
-            <label key={field.name} className="block space-y-2">
-              <span className="text-sm font-medium text-white">{field.label}</span>
-              <input
-                name={field.name}
-                defaultValue={me[field.name] ?? ""}
-                maxLength={MAX_LENGTH}
-                className="dq-input text-sm"
-                placeholder={field.placeholder}
-              />
-            </label>
-          ))}
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-white">メール</span>
-            <input value={email} disabled className="dq-input text-sm" />
-          </label>
-        </div>
-
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-white">就活で達成したい状態（短文）</span>
-          <textarea
-            name="goalState"
-            defaultValue={me.goalState ?? ""}
-            maxLength={MAX_LENGTH}
-            rows={3}
-            className="dq-input text-sm"
-            placeholder="例）自社開発で技術を磨ける環境に入社する / 社会課題に取り組む事業で働く など"
-          />
-        </label>
-
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-medium text-white">アバターを選ぶ</legend>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[...avatarOptions, { id: "", label: "選択しない", src: null }].map((opt) => (
-              <label
-                key={opt.id || "none"}
-                className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/40 bg-black/70 px-4 py-4 text-white transition-colors hover:text-yellow-400 has-[:checked]:border-white has-[:checked]:bg-black"
-              >
-                <input
-                  type="radio"
-                  name="avatarId"
-                  value={opt.id}
-                  defaultChecked={(me.avatarId ?? "") === opt.id}
-                  className="h-4 w-4 accent-amber-300"
+    <Card>
+      <CardContent className="px-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {textFields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <Label htmlFor={`profile-${field.name}`}>{field.label}</Label>
+                <Input
+                  id={`profile-${field.name}`}
+                  name={field.name}
+                  defaultValue={me[field.name] ?? ""}
+                  maxLength={MAX_LENGTH}
+                  placeholder={field.placeholder}
+                  required={"required" in field}
                 />
-                {opt.src ? (
-                  <Image
-                    src={opt.src}
-                    alt={opt.label}
-                    width={48}
-                    height={48}
-                    className="h-12 w-12 rounded-xl border border-white/30 bg-black/70 object-cover"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/30 bg-black/70 text-xs">
-                    なし
-                  </div>
-                )}
-                <span className="text-sm">{opt.label}</span>
-              </label>
+              </div>
             ))}
+            <div className="space-y-2">
+              <Label htmlFor="profile-email">メール</Label>
+              <Input id="profile-email" value={email} disabled />
+            </div>
           </div>
-        </fieldset>
 
-        <ApiErrorMessage error={updateMe.error} labels={Object.fromEntries(textFields.map((f) => [f.name, f.label]))} />
-        {saved && <p className="text-sm text-emerald-300">保存しました</p>}
+          <div className="space-y-2">
+            <Label htmlFor="profile-goalState">就活で達成したい状態（短文）</Label>
+            <Textarea
+              id="profile-goalState"
+              name="goalState"
+              defaultValue={me.goalState ?? ""}
+              maxLength={MAX_LENGTH}
+              rows={3}
+              placeholder="例）自社開発で技術を磨ける環境に入社する / 社会課題に取り組む事業で働く など"
+            />
+          </div>
 
-        <button type="submit" className="dq-button" disabled={updateMe.isPending}>
-          <UserCircleIcon className="h-4 w-4" />
-          {updateMe.isPending ? "保存中…" : "保存する"}
-        </button>
-      </div>
-    </form>
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-medium">アバターを選ぶ</legend>
+            <RadioGroup name="avatarId" defaultValue={me.avatarId ?? ""} className="gap-3 sm:grid-cols-2">
+              {[...avatarOptions, { id: "", label: "選択しない", src: null }].map((option) => (
+                <Label
+                  key={option.id || "none"}
+                  htmlFor={`avatar-${option.id || "none"}`}
+                  className="cursor-pointer gap-3 rounded-xl border bg-secondary/60 px-4 py-4 font-normal transition-colors hover:text-sky-500 has-data-[state=checked]:border-sky-400 has-data-[state=checked]:bg-accent"
+                >
+                  <RadioGroupItem id={`avatar-${option.id || "none"}`} value={option.id} />
+                  {option.src ? (
+                    <Image
+                      src={option.src}
+                      alt={option.label}
+                      width={48}
+                      height={48}
+                      className="h-12 w-12 rounded-xl border bg-card object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border bg-card text-xs">
+                      なし
+                    </div>
+                  )}
+                  <span className="text-sm">{option.label}</span>
+                </Label>
+              ))}
+            </RadioGroup>
+          </fieldset>
+
+          <ApiErrorMessage
+            error={updateMe.error}
+            labels={Object.fromEntries(textFields.map((f) => [f.name, f.label]))}
+          />
+          {saved && <p className="text-sm text-emerald-600">保存しました</p>}
+
+          <Button type="submit" variant="quest" disabled={updateMe.isPending}>
+            <UserCircleIcon className="h-4 w-4" />
+            {updateMe.isPending ? "保存中…" : "保存する"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

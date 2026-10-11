@@ -12,36 +12,43 @@ import {
   useUpdateEsEntry,
   type EsEntry,
 } from "@/lib/api/es";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
+import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { EsForm } from "./es-form";
 
 export function EsDetail({ id }: { id: string }) {
   const { data: entry, error } = useEsEntry(id);
+  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
+  const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!entry) return <p className="dq-card p-8 text-sm text-white">読み込み中…</p>;
+  if (!entry) return <Card className="p-8 text-sm">読み込み中…</Card>;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return <EsDetailLoaded key={entry.updatedAt} entry={entry} />;
+  return <EsDetailLoaded key={entry.updatedAt} entry={entry} saved={saved} onSavedChange={setSaved} />;
 }
 
-function EsDetailLoaded({ entry }: { entry: EsEntry }) {
+function EsDetailLoaded({
+  entry,
+  saved,
+  onSavedChange: setSaved,
+}: {
+  entry: EsEntry;
+  saved: boolean;
+  onSavedChange: (saved: boolean) => void;
+}) {
   const router = useRouter();
   const updateEsEntry = useUpdateEsEntry(entry.id);
   const submitEsEntry = useSubmitEsEntry();
   const deleteEsEntry = useDeleteEsEntry(entry.id);
   const reviewEsEntry = useReviewEsEntry(entry.id);
-  const [saved, setSaved] = useState(false);
-
-  const handleDelete = () => {
-    if (!window.confirm(`「${entry.title}」を削除します。よろしいですか？`)) return;
-    deleteEsEntry.mutate(undefined, { onSuccess: () => router.push(ROUTES.ES) });
-  };
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-sm text-white/80">
+      <p className="text-sm text-muted-foreground">
         状態：{entry.status === "submitted" ? "提出済み（下書きには戻せません）" : "下書き"}
       </p>
 
@@ -57,7 +64,7 @@ function EsDetailLoaded({ entry }: { entry: EsEntry }) {
           });
         }}
       />
-      {saved && <p className="text-sm text-emerald-300">保存しました</p>}
+      {saved && <p className="text-sm text-emerald-600">保存しました</p>}
 
       <AiResultPanel
         title="AI添削"
@@ -70,10 +77,24 @@ function EsDetailLoaded({ entry }: { entry: EsEntry }) {
       />
 
       <div className="space-y-2">
-        <button type="button" onClick={handleDelete} disabled={deleteEsEntry.isPending} className="dq-button-secondary">
-          <TrashIcon className="h-4 w-4" />
-          {deleteEsEntry.isPending ? "削除中…" : "このESを削除する"}
-        </button>
+        <ConfirmDialog
+          trigger={
+            <Button
+              type="button"
+              variant="quest"
+              disabled={deleteEsEntry.isPending}
+              className="text-destructive hover:text-destructive/80"
+            >
+              <TrashIcon className="h-4 w-4" />
+              {deleteEsEntry.isPending ? "削除中…" : "このESを削除する"}
+            </Button>
+          }
+          title="ESを削除しますか？"
+          description={`「${entry.title}」を削除します。よろしいですか？`}
+          confirmLabel="削除する"
+          destructive
+          onConfirm={() => deleteEsEntry.mutate(undefined, { onSuccess: () => router.push(ROUTES.ES) })}
+        />
         <ApiErrorMessage error={deleteEsEntry.error} />
       </div>
     </div>

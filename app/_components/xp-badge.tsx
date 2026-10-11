@@ -3,8 +3,11 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useMe } from "@/lib/api/me";
 import { levelThresholds, XP_PER_LEVEL } from "@/lib/xp/compute-level";
+import { QuestWindow } from "./quest-window";
 
 /**
  * ヘッダーのレベル・XPの表示。値は TanStack Query の useMe のキャッシュから読むので、
@@ -26,49 +29,35 @@ export function XpBadge() {
     <>
       <XpBadgeStatus xp={data?.xp ?? 0} level={level ?? 1} />
 
-      {/* 2. レベルアップ演出：モーダル（全画面中央） */}
-      {levelUp && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="relative aspect-video w-full max-w-[650px] overflow-hidden border-4 border-white shadow-2xl">
-            {/* 背景画像：levelup.jpeg (常駐バーより鮮明に表示) */}
-            <Image
-              src="/levelup.jpeg"
-              alt="Level Up Background"
-              fill
-              sizes="(max-width: 650px) 100vw, 650px"
-              className="object-cover opacity-90"
-              priority
-            />
-
-            {/* DQ風メッセージウィンドウ */}
-            <div className="absolute inset-x-8 bottom-8">
-              <div className="relative rounded-lg border border-[#52525b] bg-[#111111] p-6 shadow-xl">
-                {/* 枠に割り込むタイトル */}
-                <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-black px-4 text-lg font-bold tracking-widest text-white">
-                  LEVEL UP!
-                </span>
-
-                <div className="space-y-4 text-center">
-                  <p className="text-xl font-bold leading-relaxed text-white">
-                    おめでとう！
-                    <br />
-                    あなたは Lv.{levelUp} に なった！
-                  </p>
-
-                  <button
-                    type="button"
-                    className="group flex w-full items-center justify-center gap-2 text-2xl font-bold text-white transition hover:text-yellow-400"
-                    onClick={() => setLevelUp(null)}
-                  >
-                    <span className="animate-pulse">▶</span>
-                    <span>つぎへ</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* レベルアップ演出：背景画像の上にDQ風のメッセージウィンドウを重ねる */}
+      <Dialog open={levelUp !== null} onOpenChange={(open) => !open && setLevelUp(null)}>
+        <DialogContent
+          showCloseButton={false}
+          className="aspect-video max-w-[650px] overflow-hidden rounded-none border-4 border-white p-0 shadow-2xl sm:max-w-[650px]"
+        >
+          <Image
+            src="/levelup.jpeg"
+            alt=""
+            fill
+            sizes="(max-width: 650px) 100vw, 650px"
+            className="object-cover opacity-90"
+            priority
+          />
+          <QuestWindow title="LEVEL UP!" className="absolute inset-x-8 bottom-8 p-6 text-center">
+            <DialogTitle className="text-xl font-bold leading-relaxed">
+              おめでとう！
+              <br />
+              あなたは Lv.{levelUp} に なった！
+            </DialogTitle>
+            <DialogDescription className="sr-only">レベルが上がりました</DialogDescription>
+            <DialogClose asChild>
+              <Button type="button" variant="quest" className="mx-auto text-2xl">
+                つぎへ
+              </Button>
+            </DialogClose>
+          </QuestWindow>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -88,17 +77,17 @@ function XpBadgeStatus({ xp, level }: { xp: number; level: number }) {
     <div className="flex min-w-[600px] flex-1 items-center gap-4 rounded-md px-2 py-1">
       <div className="flex items-baseline gap-2">
         <span className="text-[10px] font-bold tracking-widest text-sky-600">LEVEL</span>
-        <span className="theme-readable text-2xl font-bold tracking-tighter">Lv {level}</span>
-        <span className="theme-readable-muted text-xs">XP {xp}</span>
+        <span className="text-2xl font-bold tracking-tighter">Lv {level}</span>
+        <span className="text-xs text-muted-foreground">XP {xp}</span>
       </div>
       <div className="flex min-w-[180px] flex-1 flex-col gap-1">
         <div className="h-2.5 w-full rounded-full border border-sky-300 bg-sky-100 p-[2px]">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-sky-600"
+            className="h-full rounded-full bg-linear-to-r from-sky-400 to-sky-600"
             style={{ width: `${Math.round(progress * 100)}%` }}
           />
         </div>
-        <div className="theme-readable-muted flex justify-between text-[10px] font-bold tracking-tight">
+        <div className="flex justify-between text-[10px] font-bold tracking-tight text-muted-foreground">
           <span>つぎの レベルまで {xpToNext} XP</span>
           <span>
             {xpIntoLevel} / {XP_PER_LEVEL}
