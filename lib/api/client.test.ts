@@ -54,4 +54,11 @@ describe("unwrap", () => {
     expect((error as ApiError).message).toBe("ログインが必要です");
     expect((error as ApiError).problem.code).toBe("unauthorized");
   });
+
+  it("throws a plain Error, not an ApiError, when the response is not a problem (the backend was unreachable)", async () => {
+    const error = await unwrap(Promise.resolve({ error: "Internal Server Error" })).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(ApiError);
+  });
 });
