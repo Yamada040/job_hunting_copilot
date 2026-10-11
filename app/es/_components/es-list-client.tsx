@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useEsEntries, type EsEntry } from "@/lib/api/es";
+import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { EmptyState } from "@/app/_components/empty-state";
 
 const TABS = [
   { label: "すべて", value: "all" },
@@ -43,6 +45,15 @@ export function EsListClient() {
   }, [items, query, tab]);
 
   if (error) return <ApiErrorMessage error={error} />;
+  if (items?.length === 0) {
+    return (
+      <EmptyState title="まだESがありません" description="企業を選んで、設問と回答を書くところから始めましょう。">
+        <Button asChild variant="quest">
+          <Link href={ROUTES.ES_NEW}>ESを作成する</Link>
+        </Button>
+      </EmptyState>
+    );
+  }
 
   return (
     <div className="space-y-6">

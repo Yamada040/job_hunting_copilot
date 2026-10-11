@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowTopRightOnSquareIcon, MagnifyingGlassIcon, StarIcon } from "@heroicons/react/24/outline";
 
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -13,6 +14,7 @@ import { COMPANY_STAGES, COMPANY_STAGE_LABELS } from "@/lib/companies/stages";
 import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { EmptyState } from "@/app/_components/empty-state";
 
 export function CompanyTable() {
   const { data: companies, error, isPending } = useCompanies();
@@ -31,6 +33,18 @@ export function CompanyTable() {
   }, [companies, stage, favoriteOnly, keyword]);
 
   if (error) return <ApiErrorMessage error={error} />;
+  if (companies?.length === 0) {
+    return (
+      <EmptyState
+        title="まだ企業がありません"
+        description="気になる企業を登録すると、選考状況やES・面接ログをまとめて管理できます。"
+      >
+        <Button asChild variant="quest">
+          <Link href={ROUTES.COMPANIES_NEW}>企業を登録する</Link>
+        </Button>
+      </EmptyState>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -83,7 +97,7 @@ export function CompanyTable() {
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="px-4 py-4 text-center text-muted-foreground">
-                  {isPending ? "読み込み中…" : "該当する企業がありません。"}
+                  {isPending ? "読み込み中…" : "該当する企業がありません。絞り込みやキーワードを変えてみてください。"}
                 </TableCell>
               </TableRow>
             ) : (

@@ -14,7 +14,7 @@ test("ユーザーAのESは、ユーザーBの一覧に出ず、URLを直接開�
 
   await pageB.goto("/es");
   // 読み込み中は一覧が空なので、読み込みが終わってから「出ていない」ことを確かめる（ユーザーBはESを作らない）
-  await expect(pageB.getByText("該当するESがありません")).toBeVisible();
+  await expect(pageB.getByText("まだESがありません")).toBeVisible();
   await expect(pageB.getByText(title)).toHaveCount(0);
 
   await pageB.goto(`/es/${esId}`);

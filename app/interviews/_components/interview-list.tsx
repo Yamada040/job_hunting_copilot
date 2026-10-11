@@ -3,11 +3,13 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useInterviewLogs } from "@/lib/api/interviews";
 import { ROUTES } from "@/lib/constants/routes";
 import { INTERVIEW_FORMAT_LABELS } from "@/lib/interviews/labels";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { EmptyState } from "@/app/_components/empty-state";
 
 export function InterviewList() {
   const { data: logs, error, isPending } = useInterviewLogs();
@@ -16,9 +18,14 @@ export function InterviewList() {
   if (isPending) return <Card className="p-6 text-sm">読み込み中…</Card>;
   if (logs.length === 0) {
     return (
-      <Card className="p-6 text-sm">
-        まだ面接ログがありません。右上の「面接終了後のログを追加」から記録を始めてください。
-      </Card>
+      <EmptyState
+        title="まだ面接ログがありません"
+        description="面接で聞かれた質問と答えを記録して、次の面接に活かしましょう。"
+      >
+        <Button asChild variant="quest">
+          <Link href={ROUTES.INTERVIEWS_NEW}>面接ログを追加する</Link>
+        </Button>
+      </EmptyState>
     );
   }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -10,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useWebtestQuestions } from "@/lib/api/webtests";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { EmptyState } from "@/app/_components/empty-state";
 
 export function WebtestList() {
   const [testType, setTestType] = useState("");
@@ -20,6 +22,18 @@ export function WebtestList() {
   const testTypeOptions = Array.from(new Set((all ?? []).map((q) => q.testType).filter((t): t is string => !!t)));
 
   if (error) return <ApiErrorMessage error={error} />;
+  if (all?.length === 0) {
+    return (
+      <EmptyState
+        title="まだ問題がありません"
+        description="受ける予定のWebテストの問題を登録して、解答の練習ができます。"
+      >
+        <Button asChild variant="quest">
+          <Link href={ROUTES.WEBTESTS_NEW}>問題を追加する</Link>
+        </Button>
+      </EmptyState>
+    );
+  }
 
   return (
     <Card className="gap-4 p-4">
@@ -52,7 +66,7 @@ export function WebtestList() {
           {items.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="py-4 text-center text-muted-foreground">
-                {isPending ? "読み込み中…" : "まだ問題がありません。右上の「問題を追加」から登録してください。"}
+                {isPending ? "読み込み中…" : "この形式の問題はありません。"}
               </TableCell>
             </TableRow>
           ) : (
