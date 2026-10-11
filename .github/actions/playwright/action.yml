@@ -11,10 +11,7 @@ runs:
       with:
         path: ~/.cache/ms-playwright
         key: playwright-${{ runner.os }}-${{ steps.version.outputs.version }}
+    # GitHub の Ubuntu のイメージには Chrome とそのライブラリが入っているので、OSのライブラリ（--with-deps・install-deps）は入れない
     - if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
-      run: ./node_modules/.bin/playwright install --with-deps chromium
-    # キャッシュに入るのはブラウザ本体だけなので、OSのライブラリは毎回入れる
-    - if: steps.cache.outputs.cache-hit == 'true'
-      shell: bash
-      run: ./node_modules/.bin/playwright install-deps chromium
+      run: ./node_modules/.bin/playwright install chromium
