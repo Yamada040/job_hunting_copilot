@@ -39,6 +39,5 @@ export const createSupabaseServerActionClient = async (): Promise<SupabaseClient
 };
 
 // Backward-compatible aliases
-export const createSupabaseServerClient = createSupabaseServerReadonlyClient;
 export const createSupabaseReadonlyClient = createSupabaseServerReadonlyClient;
 export const createSupabaseActionClient = createSupabaseServerActionClient;

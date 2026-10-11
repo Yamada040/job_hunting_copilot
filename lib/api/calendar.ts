@@ -4,7 +4,6 @@ import { api, unwrap } from "./client";
 import type { components } from "./schema";
 
 export type CalendarItem = components["schemas"]["CalendarItem"];
-export type CalendarEventType = components["schemas"]["CalendarEventType"];
 export type CalendarEventCreate = components["schemas"]["CalendarEventCreate"];
 export type CalendarEventUpdate = components["schemas"]["CalendarEventUpdate"];
 
