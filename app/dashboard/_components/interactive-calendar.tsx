@@ -114,17 +114,13 @@ export function InteractiveCalendar({ events }: Props) {
   // 保存・削除を楽観的に即時反映し、API失敗時はeventsへ自動ロールバックする
   const [optimisticEvents, applyOptimisticEvents] = useOptimistic(events, optimisticEventsReducer);
   const [, startDeleteTransition] = useTransition();
-  const [modalState, dispatch] = useReducer(
-    modalReducer,
-    null,
-    (): ModalState => ({
-      isModalOpen: false,
-      selectedDate: formatDateKey(new Date()),
-      editingId: null,
-      formState: { ...emptyForm },
-      deletingId: null,
-    }),
-  );
+  const [modalState, dispatch] = useReducer(modalReducer, null, (): ModalState => ({
+    isModalOpen: false,
+    selectedDate: formatDateKey(new Date()),
+    editingId: null,
+    formState: { ...emptyForm },
+    deletingId: null,
+  }));
   const { isModalOpen, selectedDate, editingId, formState, deletingId } = modalState;
   const todayKey = formatDateKey(new Date());
   const weekdayLabel = ["日", "月", "火", "水", "木", "金", "土"];
