@@ -69,6 +69,12 @@ export function AiResultPanel({
         )}
         <ApiErrorMessage error={error} />
 
+        {!text && !pending && (
+          <p className="rounded-xl border border-dashed bg-secondary/60 px-4 py-6 text-center text-sm text-muted-foreground">
+            まだ結果はありません。実行すると、ここに表示されます。
+          </p>
+        )}
+
         {text && (
           <Card variant="muted" className="gap-2 px-4">
             <div className="flex justify-end">
