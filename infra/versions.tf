@@ -16,20 +16,9 @@ terraform {
     }
   }
 
-  # state は Supabase Storage（S3互換）の非公開バケットに置く（サービスを増やさないため）。
-  # 接続先は backend.hcl、S3用のキーは環境変数 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY で渡す（README.md 参照）
-  backend "s3" {
-    key          = "job-seeker/terraform.tfstate"
-    use_lockfile = true
-
-    # AWS 以外の S3 互換ストレージなので、AWS 固有の確認は飛ばす
-    use_path_style              = true
-    skip_credentials_validation = true
-    skip_requesting_account_id  = true
-    skip_region_validation      = true
-    skip_metadata_api_check     = true
-    skip_s3_checksum            = true
-  }
+  # state は手元の terraform.tfstate に置く（git の対象外）。state には秘密の値が平文で入るため、
+  # 置き場所を terraform.tfvars と同じ手元だけにする。リモート（Supabase Storage）に置いていたときは、
+  # 漏れた service_role キーでバケットを読める経路があった
 }
 
 provider "vercel" {
