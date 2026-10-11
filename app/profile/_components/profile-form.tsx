@@ -22,7 +22,7 @@ const avatarOptions = [
 ];
 
 const textFields = [
-  { name: "fullName", label: "氏名", placeholder: "例）山田 太郎" },
+  { name: "fullName", label: "氏名", placeholder: "例）山田 太郎", required: true },
   { name: "university", label: "大学", placeholder: "例）○○大学" },
   { name: "faculty", label: "学部・学科", placeholder: "例）経済学部 経済学科" },
   { name: "targetIndustry", label: "志望業界（任意）", placeholder: "例）IT、コンサル、メーカー など" },
@@ -31,16 +31,29 @@ const textFields = [
 
 export function ProfileForm({ email }: { email: string }) {
   const { data, error } = useMe();
+  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
+  const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
   if (!data) return <Card className="px-8 text-sm">読み込み中…</Card>;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return <ProfileFormFields key={JSON.stringify(data)} me={data} email={email} />;
+  return (
+    <ProfileFormFields key={JSON.stringify(data)} me={data} email={email} saved={saved} onSavedChange={setSaved} />
+  );
 }
 
-function ProfileFormFields({ me, email }: { me: Me; email: string }) {
+function ProfileFormFields({
+  me,
+  email,
+  saved,
+  onSavedChange: setSaved,
+}: {
+  me: Me;
+  email: string;
+  saved: boolean;
+  onSavedChange: (saved: boolean) => void;
+}) {
   const updateMe = useUpdateMe();
-  const [saved, setSaved] = useState(false);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -75,6 +88,7 @@ function ProfileFormFields({ me, email }: { me: Me; email: string }) {
                   defaultValue={me[field.name] ?? ""}
                   maxLength={MAX_LENGTH}
                   placeholder={field.placeholder}
+                  required={"required" in field}
                 />
               </div>
             ))}

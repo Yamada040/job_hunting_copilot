@@ -20,19 +20,28 @@ import { InterviewForm } from "./interview-form";
 
 export function InterviewDetail({ id }: { id: string }) {
   const { data: log, error } = useInterviewLog(id);
+  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
+  const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
   if (!log) return <Card className="p-8 text-sm">読み込み中…</Card>;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return <InterviewDetailLoaded key={log.updatedAt} log={log} />;
+  return <InterviewDetailLoaded key={log.updatedAt} log={log} saved={saved} onSavedChange={setSaved} />;
 }
 
-function InterviewDetailLoaded({ log }: { log: InterviewLog }) {
+function InterviewDetailLoaded({
+  log,
+  saved,
+  onSavedChange: setSaved,
+}: {
+  log: InterviewLog;
+  saved: boolean;
+  onSavedChange: (saved: boolean) => void;
+}) {
   const router = useRouter();
   const updateLog = useUpdateInterviewLog(log.id);
   const deleteLog = useDeleteInterviewLog(log.id);
   const reviewLog = useReviewInterviewLog(log.id);
-  const [saved, setSaved] = useState(false);
 
   const handleDelete = () => {
     deleteLog.mutate(undefined, { onSuccess: () => router.push(ROUTES.INTERVIEWS) });

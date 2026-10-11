@@ -16,19 +16,28 @@ import { CompanyForm } from "./company-form";
 
 export function CompanyDetail({ id }: { id: string }) {
   const { data: company, error } = useCompany(id);
+  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
+  const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
   if (!company) return <Card className="p-8 text-sm">読み込み中…</Card>;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return <CompanyDetailLoaded key={company.updatedAt} company={company} />;
+  return <CompanyDetailLoaded key={company.updatedAt} company={company} saved={saved} onSavedChange={setSaved} />;
 }
 
-function CompanyDetailLoaded({ company }: { company: Company }) {
+function CompanyDetailLoaded({
+  company,
+  saved,
+  onSavedChange: setSaved,
+}: {
+  company: Company;
+  saved: boolean;
+  onSavedChange: (saved: boolean) => void;
+}) {
   const router = useRouter();
   const updateCompany = useUpdateCompany(company.id);
   const deleteCompany = useDeleteCompany(company.id);
   const analyzeCompany = useAnalyzeCompany(company.id);
-  const [saved, setSaved] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">

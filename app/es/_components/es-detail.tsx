@@ -22,20 +22,29 @@ import { EsForm } from "./es-form";
 
 export function EsDetail({ id }: { id: string }) {
   const { data: entry, error } = useEsEntry(id);
+  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
+  const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
   if (!entry) return <Card className="p-8 text-sm">読み込み中…</Card>;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return <EsDetailLoaded key={entry.updatedAt} entry={entry} />;
+  return <EsDetailLoaded key={entry.updatedAt} entry={entry} saved={saved} onSavedChange={setSaved} />;
 }
 
-function EsDetailLoaded({ entry }: { entry: EsEntry }) {
+function EsDetailLoaded({
+  entry,
+  saved,
+  onSavedChange: setSaved,
+}: {
+  entry: EsEntry;
+  saved: boolean;
+  onSavedChange: (saved: boolean) => void;
+}) {
   const router = useRouter();
   const updateEsEntry = useUpdateEsEntry(entry.id);
   const submitEsEntry = useSubmitEsEntry();
   const deleteEsEntry = useDeleteEsEntry(entry.id);
   const reviewEsEntry = useReviewEsEntry(entry.id);
-  const [saved, setSaved] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
