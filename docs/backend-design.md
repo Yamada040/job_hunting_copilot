@@ -391,6 +391,5 @@ GitHub Actions に次のGo用のチェックを追加し、devブランチの必
 ### リプレイス後に行うこと
 
 - エラー監視のSlack通知（Incoming Webhook）
-- Supabase の一時停止（7日間アクセスなし）を防ぐ定期アクセス（GitHub Actions から `/v1/health` を叩く）
 - 外部の企業データベースからの企業候補
 - 利用者が増えたら、AIのサービス全体の上限

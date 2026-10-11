@@ -66,3 +66,18 @@ resource "github_repository_ruleset" "default_branch" {
     }
   }
 }
+
+# 依存パッケージ（npm・Go・GitHub Actions）の既知の脆弱性を検知し、直すPRを Dependabot に作らせる。
+# 普段のバージョンアップのPRは作らせない（dependabot.yml を置かない）。脆弱性の修正だけに絞り、PRを増やさないため
+resource "github_repository_vulnerability_alerts" "this" {
+  repository = var.github_repository
+  enabled    = true
+}
+
+resource "github_repository_dependabot_security_updates" "this" {
+  repository = var.github_repository
+  enabled    = true
+
+  # 修正のPRは、脆弱性のアラートが有効でないと作れない
+  depends_on = [github_repository_vulnerability_alerts.this]
+}
