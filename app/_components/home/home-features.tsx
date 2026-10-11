@@ -12,14 +12,7 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import {
-  fadeInUp,
-  parchmentAccent,
-  parchmentCard,
-  parchmentHeading,
-  parchmentIconBox,
-  staggerChildren,
-} from "./parchment";
+import { fadeInUp, homeAccent, homeCard, homeHeading, homeIconBox, staggerChildren } from "./theme";
 import { SectionHeading } from "./section-heading";
 
 const features = [
@@ -70,15 +63,15 @@ export function HomeFeatures() {
             key={feature.title}
             variants={fadeInUp}
             whileHover={{ scale: 1.02, y: -5 }}
-            className={cn("gap-0 rounded-2xl p-8 transition-all duration-300", parchmentCard)}
+            className={cn("gap-0 rounded-2xl p-8 transition-all duration-300", homeCard)}
           >
-            <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-[#c9954f] to-[#9a4f00] text-primary-foreground shadow-md">
+            <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-200 bg-white text-slate-900 shadow-md">
               <feature.icon className="h-6 w-6" />
             </div>
-            <h3 className={cn("mb-3 text-xl font-semibold", parchmentHeading)}>{feature.title}</h3>
+            <h3 className={cn("mb-3 text-xl font-semibold", homeHeading)}>{feature.title}</h3>
             <p className="mb-4 text-base leading-6">{feature.description}</p>
-            <Badge className="h-auto gap-2 bg-[#f2dbb4] px-3 py-1 text-sm text-[#744000]">
-              <CheckCircleIcon className={cn("size-4!", parchmentAccent)} />
+            <Badge className="h-auto gap-2 bg-sky-50 px-3 py-1 text-sm text-slate-600">
+              <CheckCircleIcon className={cn("size-4!", homeAccent)} />
               {feature.benefit}
             </Badge>
           </MotionCard>
@@ -106,21 +99,21 @@ export function HomeSteps() {
           <MotionCard
             key={step.step}
             variants={fadeInUp}
-            className={cn("relative items-center gap-2 overflow-visible rounded-2xl p-6 text-center", parchmentCard)}
+            className={cn("relative items-center gap-2 overflow-visible rounded-2xl p-6 text-center", homeCard)}
           >
             <div
               className={cn(
                 "mb-2 inline-flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold",
-                parchmentIconBox,
+                homeIconBox,
               )}
             >
               {step.step}
             </div>
-            <h3 className={cn("text-lg font-semibold", parchmentHeading)}>{step.title}</h3>
+            <h3 className={cn("text-lg font-semibold", homeHeading)}>{step.title}</h3>
             <p className="text-sm">{step.description}</p>
             {index < steps.length - 1 && (
               <div className="absolute -right-3 top-1/2 hidden md:block">
-                <ArrowRightIcon className={cn("h-6 w-6", parchmentAccent)} />
+                <ArrowRightIcon className={cn("h-6 w-6", homeAccent)} />
               </div>
             )}
           </MotionCard>

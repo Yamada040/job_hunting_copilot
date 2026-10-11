@@ -17,7 +17,7 @@ import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "../layout/BrandLogo";
-import { parchmentAccent, parchmentCardDeep } from "./parchment";
+import { homeAccent, homeCardMuted } from "./theme";
 
 const acquisitionPoints = [
   "登録後すぐに使える。初期設定は最小限",
@@ -125,7 +125,7 @@ export function HomeHero() {
               <Badge
                 key={badge.label}
                 variant="outline"
-                className="h-auto gap-1.5 border-[#b8844a] bg-[#f2dbb4]/80 px-3 py-1 font-semibold text-[#744000] shadow-sm"
+                className="h-auto gap-1.5 border-sky-200 bg-white/80 px-3 py-1 font-semibold text-slate-600 shadow-sm"
               >
                 <badge.icon />
                 {badge.label}
@@ -139,8 +139,8 @@ export function HomeHero() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          <Card className={cn("gap-5 rounded-2xl p-6", parchmentCardDeep)}>
-            <p className="text-sm font-semibold text-[#744000]">今すぐ始める理由</p>
+          <Card className={cn("gap-5 rounded-2xl p-6", homeCardMuted)}>
+            <p className="text-sm font-semibold text-slate-600">今すぐ始める理由</p>
             <ul className="space-y-3">
               {acquisitionPoints.map((point, index) => (
                 <motion.li
@@ -148,9 +148,9 @@ export function HomeHero() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: 1 + index * 0.1 }}
-                  className="flex items-start gap-2 text-sm text-[#4a2f16]"
+                  className="flex items-start gap-2 text-sm text-slate-700"
                 >
-                  <CheckCircleIcon className={cn("mt-0.5 h-4 w-4 shrink-0", parchmentAccent)} />
+                  <CheckCircleIcon className={cn("mt-0.5 h-4 w-4 shrink-0", homeAccent)} />
                   {point}
                 </motion.li>
               ))}

@@ -21,7 +21,7 @@ export default function Home() {
         <HomeSteps />
         <HomeCallToAction />
         <HomeSecurity />
-        <footer className="pb-2 text-center text-xs text-[#6f4b25]">© 2026 就活copilot. All rights reserved.</footer>
+        <footer className="pb-2 text-center text-xs text-slate-600">© 2026 就活copilot. All rights reserved.</footer>
       </main>
     </div>
   );

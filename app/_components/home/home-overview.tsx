@@ -5,15 +5,7 @@ import { motion } from "framer-motion";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import {
-  fadeInUp,
-  parchmentAccent,
-  parchmentCard,
-  parchmentCardDeep,
-  parchmentHeading,
-  parchmentIconBox,
-  staggerChildren,
-} from "./parchment";
+import { fadeInUp, homeAccent, homeCard, homeCardMuted, homeHeading, homeIconBox, staggerChildren } from "./theme";
 import { SectionHeading } from "./section-heading";
 
 const summaries = [
@@ -52,8 +44,8 @@ export function HomeSummaries() {
   return (
     <section className="grid gap-4 md:grid-cols-3">
       {summaries.map((item) => (
-        <Card key={item.title} className={cn("gap-2 px-4", parchmentCard)}>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#744000]">{item.title}</p>
+        <Card key={item.title} className={cn("gap-2 px-4", homeCard)}>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-600">{item.title}</p>
           <p className="text-sm">{item.description}</p>
         </Card>
       ))}
@@ -63,17 +55,17 @@ export function HomeSummaries() {
 
 export function HomeQuickGuide() {
   return (
-    <Card className={cn("rounded-2xl py-6", parchmentCardDeep)}>
+    <Card className={cn("rounded-2xl py-6", homeCardMuted)}>
       <CardHeader className="px-6">
         <CardTitle>
-          <h2 className={cn("text-lg font-bold", parchmentHeading)}>はじめての方へ</h2>
+          <h2 className={cn("text-lg font-bold", homeHeading)}>はじめての方へ</h2>
         </CardTitle>
       </CardHeader>
       <CardContent className="px-6">
         <ul className="space-y-2 text-sm leading-6">
           {quickGuide.map((item) => (
             <li key={item} className="flex items-start gap-2">
-              <span className={cn("pt-1 text-[0.7rem]", parchmentAccent)}>▶</span>
+              <span className={cn("pt-1 text-[0.7rem]", homeAccent)}>▶</span>
               <span>{item}</span>
             </li>
           ))}
@@ -100,13 +92,13 @@ export function HomeContexts() {
             variants={fadeInUp}
             className={cn(
               "gap-2 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(116,64,0,0.18)]",
-              parchmentCard,
+              homeCard,
             )}
           >
-            <div className={cn("mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl", parchmentIconBox)}>
+            <div className={cn("mb-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl", homeIconBox)}>
               <item.icon className="h-5 w-5" />
             </div>
-            <h3 className={cn("text-lg font-semibold", parchmentHeading)}>{item.title}</h3>
+            <h3 className={cn("text-lg font-semibold", homeHeading)}>{item.title}</h3>
             <p className="text-sm leading-6">{item.description}</p>
           </MotionCard>
         ))}
