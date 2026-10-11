@@ -2,6 +2,16 @@
 
 import { useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 type CalendarEvent = {
   id: string;
   date: string;
@@ -49,56 +59,53 @@ export function EventListModal({ events, trigger }: Props) {
         {trigger}
       </div>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-2xl rounded-xl border border-[#3f3f46] bg-[#111111] p-5 text-white shadow-xl">
-            <div className="flex items-center">
-              <h3 className="text-lg font-semibold text-white">締切・面接の一覧</h3>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="p-5 sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">締切・面接の一覧</DialogTitle>
+            <DialogDescription className="sr-only">締切・面接の一覧</DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[70vh] space-y-2 overflow-y-auto">
+            {visible.map((evt) => (
+              <div key={evt.id} className="rounded-lg border bg-secondary/60 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="font-semibold">
+                    {evt.type === "es" ? "ES締切" : evt.type === "interview" ? "面接" : "予定"}
+                  </span>
+                  <span>{evt.date || "未設定"}</span>
+                </div>
+                <p className="mt-1 text-sm font-semibold">{evt.company || evt.title || "件名未設定"}</p>
+                <p className="text-xs text-muted-foreground">{evt.title}</p>
+              </div>
+            ))}
+
+            {visible.length === 0 && (
+              <div className="rounded-lg border border-dashed bg-secondary/60 p-3 text-xs text-muted-foreground">
+                表示できる予定はありません。
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              {visible.length} / {sorted.length} 件
             </div>
-
-            <div className="mt-4 max-h-[70vh] overflow-y-auto space-y-2">
-              {visible.map((evt) => (
-                <div key={evt.id} className="rounded-lg border border-[#3f3f46] bg-[#1a1a1a] px-3 py-2 text-sm">
-                  <div className="flex items-center justify-between text-xs text-white/60">
-                    <span className="font-semibold">
-                      {evt.type === "es" ? "ES締切" : evt.type === "interview" ? "面接" : "予定"}
-                    </span>
-                    <span>{evt.date || "未設定"}</span>
-                  </div>
-                  <p className="mt-1 text-sm font-semibold text-white">{evt.company || evt.title || "件名未設定"}</p>
-                  <p className="text-xs text-white/60">{evt.title}</p>
-                </div>
-              ))}
-
-              {visible.length === 0 && (
-                <div className="rounded-lg border border-dashed border-[#3f3f46] bg-[#1a1a1a] p-3 text-xs text-white/60">
-                  表示できる予定はありません。
-                </div>
+            <div className="flex gap-2">
+              {canLoadMore && (
+                <Button type="button" variant="quest" onClick={() => setVisibleCount((v) => v + 10)}>
+                  さらに読み込む
+                </Button>
               )}
-            </div>
-
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-xs text-white/60">
-                {visible.length} / {sorted.length} 件
-              </div>
-              <div className="flex gap-2">
-                {canLoadMore && (
-                  <button
-                    type="button"
-                    onClick={() => setVisibleCount((v) => v + 10)}
-                    className="sidebar-link-style text-sm"
-                  >
-                    さらに読み込む
-                  </button>
-                )}
-                <button type="button" onClick={() => setOpen(false)} className="sidebar-link-style text-sm">
+              <DialogClose asChild>
+                <Button type="button" variant="quest">
                   閉じる
-                </button>
-              </div>
+                </Button>
+              </DialogClose>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

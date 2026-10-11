@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import {
   useAnalyzeSelf,
@@ -11,6 +11,11 @@ import {
 } from "@/lib/api/assessments";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
+import { ConfirmDialog } from "@/app/_components/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Answers = SelfAnalysisAnswers;
 
@@ -28,7 +33,7 @@ export default function SelfAnalysisForm() {
   const { data: result, error, isPending } = useSelfAnalysisResult();
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (isPending) return <div className="dq-card p-6 text-sm text-white">読み込み中…</div>;
+  if (isPending) return <Card className="px-6 text-sm">読み込み中…</Card>;
   return <SelfAnalysisFormLoaded result={result} />;
 }
 
@@ -40,11 +45,6 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
   const locked = result !== null;
   const saving = submit.isPending;
 
-  const saveAction = () => {
-    if (!window.confirm("回答は1回だけ保存できます。この内容で保存しますか？")) return;
-    submit.mutate(answers);
-  };
-
   const handleChange = (key: keyof Answers, value: string) => {
     if (locked) return;
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -52,12 +52,16 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
-      <div className="dq-card p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="theme-readable text-lg font-semibold">質問リスト</h2>
-        </div>
-        <div className="mt-4 space-y-3">
-          <div className="dq-panel px-3 py-2 text-xs font-semibold text-yellow-200">※ 現在は一回しかできません。</div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2 className="text-lg font-semibold">質問リスト</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-sky-700">
+            ※ 現在は一回しかできません。
+          </Card>
           <TextArea label="強み・得意なこと" value={answers.strengths} onChange={(v) => handleChange("strengths", v)} />
           <TextArea
             label="価値観（仕事選びで譲れないこと）"
@@ -86,18 +90,21 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
             onChange={(v) => handleChange("future", v)}
           />
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={saveAction}
-              disabled={saving || locked}
-              className="dq-button disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {locked ? "実施済み" : saving ? "保存中..." : "保存する"}
-            </button>
+            <ConfirmDialog
+              trigger={
+                <Button type="button" variant="quest" disabled={saving || locked}>
+                  {locked ? "実施済み" : saving ? "保存中..." : "保存する"}
+                </Button>
+              }
+              title="回答を保存しますか？"
+              description="回答は1回だけ保存できます。この内容で保存しますか？"
+              confirmLabel="保存する"
+              onConfirm={() => submit.mutate(answers)}
+            />
           </div>
           <ApiErrorMessage error={submit.error} />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <AiResultPanel
         title="AI自己分析"
@@ -115,10 +122,11 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
 }
 
 function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const id = useId();
   return (
-    <label className="block space-y-2">
-      <span className="theme-readable text-sm font-medium">{label}</span>
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className="dq-input text-sm" />
-    </label>
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} rows={3} />
+    </div>
   );
 }

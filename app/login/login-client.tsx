@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/supabase-browser";
 
 export function LoginClient() {
@@ -25,15 +27,15 @@ export function LoginClient() {
   return (
     <div className="space-y-3">
       <form action={formAction}>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="dq-button w-full text-sm disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" size="lg" disabled={isPending} className="w-full">
           {isPending ? "リダイレクト中..." : "Googleでログイン"}
-        </button>
+        </Button>
       </form>
-      {state?.error ? <p className="text-xs text-rose-600">{state.error}</p> : null}
+      {state?.error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
+      ) : null}
     </div>
   );
 }

@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useEsEntries, type EsEntry } from "@/lib/api/es";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 
@@ -43,26 +47,26 @@ export function EsListClient() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2 text-xs">
+        <div className="flex flex-wrap gap-2">
           {TABS.map((t) => (
-            <button
+            <Button
               key={t.value}
               type="button"
+              size="xs"
+              variant={tab === t.value ? "default" : "outline"}
               onClick={() => setTab(t.value)}
-              className={`rounded-full border px-3 py-1 ${
-                tab === t.value ? "border-white bg-black text-white" : "border-white/40 bg-black/70 text-white/70"
-              }`}
+              className="rounded-full px-3"
             >
               {t.label}
               {counts?.[t.value] !== undefined ? ` (${counts[t.value as keyof typeof counts]})` : ""}
-            </button>
+            </Button>
           ))}
         </div>
-        <input
+        <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="タイトル / 企業名 / タグで検索"
-          className="w-full rounded-full border border-white/30 bg-black/70 px-4 py-2 text-xs text-white outline-none ring-0 placeholder:text-white/50 focus:border-yellow-400 sm:w-64"
+          className="w-full rounded-full bg-card px-4 text-xs sm:w-64"
         />
       </div>
 
@@ -71,36 +75,31 @@ export function EsListClient() {
           <Link
             key={es.id}
             href={`/es/${es.id}`}
-            className="rounded-xl border border-[#3f3f46] bg-[#111111] px-4 py-4 text-white transition hover:-translate-y-0.5"
+            className="rounded-xl bg-card px-4 py-4 text-card-foreground shadow-window ring-1 ring-border transition hover:-translate-y-0.5"
           >
-            <p className="text-xs text-white/70">{es.company.name}</p>
+            <p className="text-xs text-muted-foreground">{es.company.name}</p>
             <p className="text-sm font-semibold">{es.title}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/70">
-              <span className="rounded-full border border-white/40 bg-black/60 px-2 py-1 text-white">
-                {STATUS_LABEL_MAP[es.status]}
-              </span>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+              <Badge variant="outline">{STATUS_LABEL_MAP[es.status]}</Badge>
               {es.tags.length ? (
                 es.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-yellow-300/40 bg-yellow-500/20 px-2 py-1 text-yellow-200"
-                  >
+                  <Badge key={tag} className="bg-sky-100 text-sky-700">
                     {tag}
-                  </span>
+                  </Badge>
                 ))
               ) : (
-                <span className="text-white/50">タグなし</span>
+                <span>タグなし</span>
               )}
             </div>
-            <p className="mt-1 text-xs text-white/60">
+            <p className="mt-1 text-xs text-muted-foreground">
               締切: {es.deadline ?? "-"} ／ 更新日: {new Date(es.updatedAt).toLocaleDateString()}
             </p>
           </Link>
         ))}
         {filtered.length === 0 ? (
-          <div className="rounded-xl border border-[#3f3f46] bg-[#111111] px-6 py-6 text-sm text-white/80">
+          <Card className="px-6 text-sm">
             {isPending ? "読み込み中…" : "該当するESがありません。フィルタやキーワードを変えてみてください。"}
-          </div>
+          </Card>
         ) : null}
       </div>
     </div>

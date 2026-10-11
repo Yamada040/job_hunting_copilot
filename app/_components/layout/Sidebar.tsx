@@ -14,7 +14,8 @@ import {
   LightBulbIcon,
   ChartBarSquareIcon,
 } from "@heroicons/react/24/outline";
-import { clsx } from "clsx";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { useMe } from "@/lib/api/me";
 import { ROUTES } from "@/lib/constants/routes";
 
@@ -29,24 +30,20 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
   return (
     <Link
       href={item.href}
-      className={clsx(
-        "group flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold transition",
-        isActive ? "text-yellow-400" : "text-white hover:text-yellow-400",
+      aria-current={isActive ? "page" : undefined}
+      className={cn(
+        "group flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold transition hover:text-sky-500",
+        isActive ? "text-sky-600" : "text-foreground",
       )}
     >
       <span aria-hidden className="shrink-0 text-[0.7rem] transition-transform group-hover:translate-x-1">
         ▶
       </span>
-      <item.icon
-        className={clsx(
-          "h-4 w-4 shrink-0 transition-colors",
-          isActive ? "text-yellow-400" : "text-white group-hover:text-yellow-400",
-        )}
-      />
+      <item.icon className="h-4 w-4 shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs">{item.label}</div>
         {item.description && (
-          <div className="mt-0.5 truncate text-[0.65rem] font-normal text-white/70">{item.description}</div>
+          <div className="mt-0.5 truncate text-[0.65rem] font-normal text-muted-foreground">{item.description}</div>
         )}
       </div>
     </Link>
@@ -134,7 +131,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="app-sidebar fixed left-0 top-20 z-40 h-[calc(100vh-5rem)] w-60 border-r backdrop-blur">
+    <div className="fixed left-0 top-20 z-40 h-[calc(100vh-5rem)] w-60 border-r border-slate-400/20 bg-[#f8fcff]/98 backdrop-blur">
       <div className="flex h-full flex-col gap-6 overflow-y-auto px-5 py-7">
         <nav className="flex-1">
           <div className="space-y-3">
@@ -148,12 +145,13 @@ export function Sidebar() {
           </div>
         </nav>
 
-        <div className="border-t border-white/20 pt-5">
+        <div>
+          <Separator className="mb-5" />
           <div className="space-y-2">
             <form action="/auth/signout" method="post">
               <button
                 type="submit"
-                className="group flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold text-white transition hover:text-yellow-400"
+                className="group flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold text-foreground transition hover:text-sky-500"
               >
                 <span
                   aria-hidden={true}
@@ -161,7 +159,7 @@ export function Sidebar() {
                 >
                   ▶
                 </span>
-                <ArrowRightOnRectangleIcon className="h-4 w-4 shrink-0 text-white transition-colors group-hover:text-yellow-400" />
+                <ArrowRightOnRectangleIcon className="h-4 w-4 shrink-0" />
                 <div className="min-w-0 flex-1 text-left">
                   <div className="truncate text-xs">ログアウト</div>
                 </div>

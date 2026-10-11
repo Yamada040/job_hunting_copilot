@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useCompanies, useCreateCompany, type CompanySummary } from "@/lib/api/companies";
 import { ApiErrorMessage } from "./api-error-message";
 
@@ -23,10 +25,10 @@ export function CompanyPicker({ value, onChange }: Props) {
   if (value) {
     return (
       <div className="flex items-center gap-2">
-        <span className="dq-input flex-1 text-sm">{value.name}</span>
-        <button type="button" className="dq-button-secondary text-xs" onClick={() => onChange(null)}>
+        <Input value={value.name} readOnly aria-label="企業" className="flex-1" />
+        <Button type="button" variant="quest-muted" className="text-xs" onClick={() => onChange(null)}>
           変更
-        </button>
+        </Button>
       </div>
     );
   }
@@ -36,7 +38,7 @@ export function CompanyPicker({ value, onChange }: Props) {
 
   return (
     <div className="relative space-y-1">
-      <input
+      <Input
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -45,16 +47,15 @@ export function CompanyPicker({ value, onChange }: Props) {
         onFocus={() => setOpen(true)}
         maxLength={100}
         placeholder="企業名を入力して選ぶ"
-        className="dq-input text-sm"
         aria-label="企業"
       />
       {open && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-white/30 bg-black text-sm text-white">
+        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg bg-popover text-sm text-popover-foreground shadow-md ring-1 ring-border">
           {candidates?.slice(0, 10).map((c) => (
             <li key={c.id}>
               <button
                 type="button"
-                className="w-full px-3 py-2 text-left hover:bg-white/10"
+                className="w-full px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground"
                 onClick={() => onChange({ id: c.id, name: c.name })}
               >
                 {c.name}
@@ -66,7 +67,7 @@ export function CompanyPicker({ value, onChange }: Props) {
               <button
                 type="button"
                 disabled={createCompany.isPending}
-                className="w-full px-3 py-2 text-left text-yellow-300 hover:bg-white/10"
+                className="w-full px-3 py-2 text-left text-primary hover:bg-accent"
                 onClick={() =>
                   createCompany.mutate(
                     { name },

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRightIcon, HomeIcon } from "@heroicons/react/24/outline";
-import { clsx } from "clsx";
 import { BrandLogo } from "./BrandLogo";
 
 export interface BreadcrumbItem {
@@ -86,7 +85,7 @@ export function Header({
   showBrand,
 }: HeaderProps) {
   return (
-    <header className="app-header fixed left-0 top-0 z-50 w-full border-b px-6 py-4 backdrop-blur">
+    <header className="fixed left-0 top-0 z-50 w-full border-b border-sky-300/45 bg-white/94 px-6 py-4 backdrop-blur">
       <div className="flex flex-col gap-3">
         {actionsPlacement === "left" ? (
           <div className="flex items-center justify-between gap-6">
@@ -95,19 +94,19 @@ export function Header({
               {leftContent ? <div className="flex-shrink-0">{leftContent}</div> : null}
             </div>
             <div className="flex-1 min-w-0">
-              {title && <h1 className="theme-readable truncate text-2xl font-semibold">{title}</h1>}
-              {description && <p className="theme-readable-muted mt-1 text-sm">{description}</p>}
+              {title && <h1 className="truncate text-2xl font-semibold">{title}</h1>}
+              {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
             </div>
-            {actions ? <div className="header-nav-actions flex-shrink-0 flex items-center gap-2">{actions}</div> : null}
+            {actions ? <div className="flex flex-shrink-0 items-center gap-2">{actions}</div> : null}
           </div>
         ) : (
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
-              {title && <h1 className="theme-readable truncate text-2xl font-semibold">{title}</h1>}
-              {description && <p className="theme-readable-muted mt-1 text-sm">{description}</p>}
+              {title && <h1 className="truncate text-2xl font-semibold">{title}</h1>}
+              {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
             </div>
 
-            <div className={clsx("header-nav-actions ml-4 flex items-center gap-2")}>{actions}</div>
+            <div className="ml-4 flex items-center gap-2">{actions}</div>
           </div>
         )}
       </div>
@@ -122,17 +121,17 @@ export function Breadcrumbs({ breadcrumbs }: { breadcrumbs?: BreadcrumbItem[] })
   if (generatedBreadcrumbs.length <= 1) return null;
 
   return (
-    <nav className="theme-readable-muted mt-4 flex items-center space-x-1 text-xs font-bold">
+    <nav className="mt-4 flex items-center space-x-1 text-xs font-bold text-muted-foreground">
       <HomeIcon className="h-4 w-4" />
       <ChevronRightIcon className="h-4 w-4 opacity-60" />
 
       {generatedBreadcrumbs.map((item, index) => (
         <div key={item.href} className="flex items-center space-x-1">
           {index === generatedBreadcrumbs.length - 1 ? (
-            <span className="theme-readable">{item.label}</span>
+            <span className="text-foreground">{item.label}</span>
           ) : (
             <>
-              <Link href={item.href} className="transition-colors hover:text-yellow-300">
+              <Link href={item.href} className="transition-colors hover:text-sky-500">
                 {item.label}
               </Link>
               <ChevronRightIcon className="h-4 w-4 opacity-60" />
