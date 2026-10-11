@@ -1,0 +1,32 @@
+name: Cache
+
+# PR のキャッシュはその PR の中でしか使えず、新しい PR は毎回キャッシュなしで始まる。
+# PR からも読める dev にキャッシュを置くため、dev への push で依存だけを入れる。
+# test.yml・go.yml を dev でも丸ごと動かす案は、マージ前の最新化で確かめ済みの内容を流し直すだけで Actions の時間を食うため採らない
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: cache
+  cancel-in-progress: true
+
+jobs:
+  cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      # モジュールに加えてビルドの結果もキャッシュに入れ、e2e の go run を速くする
+      - working-directory: backend
+        run: go build ./...
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: ./.github/actions/playwright

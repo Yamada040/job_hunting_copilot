@@ -1,0 +1,20 @@
+name: Playwright のブラウザを入れる
+description: Chromium を Playwright のバージョンごとにキャッシュして入れる。npm ci の後に使う
+runs:
+  using: composite
+  steps:
+    - id: version
+      shell: bash
+      run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v4
+      id: cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.version.outputs.version }}
+    - if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: ./node_modules/.bin/playwright install --with-deps chromium
+    # キャッシュに入るのはブラウザ本体だけなので、OSのライブラリは毎回入れる
+    - if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: ./node_modules/.bin/playwright install-deps chromium
