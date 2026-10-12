@@ -1,6 +1,6 @@
 # データベーススキーマ リファレンス
 
-- 実体: `supabase/migrations/*.sql`（Supabase CLI で管理する。dev へのマージで GitHub Actions が本番に適用する）
+- 実体: `supabase/migrations/*.sql`（Supabase CLI で管理する。master へのリリースで GitHub Actions が本番に適用する）
 - 設計の判断とその理由: [backend-design.md](./backend-design.md) の4章
 - Go の型: `backend/internal/db/`（sqlc が migrations と `backend/internal/db/queries/` から生成する）
 
@@ -61,5 +61,5 @@ erDiagram
 ## マイグレーションの書き方
 
 - `supabase migration new <名前>` でファイルを作る
-- dev へのマージで本番に適用され、Vercel のデプロイとの順番は保証されない。**1つ前のバージョンのコードでも動く形で書く**（列の追加が先、不要な列の削除は次のリリース）
+- master へのリリースで本番に適用され、成功してから Vercel にデプロイされる。適用してからデプロイが終わるまでは古いコードが新しいDBで動くので、**1つ前のバージョンのコードでも動く形で書く**（列の追加が先、不要な列の削除は次のリリース）
 - スキーマを変えたら、`backend` で `go generate ./...` を実行して sqlc のコードを更新する

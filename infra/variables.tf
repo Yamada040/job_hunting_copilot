@@ -12,6 +12,12 @@ variable "github_token" {
   sensitive   = true
 }
 
+variable "vercel_deploy_token" {
+  description = "GitHub Actions（release.yml）が Vercel の本番にデプロイするためのトークン。Terraform 用とは別に発行し、漏れたときに個別に止められるようにする"
+  type        = string
+  sensitive   = true
+}
+
 variable "supabase_access_token" {
   description = "Supabase の Access Token。Auth Config・Data API Config の Read-write 権限が必要"
   type        = string
@@ -23,6 +29,11 @@ variable "supabase_access_token" {
 variable "vercel_project_id" {
   type    = string
   default = "prj_RvozCC16Ybrk0Ym5eT83w16WVHZh"
+}
+
+variable "vercel_team_id" {
+  type    = string
+  default = "team_SdVSOgPcd6j56NQxtmXBCgbR"
 }
 
 variable "github_owner" {
