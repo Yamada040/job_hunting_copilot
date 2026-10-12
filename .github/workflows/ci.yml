@@ -101,7 +101,7 @@ jobs:
       - run: npm run test
 
   # 生成コードの鮮度・lint・テストを1ジョブにまとめる（Goのモジュールのダウンロードを重複させない）
-  go:
+  backend:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.workflows == 'true') }}
     runs-on: ubuntu-latest

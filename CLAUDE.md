@@ -284,13 +284,13 @@ backend/
 - `.github/workflows/ci.yml`: PR ごとに、変わった場所に関係するジョブだけを走らせる（`changes` ジョブで判定し、関係ないジョブは `if:` でスキップ。スキップは必須チェックで成功扱い）
   - `checks`（lint/type-check/format:check/APIの型の鮮度）: 常に
   - `build`（本番ビルド確認）・`unit`（Vitest）: フロント・依存・ワークフローの変更
-  - `go`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）: `backend/`・`supabase/`・ワークフローの変更
+  - `backend`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）: `backend/`・`supabase/`・ワークフローの変更
   - `e2e`（Playwright。CIの中で Supabase を起動する）: `backend/`・`supabase/`・`e2e/`・依存・ワークフローの変更。フロントだけの変更では走らせない
 - `.github/workflows/cache.yml`: dev への push で、Go のモジュールとビルド結果・npm・Playwright のブラウザのキャッシュを dev に置く（PR は自分のキャッシュと dev のキャッシュしか読めないため）
 - `.github/workflows/migrate.yml`: dev へのマージで、本番の Supabase にマイグレーションを適用する
 - `.github/workflows/keepalive.yml`: 毎日 `/v1/health` を呼び、Supabase の無料プランの一時停止（7日間アクセスが無いと止まる）を防ぐ
 - Dependabot: 依存パッケージの既知の脆弱性を検知し、直すPRを作る。普段のバージョンアップのPRは作らない（`infra/github.tf`）
-- devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`go`/`e2e`）を要求し、マージ前にブランチを最新化するルールセットが設定されている（`infra/github.tf`）
+- devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`backend`/`e2e`）を要求し、マージ前にブランチを最新化するルールセットが設定されている（`infra/github.tf`）
 
 ### ブランチ運用
 
