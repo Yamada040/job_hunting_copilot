@@ -23,8 +23,8 @@ describe("coverflowLayout", () => {
   });
 
   it("左右のカードは内側へ傾けて奥へ下げ、左右で向きを反対にする", () => {
-    expect(coverflowLayout(1).transform).toBe("translateX(230px) translateZ(-220px) rotateY(-50deg)");
-    expect(coverflowLayout(-2).transform).toBe("translateX(-350px) translateZ(-300px) rotateY(50deg)");
+    expect(coverflowLayout(1).transform).toBe("translateX(300px) translateZ(-220px) rotateY(-50deg)");
+    expect(coverflowLayout(-2).transform).toBe("translateX(-430px) translateZ(-300px) rotateY(50deg)");
   });
 
   it("左右3枚までは不透明のまま奥ほどもやを濃くし、その外側は消す", () => {

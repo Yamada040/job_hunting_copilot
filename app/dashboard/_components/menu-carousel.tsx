@@ -22,7 +22,7 @@ export type CarouselItem = {
 };
 
 // ドラッグした距離（px）を、送るカードの枚数に直す割合
-const DRAG_CARDS_PER_PIXEL = 1 / 200;
+const DRAG_CARDS_PER_PIXEL = 1 / 260;
 // 離したときの速さ（px/ms）から、慣性で余分に回すカードの数への割合と上限
 const FLING_CARDS_PER_SPEED = 2.5;
 const MAX_FLING_CARDS = 3;
@@ -98,7 +98,7 @@ export function MenuCarousel({ items }: { items: CarouselItem[] }) {
     <div className="space-y-2">
       <div
         className={cn(
-          "relative h-[32rem] cursor-grab touch-pan-y select-none overflow-hidden rounded-3xl",
+          "relative h-[26rem] cursor-grab touch-pan-y select-none overflow-hidden rounded-3xl",
           dragging && "cursor-grabbing",
         )}
         onPointerDown={(e) => {

@@ -11,7 +11,7 @@ const company = `主要操作商事-${stamp}`;
 test("企業を登録して編集する", async ({ page }) => {
   await page.goto("/companies/new");
   await page.getByLabel("企業名").fill(company);
-  await page.getByRole("button", { name: "追加する" }).click();
+  await page.getByRole("button", { name: "追加する", exact: true }).click();
   await expect(page).toHaveURL(/\/companies\/[0-9a-f-]{36}$/);
   await page.getByLabel("業界").fill("IT");
   await page.getByRole("button", { name: "保存する" }).click();
@@ -22,7 +22,7 @@ test("企業を登録して編集する", async ({ page }) => {
 
 test("ESを下書き保存して提出する", async ({ page }) => {
   await page.goto("/es/new");
-  await page.getByLabel("企業").fill(company);
+  await page.getByLabel("企業", { exact: true }).fill(company);
   await page.getByRole("button", { name: company, exact: true }).click();
   await page.locator('input[name="title"]').fill(`本選考ES-${stamp}`);
   await page.getByRole("button", { name: "下書きとして保存" }).click();
@@ -34,7 +34,7 @@ test("ESを下書き保存して提出する", async ({ page }) => {
 
 test("面接ログを記録する", async ({ page }) => {
   await page.goto("/interviews/new");
-  await page.getByLabel("企業").fill(company);
+  await page.getByLabel("企業", { exact: true }).fill(company);
   await page.getByRole("button", { name: company, exact: true }).click();
   await page.getByLabel("面接の回次").fill("一次");
   await page.getByLabel("実施日").fill("2026-10-01");
@@ -84,7 +84,18 @@ test("ダッシュボードのカルーセルを回して画面を開く", async
   await expect(page).toHaveURL(/\/companies$/);
 });
 
-test("サイドバーのリンクで移動する", async ({ page }) => {
+test("＋から予定をその場で追加すると、ホームの直近の予定に出る", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "追加する（N）" }).click();
+  await page.getByRole("button", { name: "予定を追加" }).click();
+  await page.getByLabel("タイトル").fill(`すぐ追加-${stamp}`);
+  await page.getByRole("dialog").getByRole("button", { name: "予定を追加" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  // 直近の予定の行はリンク（カルーセルのカレンダーのカードにも同じ名前が出るので、行に絞る）
+  await expect(page.getByRole("link", { name: new RegExp(`すぐ追加-${stamp}`) })).toBeVisible();
+});
+
+test("下のメニューのリンクで移動する", async ({ page }) => {
   await page.goto("/dashboard");
   await page.getByRole("link", { name: /企業管理/ }).click();
   await expect(page).toHaveURL(/\/companies$/);

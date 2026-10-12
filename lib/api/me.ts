@@ -8,7 +8,7 @@ export type ProfileUpdate = components["schemas"]["ProfileUpdate"];
 
 export const meQueryKey = ["me"] as const;
 
-/** ログイン中のユーザーのプロフィール・XP・レベル。ヘッダーやサイドバーなど複数の場所で、1回の取得を共有する。 */
+/** ログイン中のユーザーのプロフィール・XP・レベル。ヘッダーや下のメニューなど複数の場所で、1回の取得を共有する。 */
 export function useMe() {
   return useQuery({
     queryKey: meQueryKey,

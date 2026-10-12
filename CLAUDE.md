@@ -95,7 +95,7 @@ flowchart LR
 - **ブラウザからバックエンドのAPIを直接呼ぶ**（SPA型）: バックエンドのAPIは `/v1/...` で Next.js と同じドメインに置かれている。`lib/api/client.ts` の生成クライアント経由で呼び、`fetch()` を直接書かない
 - **サーバーのデータのキャッシュには TanStack Query を使う**（`lib/api/<機能>.ts` のフック）。更新のレスポンスで関連するキャッシュを書き換える。XPが付く操作は、レスポンスの `xp` で `applyXpResult` を呼びヘッダーの表示を更新する
 - 画面だけの状態は props と hooks で扱い、Redux・Zustand などの汎用の状態管理ライブラリは使わない
-- **ブラウザに保存してよい値**: 業務データはバックエンドのDBを正とし、`localStorage` / `sessionStorage` に保存しない。ブラウザに残すのは、Supabase Auth のCookie（ログインセッション）と、端末ごとの表示設定である `localStorage` の `sidebar-open`（サイドバーの開閉）だけ。開閉状態を端末間で同期したくなったら、`profiles` の設定としてバックエンドに移す
+- **ブラウザに保存してよい値**: 業務データはバックエンドのDBを正とし、`localStorage` / `sessionStorage` に保存しない。ブラウザに残すのは、Supabase Auth のCookie（ログインセッション）だけ。端末ごとの表示設定が必要になったら、まず `profiles` の設定としてバックエンドに置けないか考える
 - **ローカル開発**: `next dev` は `/v1` を `API_ORIGIN`（既定 `http://localhost:8080`）のバックエンドに転送する
 
 ### バックエンド（Go）の構成
@@ -182,7 +182,8 @@ backend/
 
 **コンポーネント構成**:
 
-- ページレベルのレイアウト: `app/_components/layout/`（`AppLayout`）
+- ページレベルのレイアウト: `app/_components/layout/`（`AppLayout`）。ヘッダー（`AppHeader`、レベル・XPの表示）と下のメニュー（`Dock`）は、画面を移っても動きや演出が途切れないよう、各画面ではなくルートのレイアウト（`app/layout.tsx`）に置く
+- レベル・XPの表示: `app/_components/xp-badge.tsx` と `app/_components/xp/`（紋章・ゲージ・レベルアップの演出）。ゲージの繰り上がりの順番は `lib/xp/gauge.ts`
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
 - 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示、`ConfirmDialog`）
 - shadcn/ui の部品: `components/ui/`
@@ -255,7 +256,7 @@ backend/
 **UIの一貫性**:
 
 - shadcn/ui の部品（`Card`・`Button`）をベースにする
-- サイドバーのメニューは、ホバーで淡い背景、今いる画面は `bg-accent` で示す
+- 画面の移動は、画面下のアイコンの帯（`Dock`、`app/_components/layout/Dock.tsx`）で行う。ゲームのメニューのように、どの画面からも1回で移れる。印を滑らせるため、各画面ではなくルートのレイアウト（`app/layout.tsx`）に置く
 
 ### テスト
 
@@ -365,7 +366,7 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 - `/webtests`, `/webtests/new`, `/webtests/[id]` — Webテスト練習
 - `/profile` — プロフィール/目標の編集
 - `/contact` — フィードバックフォーム（ログイン済みユーザー向け）
-- `/developer` — 開発者向け管理ページ（バックエンドが `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけサイドバーにリンクが出る）
+- `/developer` — 開発者向け管理ページ（バックエンドが `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけ下のメニューにリンクが出る）
 
 すべての保護ページ: 未ログインなら `proxy.ts` が `/login` へリダイレクトする。
 

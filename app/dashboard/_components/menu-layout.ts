@@ -2,9 +2,9 @@
 // （https://motion-reference.takayustudio.jp/#motion=3d-coverflow）
 
 // 正面のカードの中心から、隣のカードの中心までの距離（px）
-const SIDE_GAP = 230;
+const SIDE_GAP = 300;
 // 2枚目より外側のカードどうしの間隔（px）。正面の隣より詰めて、奥へ重なって見せる
-const STACK_GAP = 120;
+const STACK_GAP = 130;
 // 隣のカードを奥へ下げる量と、さらに外側のカードを1枚ごとに下げる量（px）
 const SIDE_DEPTH = 220;
 const STACK_DEPTH = 80;

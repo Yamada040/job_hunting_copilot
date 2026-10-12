@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { SITE_NAME, getSiteUrl } from "@/lib/constants/site";
 import "./globals.css";
 import { Providers } from "./_components/providers";
+import { AppHeader } from "./_components/layout/AppHeader";
+import { Dock } from "./_components/layout/Dock";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -60,7 +62,11 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className="antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppHeader />
+          {children}
+          <Dock />
+        </Providers>
       </body>
     </html>
   );
