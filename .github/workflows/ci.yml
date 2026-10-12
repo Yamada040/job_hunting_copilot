@@ -164,7 +164,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.120.0 # mise.toml・migrate.yml と合わせる
       - run: npm run supabase:signing-key
       # 認証（GoTrue）・DB・その前段の API ゲートウェイだけを起動する
       - run: supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta,postgrest,supavisor
