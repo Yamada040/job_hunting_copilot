@@ -185,7 +185,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/v1/es-entries/{esEntryId}/review": {
+  "/v1/es-entries/{esEntryId}/reviews": {
     parameters: {
       query?: never;
       header?: never;
@@ -194,11 +194,15 @@ export interface paths {
       };
       cookie?: never;
     };
-    get?: never;
+    /**
+     * ESのAI添削の履歴を取得する
+     * @description 新しい順。点数の推移を見せるため、添削のたびに1件ずつ残している。
+     */
+    get: operations["listEsReviews"];
     put?: never;
     /**
      * AI添削を行う
-     * @description 保存済みのESの内容をAIが添削し、添削結果を保存して返す。何度でも実行でき、結果は上書きする（1日の上限あり）。
+     * @description 保存済みのESの内容をAIが添削し、添削結果を履歴に1件足して返す。何度でも実行できる（1日の上限あり）。
      */
     post: operations["reviewEsEntry"];
     delete?: never;
@@ -647,6 +651,51 @@ export interface components {
       prompt: string;
       /** @description 回答（Markdown） */
       answer: string;
+      /** @description 文字数の上限（改行を除いて数える）。AI添削の修正版をこの範囲に収める。保存・提出は上限を超えてもできる */
+      charLimit?: number;
+    };
+    EsReviewScore: {
+      /** @description 10点満点。判断する情報が無いときは null */
+      score: number | null;
+      comment: string;
+    };
+    /** @description 設問または本文1つ分の添削結果。添削したときの設問・回答・上限も残す */
+    EsReviewItem: {
+      /**
+       * @description question は設問、body は本文
+       * @enum {string}
+       */
+      source: "question" | "body";
+      /** @description 設問。本文なら null */
+      prompt: string | null;
+      /** @description 添削したときの回答（本文） */
+      answer: string;
+      charLimit: number | null;
+      /** @description 構成（結論が先にあり、流れが追えるか） */
+      structure: components["schemas"]["EsReviewScore"];
+      /** @description 具体性（数字やエピソードで裏付けているか） */
+      specificity: components["schemas"]["EsReviewScore"];
+      /** @description 企業との一致（企業が求める人物像に合っているか） */
+      companyFit: components["schemas"]["EsReviewScore"];
+      /** @description 改善点 */
+      improvement: string;
+      /** @description 修正版 */
+      rewrite: string;
+    };
+    EsReview: {
+      /** Format: uuid */
+      id: string;
+      /** @description 全項目の点数の平均（小数第1位まで）。点数が1つも無ければ null */
+      overallScore: number | null;
+      /** @description ES全体の講評 */
+      summary: string;
+      items: components["schemas"]["EsReviewItem"][];
+      /** @description 企業分析の分析結果をAIに渡したか。渡していなければ「企業との一致」は採点されない */
+      usedCompanyAnalysis: boolean;
+      /** @description 自己分析の分析結果をAIに渡したか */
+      usedSelfAnalysis: boolean;
+      /** Format: date-time */
+      createdAt: string;
     };
     EsEntry: {
       /** Format: uuid */
@@ -666,8 +715,6 @@ export interface components {
        */
       deadline: string | null;
       memo: string | null;
-      /** @description AI添削の添削結果 */
-      aiResult: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -959,6 +1006,21 @@ export interface components {
       companiesCreated7d: number;
       totalInterviews: number;
       interviewsCreated7d: number;
+      /** @description AIの機能ごとのトークン数。全機能を決まった順で返す */
+      aiUsage: components["schemas"]["AiUsage"][];
+    };
+    /** @description 1つのAI機能で、トークン数を記録した呼び出しの回数と合計。結果を上書きする機能・1回だけの機能は最新の1回分だけが残る */
+    AiUsage: {
+      /**
+       * @description 日本語の表示名はフロントエンドが持つ
+       * @enum {string}
+       */
+      feature: "es_review" | "interview_review" | "company_analysis" | "aptitude_diagnosis" | "self_analysis";
+      calls: number;
+      /** @description 入力トークンの合計 */
+      inputTokens: number;
+      /** @description 出力トークンの合計（思考・推論の分を含む） */
+      outputTokens: number;
     };
     /** @description RFC 9457 Problem Details に、拡張項目 code と errors を加えたもの */
     Problem: {
@@ -1372,6 +1434,29 @@ export interface operations {
       default: components["responses"]["Problem"];
     };
   };
+  listEsReviews: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        esEntryId: components["parameters"]["EsEntryId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 添削結果の一覧 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EsReview"][];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
   reviewEsEntry: {
     parameters: {
       query?: never;
@@ -1383,13 +1468,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description 添削結果を保存したES */
-      200: {
+      /** @description 保存した添削結果 */
+      201: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["EsEntry"];
+          "application/json": components["schemas"]["EsReview"];
         };
       };
       default: components["responses"]["Problem"];

@@ -64,7 +64,7 @@ func (q *Queries) DeleteInterviewLog(ctx context.Context, arg DeleteInterviewLog
 }
 
 const getInterviewLog = `-- name: GetInterviewLog :one
-select interview_logs.id, interview_logs.user_id, interview_logs.company_id, interview_logs.format, interview_logs.round, interview_logs.interview_date, interview_logs.questions, interview_logs.improvement, interview_logs.unexpected, interview_logs.ai_result, interview_logs.created_at, interview_logs.updated_at, companies.name as company_name
+select interview_logs.id, interview_logs.user_id, interview_logs.company_id, interview_logs.format, interview_logs.round, interview_logs.interview_date, interview_logs.questions, interview_logs.improvement, interview_logs.unexpected, interview_logs.ai_result, interview_logs.created_at, interview_logs.updated_at, interview_logs.ai_input_tokens, interview_logs.ai_output_tokens, companies.name as company_name
 from interview_logs
 join companies on companies.id = interview_logs.company_id
 where interview_logs.id = $1 and interview_logs.user_id = $2
@@ -96,13 +96,15 @@ func (q *Queries) GetInterviewLog(ctx context.Context, arg GetInterviewLogParams
 		&i.InterviewLog.AiResult,
 		&i.InterviewLog.CreatedAt,
 		&i.InterviewLog.UpdatedAt,
+		&i.InterviewLog.AiInputTokens,
+		&i.InterviewLog.AiOutputTokens,
 		&i.CompanyName,
 	)
 	return i, err
 }
 
 const listInterviewLogs = `-- name: ListInterviewLogs :many
-select interview_logs.id, interview_logs.user_id, interview_logs.company_id, interview_logs.format, interview_logs.round, interview_logs.interview_date, interview_logs.questions, interview_logs.improvement, interview_logs.unexpected, interview_logs.ai_result, interview_logs.created_at, interview_logs.updated_at, companies.name as company_name
+select interview_logs.id, interview_logs.user_id, interview_logs.company_id, interview_logs.format, interview_logs.round, interview_logs.interview_date, interview_logs.questions, interview_logs.improvement, interview_logs.unexpected, interview_logs.ai_result, interview_logs.created_at, interview_logs.updated_at, interview_logs.ai_input_tokens, interview_logs.ai_output_tokens, companies.name as company_name
 from interview_logs
 join companies on companies.id = interview_logs.company_id
 where interview_logs.user_id = $1
@@ -145,6 +147,8 @@ func (q *Queries) ListInterviewLogs(ctx context.Context, arg ListInterviewLogsPa
 			&i.InterviewLog.AiResult,
 			&i.InterviewLog.CreatedAt,
 			&i.InterviewLog.UpdatedAt,
+			&i.InterviewLog.AiInputTokens,
+			&i.InterviewLog.AiOutputTokens,
 			&i.CompanyName,
 		); err != nil {
 			return nil, err
@@ -158,17 +162,25 @@ func (q *Queries) ListInterviewLogs(ctx context.Context, arg ListInterviewLogsPa
 }
 
 const setInterviewAiResult = `-- name: SetInterviewAiResult :execrows
-update interview_logs set ai_result = $1 where id = $2 and user_id = $3
+update interview_logs set ai_result = $1, ai_input_tokens = $2, ai_output_tokens = $3 where id = $4 and user_id = $5
 `
 
 type SetInterviewAiResultParams struct {
-	AiResult *string
-	ID       uuid.UUID
-	UserID   uuid.UUID
+	AiResult       *string
+	AiInputTokens  *int32
+	AiOutputTokens *int32
+	ID             uuid.UUID
+	UserID         uuid.UUID
 }
 
 func (q *Queries) SetInterviewAiResult(ctx context.Context, arg SetInterviewAiResultParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setInterviewAiResult, arg.AiResult, arg.ID, arg.UserID)
+	result, err := q.db.Exec(ctx, setInterviewAiResult,
+		arg.AiResult,
+		arg.AiInputTokens,
+		arg.AiOutputTokens,
+		arg.ID,
+		arg.UserID,
+	)
 	if err != nil {
 		return 0, err
 	}

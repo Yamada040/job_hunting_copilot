@@ -39,24 +39,28 @@ func fakeServer(t *testing.T, responses ...string) (*httptest.Server, *[]string)
 }
 
 func TestGenerateWithoutKeyIsUnavailable(t *testing.T) {
-	_, err := NewClient(Config{}, http.DefaultClient).Generate(t.Context(), KindESReview, "ES")
+	_, _, err := NewClient(Config{}, http.DefaultClient).Generate(t.Context(), KindESReview, "ES")
 
 	if !isUnavailable(err) {
 		t.Errorf("error = %v, want unavailable", err)
 	}
 }
 
-func TestGeminiGenerateSendsPromptAndReturnsText(t *testing.T) {
-	srv, bodies := fakeServer(t, `{"candidates":[{"content":{"parts":[{"text":"添削結果"}]}}]}`)
+func TestGeminiGenerateSendsPromptAndReturnsTextAndUsage(t *testing.T) {
+	srv, bodies := fakeServer(t, `{"candidates":[{"content":{"parts":[{"text":"添削結果"}]}}],
+		"usageMetadata":{"promptTokenCount":100,"candidatesTokenCount":40,"thoughtsTokenCount":60}}`)
 	c := NewClient(Config{Provider: "gemini", APIKey: "key-1", GeminiBaseURL: srv.URL}, srv.Client())
 
-	text, err := c.Generate(t.Context(), KindESReview, "志望動機の回答")
+	text, usage, err := c.Generate(t.Context(), KindESReview, "志望動機の回答")
 	if err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
 	if text != "添削結果" {
 		t.Errorf("text = %q, want 添削結果", text)
+	}
+	if usage != (Usage{InputTokens: 100, OutputTokens: 100}) {
+		t.Errorf("usage = %+v, want the thinking tokens counted as output", usage)
 	}
 	if !strings.HasPrefix((*bodies)[0], "key-1|") || !strings.Contains((*bodies)[0], "志望動機の回答") {
 		t.Errorf("request = %s, want the API key header and the input in the prompt", (*bodies)[0])
@@ -65,19 +69,22 @@ func TestGeminiGenerateSendsPromptAndReturnsText(t *testing.T) {
 
 func TestGeminiAnalyzeCompanySearchesThenAnswers(t *testing.T) {
 	gem, gemBodies := fakeServer(t,
-		`{"candidates":[{"content":{"parts":[{"functionCall":{"name":"search_web","args":{"query":"サンプル 採用"}}}]}}]}`,
-		`{"candidates":[{"content":{"parts":[{"text":"分析結果"}]}}]}`,
+		`{"candidates":[{"content":{"parts":[{"functionCall":{"name":"search_web","args":{"query":"サンプル 採用"}}}]}}],"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":1}}`,
+		`{"candidates":[{"content":{"parts":[{"text":"分析結果"}]}}],"usageMetadata":{"promptTokenCount":200,"candidatesTokenCount":50}}`,
 	)
 	tav, tavBodies := fakeServer(t, `{"results":[{"title":"採用ページ","url":"https://example.com","content":"新卒採用"}]}`)
 	c := NewClient(Config{Provider: "gemini", APIKey: "k", GeminiBaseURL: gem.URL, TavilyAPIKey: "t", TavilyEndpoint: tav.URL}, gem.Client())
 
-	text, err := c.AnalyzeCompany(t.Context(), "企業名: サンプル")
+	text, usage, err := c.AnalyzeCompany(t.Context(), "企業名: サンプル")
 	if err != nil {
 		t.Fatalf("AnalyzeCompany: %v", err)
 	}
 
 	if text != "分析結果" {
 		t.Errorf("text = %q, want 分析結果", text)
+	}
+	if usage != (Usage{InputTokens: 210, OutputTokens: 51}) {
+		t.Errorf("usage = %+v, want the sum of both calls", usage)
 	}
 	if len(*tavBodies) != 1 || !strings.Contains((*tavBodies)[0], "サンプル 採用") {
 		t.Errorf("tavily requests = %v, want one search with the query from the model", *tavBodies)
@@ -88,10 +95,10 @@ func TestGeminiAnalyzeCompanySearchesThenAnswers(t *testing.T) {
 }
 
 func TestGPTGenerateReturnsText(t *testing.T) {
-	srv, bodies := fakeServer(t, `{"choices":[{"message":{"role":"assistant","content":"振り返り結果"}}]}`)
+	srv, bodies := fakeServer(t, `{"choices":[{"message":{"role":"assistant","content":"振り返り結果"}}],"usage":{"prompt_tokens":30,"completion_tokens":20}}`)
 	c := NewClient(Config{Provider: "gpt", APIKey: "key-2", GPTEndpoint: srv.URL}, srv.Client())
 
-	text, err := c.Generate(t.Context(), KindInterviewReview, "面接の内容")
+	text, usage, err := c.Generate(t.Context(), KindInterviewReview, "面接の内容")
 	if err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
@@ -103,6 +110,9 @@ func TestGPTGenerateReturnsText(t *testing.T) {
 	if text != "振り返り結果" || req.Model != "gpt-4o-mini" || !strings.Contains(req.Messages[1].Content, "面接の内容") {
 		t.Errorf("text = %q, request = %+v; want the default model and the input in the prompt", text, req)
 	}
+	if usage != (Usage{InputTokens: 30, OutputTokens: 20}) {
+		t.Errorf("usage = %+v, want the usage from the response", usage)
+	}
 }
 
 func TestGPTAnalyzeCompanyAnswersToolCalls(t *testing.T) {
@@ -112,7 +122,7 @@ func TestGPTAnalyzeCompanyAnswersToolCalls(t *testing.T) {
 	)
 	c := NewClient(Config{Provider: "gpt", APIKey: "k", GPTEndpoint: gpt.URL}, gpt.Client())
 
-	text, err := c.AnalyzeCompany(t.Context(), "企業名: サンプル")
+	text, _, err := c.AnalyzeCompany(t.Context(), "企業名: サンプル")
 	if err != nil {
 		t.Fatalf("AnalyzeCompany: %v", err)
 	}
@@ -126,9 +136,47 @@ func TestUpstreamErrorIsUnavailable(t *testing.T) {
 	srv, _ := fakeServer(t) // 何も返さず500
 	c := NewClient(Config{Provider: "gemini", APIKey: "k", GeminiBaseURL: srv.URL}, srv.Client())
 
-	_, err := c.Generate(t.Context(), KindSelfAnalysis, "回答")
+	_, _, err := c.Generate(t.Context(), KindSelfAnalysis, "回答")
 
 	if !isUnavailable(err) {
+		t.Errorf("error = %v, want unavailable", err)
+	}
+}
+
+func TestGeminiGenerateJSONAsksForJSONAndDecodes(t *testing.T) {
+	srv, bodies := fakeServer(t, `{"candidates":[{"content":{"parts":[{"text":"{\"summary\":\"講評\"}"}]}}]}`)
+	c := NewClient(Config{Provider: "gemini", APIKey: "k", GeminiBaseURL: srv.URL}, srv.Client())
+
+	var out struct{ Summary string }
+	if _, err := c.GenerateJSON(t.Context(), KindESReview, "ES", &out); err != nil {
+		t.Fatalf("GenerateJSON: %v", err)
+	}
+
+	if out.Summary != "講評" || !strings.Contains((*bodies)[0], `"responseMimeType":"application/json"`) {
+		t.Errorf("out = %+v, request = %s; want JSON mode and the decoded reply", out, (*bodies)[0])
+	}
+}
+
+func TestGPTGenerateJSONAsksForJSONObject(t *testing.T) {
+	srv, bodies := fakeServer(t, `{"choices":[{"message":{"role":"assistant","content":"{\"summary\":\"講評\"}"}}]}`)
+	c := NewClient(Config{Provider: "gpt", APIKey: "k", GPTEndpoint: srv.URL}, srv.Client())
+
+	var out struct{ Summary string }
+	if _, err := c.GenerateJSON(t.Context(), KindESReview, "ES", &out); err != nil {
+		t.Fatalf("GenerateJSON: %v", err)
+	}
+
+	if out.Summary != "講評" || !strings.Contains((*bodies)[0], `"response_format":{"type":"json_object"}`) {
+		t.Errorf("out = %+v, request = %s; want JSON mode and the decoded reply", out, (*bodies)[0])
+	}
+}
+
+func TestGenerateJSONWithBrokenReplyIsUnavailable(t *testing.T) {
+	srv, _ := fakeServer(t, `{"candidates":[{"content":{"parts":[{"text":"JSONではない文章"}]}}]}`)
+	c := NewClient(Config{Provider: "gemini", APIKey: "k", GeminiBaseURL: srv.URL}, srv.Client())
+
+	var out struct{ Summary string }
+	if _, err := c.GenerateJSON(t.Context(), KindESReview, "ES", &out); !isUnavailable(err) {
 		t.Errorf("error = %v, want unavailable", err)
 	}
 }

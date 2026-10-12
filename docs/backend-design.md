@@ -107,11 +107,11 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 
 ### AIのルール
 
-| 機能                   | 再実行                   | 1人1日の上限         |
-| ---------------------- | ------------------------ | -------------------- |
-| AI添削・AI振り返り     | 何度でも（結果を上書き） | 汎用AIとして合計20回 |
-| AI適性診断・AI自己分析 | 1回だけ                  | 汎用AIの20回に含む   |
-| AI企業分析             | 企業ごとに1回だけ        | 3回                  |
+| 機能                   | 再実行                                         | 1人1日の上限         |
+| ---------------------- | ---------------------------------------------- | -------------------- |
+| AI添削・AI振り返り     | 何度でも（添削は履歴を残し、振り返りは上書き） | 汎用AIとして合計20回 |
+| AI適性診断・AI自己分析 | 1回だけ                                        | 汎用AIの20回に含む   |
+| AI企業分析             | 企業ごとに1回だけ                              | 3回                  |
 
 - 適性診断・自己分析は何度もやるものではなく、AIの費用も抑えたいため1回だけとする
 - 企業分析の上限が厳しいのは、Tavilyの無料枠（月1,000クレジット程度）に対し、1回で最大3回検索するため
@@ -146,6 +146,7 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 | `profiles`                                   | id, full_name, university, faculty, avatar_id, target_industry, career_axis, goal_state, xp, level, created_at, updated_at                     | XPとレベルは保存する（下記）                                                           |
 | `companies`                                  | id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at | `(user_id, normalized_name)` がユニーク。`preference` は1〜5                           |
 | `es_entries`                                 | id, user_id, company_id, position, title, status, content_md, questions, tags, deadline, memo, ai_result, created_at, updated_at               | `position` は職種・募集枠（自由入力）。企業のURLは `companies.url` に一本化            |
+| `es_reviews`                                 | id, user_id, es_entry_id, ai_result, created_at                                                                                                | ESのAI添削の履歴（点数の推移を見せるため上書きしない）                                 |
 | `interview_logs`                             | id, user_id, company_id, format, round, interview_date, questions, improvement, unexpected, ai_result, created_at, updated_at                  | `round` は面接の回次（自由入力）。`questions` は質問と回答の一覧だけを持つ             |
 | `calendar_events`                            | id, user_id, company_id（任意）, title, type, date, time, created_at, updated_at                                                               | `time` は `time` 型                                                                    |
 | `xp_logs`                                    | id, user_id, xp, action, ref_id, created_at                                                                                                    | `(user_id, action, ref_id)` がユニーク。`(user_id, action, created_at)` にインデックス |
@@ -158,6 +159,7 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 ### 個別の判断
 
 - **AI結果の列名は全テーブルで `ai_result`**。用語集の名前（添削結果など）はGoの型と画面で使い、DBは共通の名前にする
+- **AIのトークン数は、`ai_result` と同じ行の `ai_input_tokens`・`ai_output_tokens` に残す**。開発者ダッシュボードで機能ごとに集計する。思考・推論の分は出力に含める。呼び出しごとの別テーブルは作らず、上書きする機能・1回だけの機能では最新の1回分だけが残る
 - **XPとレベルは `profiles` に保存する**。採らなかった案: 毎回 `xp_logs` から合計を計算する。保存する代わりに、付与は必ずトランザクション内で `xp = xp + n` とアトミックに更新する。レベルの計算式を変えたら全ユーザーの `level` を計算し直す必要がある
 - **正規化した企業名はバックエンドで計算して保存する**。採らなかった案: DBの生成列。正規化はドメインのルールなので、Goの単体テストで確かめられる形にする。DBに書き込むのはバックエンドだけなので、バックエンド以外から書かれる心配はない。重複はDBのユニーク制約が最後に止める
 - **法人番号の列は今は作らない**。外部の企業データから候補を出す機能を作るときに追加する
@@ -215,6 +217,7 @@ flowchart LR
 - ルールを伴う操作は専用のエンドポイントにする（例: `POST /v1/es-entries/{id}/submit`）。`PATCH` では `status` を変更できない
 - XPが付く操作のレスポンスには `xp: { awarded, total, level, leveledUp }` を含める。付かなかった場合も `awarded: 0` で返す
 - AIへの入力はバックエンドが保存済みのデータから組み立てる。画面は先に内容を保存してからAIのAPIを呼ぶ（クライアントが送った文章をAIに渡さない）
+- AIの結果どうしをつなぐ。AI添削には、そのESの企業の分析結果（求める人物像）と自己分析の分析結果も渡し、「企業との一致」の採点と、強みを活かせているかの指摘に使う
 - AIの結果はすべて、完成してからJSONで返す（ストリーミングしない。7章の理由による）
 
 ### エンドポイント
@@ -231,7 +234,7 @@ flowchart LR
 | GET / POST           | `/es-entries?companyId=&limit=`     | 一覧／作成（常に下書き）                         |
 | GET / PATCH / DELETE | `/es-entries/{id}`                  |                                                  |
 | POST                 | `/es-entries/{id}/submit`           | 提出（XP、取り消し不可）                         |
-| POST                 | `/es-entries/{id}/review`           | AI添削                                           |
+| GET / POST           | `/es-entries/{id}/reviews`          | AI添削の履歴／AI添削                             |
 | GET / POST           | `/interview-logs?companyId=&limit=` | 一覧／作成（XP）                                 |
 | GET / PATCH / DELETE | `/interview-logs/{id}`              | 削除は今回新設                                   |
 | POST                 | `/interview-logs/{id}/review`       | AI振り返り                                       |

@@ -35,4 +35,4 @@ where id = @id and user_id = @user_id;
 delete from interview_logs where id = @id and user_id = @user_id;
 
 -- name: SetInterviewAiResult :execrows
-update interview_logs set ai_result = @ai_result where id = @id and user_id = @user_id;
+update interview_logs set ai_result = @ai_result, ai_input_tokens = @ai_input_tokens, ai_output_tokens = @ai_output_tokens where id = @id and user_id = @user_id;

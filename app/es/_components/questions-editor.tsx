@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { EsQuestion } from "@/lib/api/es";
+import { countCharacters } from "@/lib/es/characters";
+import { cn } from "@/lib/utils";
 
 type Props = {
   questions: EsQuestion[];
@@ -45,9 +47,26 @@ export function QuestionsEditor({ questions, onChange }: Props) {
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor={`${idPrefix}-answer-${index}`} className="text-xs text-muted-foreground">
-              回答
-            </Label>
+            <div className="flex items-end justify-between gap-3">
+              <Label htmlFor={`${idPrefix}-answer-${index}`} className="text-xs text-muted-foreground">
+                回答
+              </Label>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Label htmlFor={`${idPrefix}-limit-${index}`}>文字数の上限</Label>
+                <Input
+                  id={`${idPrefix}-limit-${index}`}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={4000}
+                  value={q.charLimit ?? ""}
+                  onChange={(e) => update(index, { charLimit: e.target.value ? Number(e.target.value) : undefined })}
+                  className="h-7 w-20 bg-card text-right text-xs"
+                  placeholder="なし"
+                />
+                <span>字</span>
+              </div>
+            </div>
             <Textarea
               id={`${idPrefix}-answer-${index}`}
               value={q.answer}
@@ -57,7 +76,7 @@ export function QuestionsEditor({ questions, onChange }: Props) {
               className="min-h-28 bg-card"
               placeholder="回答を入力"
             />
-            <span className="block text-right text-xs text-muted-foreground">{q.answer.length} 文字</span>
+            <CharacterCount text={q.answer} limit={q.charLimit} />
           </div>
           <div className="flex justify-end">
             <Button
@@ -72,5 +91,19 @@ export function QuestionsEditor({ questions, onChange }: Props) {
         </Card>
       ))}
     </div>
+  );
+}
+
+/** 回答の文字数。上限を超えたら赤くするだけで、保存・提出は止めない。 */
+function CharacterCount({ text, limit }: { text: string; limit?: number }) {
+  const count = countCharacters(text);
+  return (
+    <span
+      className={cn("block text-right text-xs text-muted-foreground", {
+        "font-semibold text-destructive": limit !== undefined && count > limit,
+      })}
+    >
+      {limit === undefined ? `${count} 文字` : `${count} / ${limit} 文字`}
+    </span>
   );
 }

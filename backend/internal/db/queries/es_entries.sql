@@ -42,5 +42,20 @@ delete from es_entries where id = @id and user_id = @user_id;
 -- ESなどを企業にひも付ける前に、その企業が本人のものかを確かめる（他人の企業IDを指定されても、ひも付けさせない）
 select exists (select 1 from companies where id = @id and user_id = @user_id);
 
--- name: SetEsAiResult :execrows
-update es_entries set ai_result = @ai_result where id = @id and user_id = @user_id;
+-- name: CreateEsReview :one
+insert into es_reviews (user_id, es_entry_id, ai_result, ai_input_tokens, ai_output_tokens)
+values (@user_id, @es_entry_id, @ai_result, @ai_input_tokens, @ai_output_tokens)
+returning *;
+
+-- name: ListEsReviews :many
+-- 新しい順。ESが本人のものかは、呼び出す前に GetEsEntry で確かめる
+select * from es_reviews
+where es_entry_id = @es_entry_id and user_id = @user_id
+order by created_at desc;
+
+-- name: GetEsReviewContext :one
+-- AI添削に渡す、企業分析の分析結果と自己分析の分析結果。どちらもまだ無ければ null
+select companies.ai_result as company_analysis, self_analysis_results.ai_result as self_analysis
+from companies
+left join self_analysis_results on self_analysis_results.user_id = companies.user_id
+where companies.id = @company_id and companies.user_id = @user_id;

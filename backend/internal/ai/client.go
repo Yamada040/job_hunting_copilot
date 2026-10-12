@@ -42,14 +42,32 @@ type SearchResult struct {
 	Content string
 }
 
+// Usage は、AIの呼び出しで使ったトークン数。企業分析のように複数回呼ぶときは合計する。
+// Gemini の思考（thinking）のトークンは料金上は出力として数えられるので、OutputTokens に含める。
+type Usage struct {
+	InputTokens  int
+	OutputTokens int
+}
+
+// ColumnValues は、DBの ai_input_tokens・ai_output_tokens 列に入れる値を返す。
+func (u Usage) ColumnValues() (input, output *int32) {
+	in, out := int32(u.InputTokens), int32(u.OutputTokens)
+	return &in, &out
+}
+
+func (u Usage) add(other Usage) Usage {
+	return Usage{InputTokens: u.InputTokens + other.InputTokens, OutputTokens: u.OutputTokens + other.OutputTokens}
+}
+
 // searchFunc は、企業分析でAIが使うWeb検索。
 type searchFunc func(ctx context.Context, query string) ([]SearchResult, error)
 
 // provider は、AIのプロバイダーごとの違いを隠す。
 type provider interface {
-	generate(ctx context.Context, prompt string) (string, error)
+	// asJSON が true なら、AIにJSONだけを返させる
+	generate(ctx context.Context, prompt string, asJSON bool) (string, Usage, error)
 	// generateWithSearch は、AIが必要に応じて search を呼びながら回答を作る（企業分析で使う）
-	generateWithSearch(ctx context.Context, instructions, input string, search searchFunc) (string, error)
+	generateWithSearch(ctx context.Context, instructions, input string, search searchFunc) (string, Usage, error)
 }
 
 type Client struct {
@@ -71,22 +89,38 @@ func NewClient(cfg Config, httpClient *http.Client) *Client {
 	return &Client{provider: p, search: newTavily(cfg, httpClient).search}
 }
 
-// Generate は、kind の指示で input を処理した結果の文章を返す。
-func (c *Client) Generate(ctx context.Context, kind Kind, input string) (string, error) {
+// Generate は、kind の指示で input を処理した結果の文章と、使ったトークン数を返す。
+func (c *Client) Generate(ctx context.Context, kind Kind, input string) (string, Usage, error) {
 	if c.provider == nil {
-		return "", notConfigured()
+		return "", Usage{}, notConfigured()
 	}
-	text, err := c.provider.generate(ctx, buildPrompt(kind, input))
-	return text, upstream(ctx, err)
+	text, usage, err := c.provider.generate(ctx, buildPrompt(kind, input), false)
+	return text, usage, upstream(ctx, err)
 }
 
-// AnalyzeCompany は、AIにWeb検索をさせながら企業を分析した結果を返す。
-func (c *Client) AnalyzeCompany(ctx context.Context, input string) (string, error) {
+// GenerateJSON は、kind の指示で input を処理させ、AIが返したJSONを out に読み込む。
+// 中身が求めた形かどうか（件数・値の範囲）は呼び出し側が確かめ、合わなければ InvalidResult を返す。
+func (c *Client) GenerateJSON(ctx context.Context, kind Kind, input string, out any) (Usage, error) {
 	if c.provider == nil {
-		return "", notConfigured()
+		return Usage{}, notConfigured()
 	}
-	text, err := c.provider.generateWithSearch(ctx, instructionsFor(KindCompanyAnalysis), prompts[KindCompanyAnalysis].inputLabel+"\n"+input, c.search)
-	return text, upstream(ctx, err)
+	text, usage, err := c.provider.generate(ctx, buildPrompt(kind, input), true)
+	if err != nil {
+		return Usage{}, upstream(ctx, err)
+	}
+	if err := json.Unmarshal([]byte(text), out); err != nil {
+		return Usage{}, InvalidResult(ctx, fmt.Errorf("decode ai json: %w", err))
+	}
+	return usage, nil
+}
+
+// AnalyzeCompany は、AIにWeb検索をさせながら企業を分析した結果と、検索をはさんだ全呼び出しの合計のトークン数を返す。
+func (c *Client) AnalyzeCompany(ctx context.Context, input string) (string, Usage, error) {
+	if c.provider == nil {
+		return "", Usage{}, notConfigured()
+	}
+	text, usage, err := c.provider.generateWithSearch(ctx, instructionsFor(KindCompanyAnalysis), prompts[KindCompanyAnalysis].inputLabel+"\n"+input, c.search)
+	return text, usage, upstream(ctx, err)
 }
 
 // キーが無いときに仮の文章を返さないのは、結果を保存する機能（1回しか実行できない適性診断など）で、仮の文章が保存されてしまうため
@@ -95,6 +129,11 @@ func notConfigured() error {
 }
 
 var errEmptyResponse = errors.New("ai returned no text")
+
+// InvalidResult は、AIの結果が求めた形になっていなかったときのエラー。利用者には、AIの呼び出しに失敗したときと同じく再試行を促す。
+func InvalidResult(ctx context.Context, err error) error {
+	return upstream(ctx, err)
+}
 
 func upstream(ctx context.Context, err error) error {
 	if err == nil {
@@ -137,8 +176,9 @@ func postJSON(ctx context.Context, client *http.Client, url string, headers map[
 
 // Generator は、AIを使う機能が必要とする操作。テストでは偽物に差し替える。
 type Generator interface {
-	Generate(ctx context.Context, kind Kind, input string) (string, error)
-	AnalyzeCompany(ctx context.Context, input string) (string, error)
+	Generate(ctx context.Context, kind Kind, input string) (string, Usage, error)
+	GenerateJSON(ctx context.Context, kind Kind, input string, out any) (Usage, error)
+	AnalyzeCompany(ctx context.Context, input string) (string, Usage, error)
 }
 
 var _ Generator = (*Client)(nil)

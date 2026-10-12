@@ -34,9 +34,14 @@ func (h Handler) GetAdminStats(ctx context.Context, _ openapi.GetAdminStatsReque
 	}
 	now := h.Now().In(jst)
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, jst)
-	row, err := db.New(h.Pool).GetAdminStats(ctx, db.GetAdminStatsParams{Since: now.AddDate(0, 0, -7), TodayStart: today})
+	q := db.New(h.Pool)
+	row, err := q.GetAdminStats(ctx, db.GetAdminStatsParams{Since: now.AddDate(0, 0, -7), TodayStart: today})
 	if err != nil {
 		return nil, fmt.Errorf("get admin stats: %w", err)
+	}
+	usage, err := q.ListAiUsage(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list ai usage: %w", err)
 	}
 	return openapi.GetAdminStats200JSONResponse{
 		TotalUsers: int(row.TotalUsers), NewUsers7d: int(row.NewUsers),
@@ -44,5 +49,29 @@ func (h Handler) GetAdminStats(ctx context.Context, _ openapi.GetAdminStatsReque
 		TotalEs: int(row.TotalEs), EsCreated7d: int(row.NewEs),
 		TotalCompanies: int(row.TotalCompanies), CompaniesCreated7d: int(row.NewCompanies),
 		TotalInterviews: int(row.TotalInterviews), InterviewsCreated7d: int(row.NewInterviews),
+		AiUsage: toAPIUsage(usage),
 	}, nil
+}
+
+// aiFeatures は、ダッシュボードに並べるAIの機能の順番。
+var aiFeatures = []openapi.AiUsageFeature{
+	openapi.AiUsageFeatureEsReview,
+	openapi.AiUsageFeatureInterviewReview,
+	openapi.AiUsageFeatureCompanyAnalysis,
+	openapi.AiUsageFeatureAptitudeDiagnosis,
+	openapi.AiUsageFeatureSelfAnalysis,
+}
+
+// toAPIUsage は、まだ一度も使われていない機能も0件として、決まった順に並べる。
+func toAPIUsage(rows []db.ListAiUsageRow) []openapi.AiUsage {
+	byFeature := map[string]db.ListAiUsageRow{}
+	for _, r := range rows {
+		byFeature[r.Feature] = r
+	}
+	usage := make([]openapi.AiUsage, len(aiFeatures))
+	for i, f := range aiFeatures {
+		r := byFeature[string(f)]
+		usage[i] = openapi.AiUsage{Feature: f, Calls: int(r.Calls), InputTokens: int(r.InputTokens), OutputTokens: int(r.OutputTokens)}
+	}
+	return usage
 }

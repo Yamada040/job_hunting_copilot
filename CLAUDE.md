@@ -127,7 +127,7 @@ backend/
 
 | 機能                      | API                                      | 再実行                   |
 | ------------------------- | ---------------------------------------- | ------------------------ |
-| AI添削（ES）              | `POST /v1/es-entries/{id}/review`        | 何度でも（結果を上書き） |
+| AI添削（ES）              | `POST /v1/es-entries/{id}/reviews`       | 何度でも（履歴を残す）   |
 | AI振り返り（面接ログ）    | `POST /v1/interview-logs/{id}/review`    | 何度でも（結果を上書き） |
 | AI企業分析（Web検索あり） | `POST /v1/companies/{id}/analysis`       | 企業ごとに1回            |
 | AI適性診断                | `POST /v1/aptitude-result/diagnosis`     | 1回                      |
@@ -144,6 +144,7 @@ backend/
 - `profiles`: プロフィール、XP、レベル
 - `companies`: 企業（中心のエンティティ）。正規化した企業名（`normalized_name`）はユーザーごとに一意
 - `es_entries` / `interview_logs`: ES・面接ログ。`company_id` は必須
+- `es_reviews`: ESのAI添削の履歴（設問ごとの3観点の点数と修正版）。点数の推移を見せるため、上書きせず1回ずつ残す
 - `calendar_events`: ユーザーが登録した予定（`company_id` は任意）。カレンダーにはESの締切も混ぜて表示する（バックエンドが組み立てる）
 - `xp_logs`: XPの獲得履歴。`(user_id, action, ref_id)` がユニークで、同じ対象への二重付与をDBが防ぐ
 - `aptitude_results` / `self_analysis_results`: 1人1件
