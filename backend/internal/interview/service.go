@@ -202,11 +202,12 @@ func (s *Service) Review(ctx context.Context, userID, id uuid.UUID) (Log, error)
 	if err := s.limiter.Hit(ctx, q, userID, ratelimit.AIBurst, ratelimit.AIDaily); err != nil {
 		return Log{}, err
 	}
-	text, err := s.ai.Generate(ctx, ai.KindInterviewReview, reviewInput(log))
+	text, usage, err := s.ai.Generate(ctx, ai.KindInterviewReview, reviewInput(log))
 	if err != nil {
 		return Log{}, err
 	}
-	n, err := q.SetInterviewAiResult(ctx, db.SetInterviewAiResultParams{ID: id, UserID: userID, AiResult: &text})
+	input, output := usage.ColumnValues()
+	n, err := q.SetInterviewAiResult(ctx, db.SetInterviewAiResultParams{ID: id, UserID: userID, AiResult: &text, AiInputTokens: input, AiOutputTokens: output})
 	if err != nil {
 		return Log{}, fmt.Errorf("save interview review: %w", err)
 	}

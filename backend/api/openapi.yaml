@@ -272,20 +272,35 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
-  /v1/es-entries/{esEntryId}/review:
+  /v1/es-entries/{esEntryId}/reviews:
     parameters:
       - $ref: "#/components/parameters/EsEntryId"
-    post:
-      operationId: reviewEsEntry
-      summary: AI添削を行う
-      description: 保存済みのESの内容をAIが添削し、添削結果を保存して返す。何度でも実行でき、結果は上書きする（1日の上限あり）。
+    get:
+      operationId: listEsReviews
+      summary: ESのAI添削の履歴を取得する
+      description: 新しい順。点数の推移を見せるため、添削のたびに1件ずつ残している。
       responses:
         "200":
-          description: 添削結果を保存したES
+          description: 添削結果の一覧
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EsEntry"
+                type: array
+                items:
+                  $ref: "#/components/schemas/EsReview"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: reviewEsEntry
+      summary: AI添削を行う
+      description: 保存済みのESの内容をAIが添削し、添削結果を履歴に1件足して返す。何度でも実行できる（1日の上限あり）。
+      responses:
+        "201":
+          description: 保存した添削結果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EsReview"
         default:
           $ref: "#/components/responses/Problem"
 
@@ -1049,25 +1064,94 @@ components:
           type: string
           maxLength: 4000
           description: 回答（Markdown）
+        charLimit:
+          type: integer
+          minimum: 1
+          maximum: 4000
+          description: 文字数の上限（改行を除いて数える）。AI添削の修正版をこの範囲に収める。保存・提出は上限を超えてもできる
+
+    EsReviewScore:
+      type: object
+      required: [score, comment]
+      properties:
+        score:
+          type: integer
+          minimum: 1
+          maximum: 10
+          nullable: true
+          description: 10点満点。判断する情報が無いときは null
+        comment:
+          type: string
+
+    EsReviewItem:
+      type: object
+      description: 設問または本文1つ分の添削結果。添削したときの設問・回答・上限も残す
+      required: [source, prompt, answer, charLimit, structure, specificity, companyFit, improvement, rewrite]
+      properties:
+        source:
+          type: string
+          enum: [question, body]
+          description: question は設問、body は本文
+        prompt:
+          type: string
+          nullable: true
+          description: 設問。本文なら null
+        answer:
+          type: string
+          description: 添削したときの回答（本文）
+        charLimit:
+          type: integer
+          nullable: true
+        structure:
+          allOf:
+            - $ref: "#/components/schemas/EsReviewScore"
+          description: 構成（結論が先にあり、流れが追えるか）
+        specificity:
+          allOf:
+            - $ref: "#/components/schemas/EsReviewScore"
+          description: 具体性（数字やエピソードで裏付けているか）
+        companyFit:
+          allOf:
+            - $ref: "#/components/schemas/EsReviewScore"
+          description: 企業との一致（企業が求める人物像に合っているか）
+        improvement:
+          type: string
+          description: 改善点
+        rewrite:
+          type: string
+          description: 修正版
+
+    EsReview:
+      type: object
+      required: [id, overallScore, summary, items, usedCompanyAnalysis, usedSelfAnalysis, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        overallScore:
+          type: number
+          nullable: true
+          description: 全項目の点数の平均（小数第1位まで）。点数が1つも無ければ null
+        summary:
+          type: string
+          description: ES全体の講評
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EsReviewItem"
+        usedCompanyAnalysis:
+          type: boolean
+          description: 企業分析の分析結果をAIに渡したか。渡していなければ「企業との一致」は採点されない
+        usedSelfAnalysis:
+          type: boolean
+          description: 自己分析の分析結果をAIに渡したか
+        createdAt:
+          type: string
+          format: date-time
 
     EsEntry:
       type: object
-      required:
-        [
-          id,
-          company,
-          position,
-          title,
-          status,
-          questions,
-          contentMd,
-          tags,
-          deadline,
-          memo,
-          aiResult,
-          createdAt,
-          updatedAt,
-        ]
+      required: [id, company, position, title, status, questions, contentMd, tags, deadline, memo, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -1102,10 +1186,6 @@ components:
         memo:
           type: string
           nullable: true
-        aiResult:
-          type: string
-          nullable: true
-          description: AI添削の添削結果
         createdAt:
           type: string
           format: date-time
@@ -1787,6 +1867,7 @@ components:
           companiesCreated7d,
           totalInterviews,
           interviewsCreated7d,
+          aiUsage,
         ]
       properties:
         totalUsers:
@@ -1810,6 +1891,29 @@ components:
           type: integer
         interviewsCreated7d:
           type: integer
+        aiUsage:
+          type: array
+          description: AIの機能ごとのトークン数。全機能を決まった順で返す
+          items:
+            $ref: "#/components/schemas/AiUsage"
+
+    AiUsage:
+      type: object
+      description: 1つのAI機能で、トークン数を記録した呼び出しの回数と合計。結果を上書きする機能・1回だけの機能は最新の1回分だけが残る
+      required: [feature, calls, inputTokens, outputTokens]
+      properties:
+        feature:
+          type: string
+          enum: [es_review, interview_review, company_analysis, aptitude_diagnosis, self_analysis]
+          description: 日本語の表示名はフロントエンドが持つ
+        calls:
+          type: integer
+        inputTokens:
+          type: integer
+          description: 入力トークンの合計
+        outputTokens:
+          type: integer
+          description: 出力トークンの合計（思考・推論の分を含む）
 
     Problem:
       type: object

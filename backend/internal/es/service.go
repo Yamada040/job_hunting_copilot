@@ -28,6 +28,8 @@ const defaultListLimit = 1000
 type Question struct {
 	Prompt string `json:"prompt"`
 	Answer string `json:"answer"`
+	// CharLimit は文字数の上限。AI添削の修正版をこの範囲に収めるためだけに使い、保存・提出は止めない
+	CharLimit *int `json:"charLimit,omitempty"`
 }
 
 // Entry は、ESと、ひも付く企業の名前。
@@ -205,57 +207,6 @@ func (s *Service) Submit(ctx context.Context, userID, id uuid.UUID) (Entry, xp.R
 		return err
 	})
 	return entry, reward, err
-}
-
-// Review は、保存済みのESの内容をAIに添削させ、添削結果を保存する。何度でも実行でき、結果は上書きする。
-// AIへの入力は画面から受け取らず、保存済みのデータから組み立てる（docs/backend-design.md 5章）。
-func (s *Service) Review(ctx context.Context, userID, id uuid.UUID) (Entry, error) {
-	q := db.New(s.pool)
-	entry, err := get(ctx, q, userID, id)
-	if err != nil {
-		return Entry{}, err
-	}
-	input := reviewInput(entry)
-	if input == "" {
-		return Entry{}, &platform.Error{Kind: platform.KindInvalid, Message: "添削する設問・回答または本文を入力して保存してください"}
-	}
-	if err := s.limiter.Hit(ctx, q, userID, ratelimit.AIBurst, ratelimit.AIDaily); err != nil {
-		return Entry{}, err
-	}
-	text, err := s.ai.Generate(ctx, ai.KindESReview, input)
-	if err != nil {
-		return Entry{}, err
-	}
-	n, err := q.SetEsAiResult(ctx, db.SetEsAiResultParams{ID: id, UserID: userID, AiResult: &text})
-	if err != nil {
-		return Entry{}, fmt.Errorf("save es review: %w", err)
-	}
-	if n == 0 {
-		return Entry{}, notFound()
-	}
-	return get(ctx, q, userID, id)
-}
-
-// reviewInput は、AI添削に渡す文章を作る。設問も本文も無ければ空文字を返す。
-func reviewInput(e Entry) string {
-	var body []string
-	for i, q := range e.Questions {
-		body = append(body, fmt.Sprintf("設問%d: %s\n回答: %s", i+1, q.Prompt, q.Answer))
-	}
-	if e.ContentMd != nil && strings.TrimSpace(*e.ContentMd) != "" {
-		body = append(body, "本文:\n"+*e.ContentMd)
-	}
-	if len(body) == 0 {
-		return ""
-	}
-	header := []string{"企業: " + e.CompanyName}
-	if e.Title != nil {
-		header = append(header, "タイトル: "+*e.Title)
-	}
-	if e.Position != nil {
-		header = append(header, "職種・募集枠: "+*e.Position)
-	}
-	return strings.Join(header, "\n") + "\n\n" + strings.Join(body, "\n\n")
 }
 
 func (s *Service) Delete(ctx context.Context, userID, id uuid.UUID) error {

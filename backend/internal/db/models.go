@@ -245,11 +245,13 @@ type ApiRateLimit struct {
 }
 
 type AptitudeResult struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Answers   json.RawMessage
-	AiResult  *string
-	CreatedAt time.Time
+	ID             uuid.UUID
+	UserID         uuid.UUID
+	Answers        json.RawMessage
+	AiResult       *string
+	CreatedAt      time.Time
+	AiInputTokens  *int32
+	AiOutputTokens *int32
 }
 
 type CalendarEvent struct {
@@ -280,6 +282,8 @@ type Company struct {
 	AiResult       *string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	AiInputTokens  *int32
+	AiOutputTokens *int32
 }
 
 type EsEntry struct {
@@ -299,19 +303,31 @@ type EsEntry struct {
 	UpdatedAt time.Time
 }
 
+type EsReview struct {
+	ID             uuid.UUID
+	UserID         uuid.UUID
+	EsEntryID      uuid.UUID
+	AiResult       json.RawMessage
+	CreatedAt      time.Time
+	AiInputTokens  *int32
+	AiOutputTokens *int32
+}
+
 type InterviewLog struct {
-	ID            uuid.UUID
-	UserID        uuid.UUID
-	CompanyID     uuid.UUID
-	Format        *InterviewFormat
-	Round         *string
-	InterviewDate *time.Time
-	Questions     json.RawMessage
-	Improvement   *string
-	Unexpected    *string
-	AiResult      *string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID             uuid.UUID
+	UserID         uuid.UUID
+	CompanyID      uuid.UUID
+	Format         *InterviewFormat
+	Round          *string
+	InterviewDate  *time.Time
+	Questions      json.RawMessage
+	Improvement    *string
+	Unexpected     *string
+	AiResult       *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	AiInputTokens  *int32
+	AiOutputTokens *int32
 }
 
 type Profile struct {
@@ -330,11 +346,13 @@ type Profile struct {
 }
 
 type SelfAnalysisResult struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Answers   json.RawMessage
-	AiResult  *string
-	CreatedAt time.Time
+	ID             uuid.UUID
+	UserID         uuid.UUID
+	Answers        json.RawMessage
+	AiResult       *string
+	CreatedAt      time.Time
+	AiInputTokens  *int32
+	AiOutputTokens *int32
 }
 
 type WebtestAttempt struct {

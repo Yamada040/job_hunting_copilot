@@ -34,4 +34,4 @@ delete from companies where id = @id and user_id = @user_id;
 
 -- name: SetCompanyAiResultOnce :execrows
 -- 企業分析は企業ごとに1回だけ（docs/backend-design.md 3章）。同時に2回実行されても、先に保存した方だけを残す
-update companies set ai_result = @ai_result where id = @id and user_id = @user_id and ai_result is null;
+update companies set ai_result = @ai_result, ai_input_tokens = @ai_input_tokens, ai_output_tokens = @ai_output_tokens where id = @id and user_id = @user_id and ai_result is null;

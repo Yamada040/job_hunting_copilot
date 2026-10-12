@@ -61,26 +61,42 @@ type geminiResponse struct {
 	Candidates []struct {
 		Content geminiContent `json:"content"`
 	} `json:"candidates"`
+	UsageMetadata struct {
+		PromptTokenCount     int `json:"promptTokenCount"`
+		CandidatesTokenCount int `json:"candidatesTokenCount"`
+		ThoughtsTokenCount   int `json:"thoughtsTokenCount"`
+	} `json:"usageMetadata"`
 }
 
-func (g *gemini) call(ctx context.Context, req geminiRequest) ([]geminiPart, error) {
-	req.GenerationConfig = map[string]any{"temperature": 0.7}
+func (g *gemini) call(ctx context.Context, req geminiRequest) ([]geminiPart, Usage, error) {
+	if req.GenerationConfig == nil {
+		req.GenerationConfig = map[string]any{}
+	}
+	req.GenerationConfig["temperature"] = 0.7
 	var res geminiResponse
 	if err := postJSON(ctx, g.client, g.endpoint, map[string]string{"x-goog-api-key": g.apiKey}, req, &res); err != nil {
-		return nil, fmt.Errorf("gemini: %w", err)
+		return nil, Usage{}, fmt.Errorf("gemini: %w", err)
 	}
+	m := res.UsageMetadata
+	usage := Usage{InputTokens: m.PromptTokenCount, OutputTokens: m.CandidatesTokenCount + m.ThoughtsTokenCount}
 	if len(res.Candidates) == 0 {
-		return nil, fmt.Errorf("gemini: %w", errEmptyResponse)
+		return nil, usage, fmt.Errorf("gemini: %w", errEmptyResponse)
 	}
-	return res.Candidates[0].Content.Parts, nil
+	return res.Candidates[0].Content.Parts, usage, nil
 }
 
-func (g *gemini) generate(ctx context.Context, prompt string) (string, error) {
-	parts, err := g.call(ctx, geminiRequest{Contents: []geminiContent{{Role: "user", Parts: []geminiPart{{Text: prompt}}}}})
-	if err != nil {
-		return "", err
+func (g *gemini) generate(ctx context.Context, prompt string, asJSON bool) (string, Usage, error) {
+	req := geminiRequest{Contents: []geminiContent{{Role: "user", Parts: []geminiPart{{Text: prompt}}}}}
+	if asJSON {
+		// responseSchema で形まで指定しないのは、GPT と同じくプロンプトで形を伝え、検証はバックエンドで1か所にまとめるため
+		req.GenerationConfig = map[string]any{"responseMimeType": "application/json"}
 	}
-	return joinText(parts)
+	parts, usage, err := g.call(ctx, req)
+	if err != nil {
+		return "", usage, err
+	}
+	text, err := joinText(parts)
+	return text, usage, err
 }
 
 var geminiSearchTool = map[string]any{
@@ -95,22 +111,25 @@ var geminiSearchTool = map[string]any{
 	}},
 }
 
-func (g *gemini) generateWithSearch(ctx context.Context, instructions, input string, search searchFunc) (string, error) {
+func (g *gemini) generateWithSearch(ctx context.Context, instructions, input string, search searchFunc) (string, Usage, error) {
 	system := &geminiContent{Parts: []geminiPart{{Text: instructions}}}
 	contents := []geminiContent{{Role: "user", Parts: []geminiPart{{Text: input}}}}
+	var total Usage
 
 	for range maxSearches {
-		parts, err := g.call(ctx, geminiRequest{SystemInstruction: system, Contents: contents, Tools: []map[string]any{geminiSearchTool}})
+		parts, usage, err := g.call(ctx, geminiRequest{SystemInstruction: system, Contents: contents, Tools: []map[string]any{geminiSearchTool}})
+		total = total.add(usage)
 		if err != nil {
-			return "", err
+			return "", total, err
 		}
 		call := firstFunctionCall(parts)
 		if call == nil {
-			return joinText(parts)
+			text, err := joinText(parts)
+			return text, total, err
 		}
 		results, err := search(ctx, call.Args["query"])
 		if err != nil {
-			return "", err
+			return "", total, err
 		}
 		contents = append(contents,
 			geminiContent{Role: "model", Parts: []geminiPart{{FunctionCall: call}}},
@@ -120,11 +139,13 @@ func (g *gemini) generateWithSearch(ctx context.Context, instructions, input str
 		)
 	}
 	// 検索の上限に達したら、ツールを渡さずに、ここまでの検索結果で回答させる
-	parts, err := g.call(ctx, geminiRequest{SystemInstruction: system, Contents: contents})
+	parts, usage, err := g.call(ctx, geminiRequest{SystemInstruction: system, Contents: contents})
+	total = total.add(usage)
 	if err != nil {
-		return "", err
+		return "", total, err
 	}
-	return joinText(parts)
+	text, err := joinText(parts)
+	return text, total, err
 }
 
 func firstFunctionCall(parts []geminiPart) *geminiFunctionCall {

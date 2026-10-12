@@ -40,7 +40,7 @@ type record struct {
 type table struct {
 	get       func(ctx context.Context, q *db.Queries, userID uuid.UUID) (record, error)
 	create    func(ctx context.Context, q *db.Queries, userID uuid.UUID, answers []byte) (int64, error)
-	setAIOnce func(ctx context.Context, q *db.Queries, userID uuid.UUID, text string) (int64, error)
+	setAIOnce func(ctx context.Context, q *db.Queries, userID uuid.UUID, text string, usage ai.Usage) (int64, error)
 }
 
 // kind は、適性診断と自己分析の違い。
@@ -107,11 +107,11 @@ func (s *Service[A]) Diagnose(ctx context.Context, userID uuid.UUID) (Result[A],
 	if err := s.limiter.Hit(ctx, q, userID, ratelimit.AIBurst, ratelimit.AIDaily); err != nil {
 		return Result[A]{}, err
 	}
-	text, err := s.ai.Generate(ctx, s.kind.aiKind, s.kind.aiInput(result.Answers))
+	text, usage, err := s.ai.Generate(ctx, s.kind.aiKind, s.kind.aiInput(result.Answers))
 	if err != nil {
 		return Result[A]{}, err
 	}
-	n, err := s.kind.table.setAIOnce(ctx, q, userID, text)
+	n, err := s.kind.table.setAIOnce(ctx, q, userID, text, usage)
 	if err != nil {
 		return Result[A]{}, fmt.Errorf("save %s ai result: %w", s.kind.label, err)
 	}

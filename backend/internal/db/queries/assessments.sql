@@ -6,7 +6,7 @@ select * from aptitude_results where user_id = @user_id;
 insert into aptitude_results (user_id, answers) values (@user_id, @answers) on conflict (user_id) do nothing;
 
 -- name: SetAptitudeAiResultOnce :execrows
-update aptitude_results set ai_result = @ai_result where user_id = @user_id and ai_result is null;
+update aptitude_results set ai_result = @ai_result, ai_input_tokens = @ai_input_tokens, ai_output_tokens = @ai_output_tokens where user_id = @user_id and ai_result is null;
 
 -- name: GetSelfAnalysisResult :one
 select * from self_analysis_results where user_id = @user_id;
@@ -15,4 +15,4 @@ select * from self_analysis_results where user_id = @user_id;
 insert into self_analysis_results (user_id, answers) values (@user_id, @answers) on conflict (user_id) do nothing;
 
 -- name: SetSelfAnalysisAiResultOnce :execrows
-update self_analysis_results set ai_result = @ai_result where user_id = @user_id and ai_result is null;
+update self_analysis_results set ai_result = @ai_result, ai_input_tokens = @ai_input_tokens, ai_output_tokens = @ai_output_tokens where user_id = @user_id and ai_result is null;

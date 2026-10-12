@@ -124,11 +124,27 @@ func (h Handler) ReviewEsEntry(ctx context.Context, req openapi.ReviewEsEntryReq
 	if err != nil {
 		return nil, err
 	}
-	entry, err := h.Service.Review(ctx, userID, req.EsEntryId)
+	review, err := h.Service.Review(ctx, userID, req.EsEntryId)
 	if err != nil {
 		return nil, err
 	}
-	return openapi.ReviewEsEntry200JSONResponse(toAPI(entry)), nil
+	return openapi.ReviewEsEntry201JSONResponse(toAPIReview(review)), nil
+}
+
+func (h Handler) ListEsReviews(ctx context.Context, req openapi.ListEsReviewsRequestObject) (openapi.ListEsReviewsResponseObject, error) {
+	userID, err := auth.RequireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	reviews, err := h.Service.ListReviews(ctx, userID, req.EsEntryId)
+	if err != nil {
+		return nil, err
+	}
+	res := make(openapi.ListEsReviews200JSONResponse, len(reviews))
+	for i, r := range reviews {
+		res[i] = toAPIReview(r)
+	}
+	return res, nil
 }
 
 func (h Handler) DeleteEsEntry(ctx context.Context, req openapi.DeleteEsEntryRequestObject) (openapi.DeleteEsEntryResponseObject, error) {
@@ -148,7 +164,7 @@ func fromAPIQuestions(qs *[]openapi.EsQuestion) *[]Question {
 	}
 	out := make([]Question, len(*qs))
 	for i, q := range *qs {
-		out[i] = Question{Prompt: q.Prompt, Answer: q.Answer}
+		out[i] = Question{Prompt: q.Prompt, Answer: q.Answer, CharLimit: q.CharLimit}
 	}
 	return &out
 }
@@ -156,7 +172,7 @@ func fromAPIQuestions(qs *[]openapi.EsQuestion) *[]Question {
 func toAPI(e Entry) openapi.EsEntry {
 	questions := make([]openapi.EsQuestion, len(e.Questions))
 	for i, q := range e.Questions {
-		questions[i] = openapi.EsQuestion{Prompt: q.Prompt, Answer: q.Answer}
+		questions[i] = openapi.EsQuestion{Prompt: q.Prompt, Answer: q.Answer, CharLimit: q.CharLimit}
 	}
 	var deadline *openapi_types.Date
 	if e.Deadline != nil {
@@ -177,8 +193,42 @@ func toAPI(e Entry) openapi.EsEntry {
 		Tags:      e.Tags,
 		Deadline:  deadline,
 		Memo:      e.Memo,
-		AiResult:  e.AiResult,
 		CreatedAt: e.CreatedAt,
 		UpdatedAt: e.UpdatedAt,
 	}
+}
+
+func toAPIReview(r Review) openapi.EsReview {
+	items := make([]openapi.EsReviewItem, len(r.Result.Items))
+	for i, item := range r.Result.Items {
+		items[i] = openapi.EsReviewItem{
+			Source:      openapi.EsReviewItemSource(item.Source),
+			Prompt:      item.Prompt,
+			Answer:      item.Answer,
+			CharLimit:   item.CharLimit,
+			Structure:   toAPIScore(item.Structure),
+			Specificity: toAPIScore(item.Specificity),
+			CompanyFit:  toAPIScore(item.CompanyFit),
+			Improvement: item.Improvement,
+			Rewrite:     item.Rewrite,
+		}
+	}
+	var overall *float32
+	if score := r.Result.OverallScore(); score != nil {
+		v := float32(*score)
+		overall = &v
+	}
+	return openapi.EsReview{
+		Id:                  r.ID,
+		OverallScore:        overall,
+		Summary:             r.Result.Summary,
+		Items:               items,
+		UsedCompanyAnalysis: r.Result.UsedCompanyAnalysis,
+		UsedSelfAnalysis:    r.Result.UsedSelfAnalysis,
+		CreatedAt:           r.CreatedAt,
+	}
+}
+
+func toAPIScore(s Score) openapi.EsReviewScore {
+	return openapi.EsReviewScore{Score: s.Value, Comment: s.Comment}
 }

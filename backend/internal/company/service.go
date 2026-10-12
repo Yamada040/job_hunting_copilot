@@ -187,11 +187,12 @@ func (s *Service) Analyze(ctx context.Context, userID, id uuid.UUID) (db.Company
 	if err := s.limiter.Hit(ctx, q, userID, ratelimit.CompanyAnalysisBurst, ratelimit.CompanyAnalysisDaily); err != nil {
 		return db.Company{}, err
 	}
-	text, err := s.ai.AnalyzeCompany(ctx, analysisInput(row))
+	text, usage, err := s.ai.AnalyzeCompany(ctx, analysisInput(row))
 	if err != nil {
 		return db.Company{}, err
 	}
-	n, err := q.SetCompanyAiResultOnce(ctx, db.SetCompanyAiResultOnceParams{ID: id, UserID: userID, AiResult: &text})
+	input, output := usage.ColumnValues()
+	n, err := q.SetCompanyAiResultOnce(ctx, db.SetCompanyAiResultOnceParams{ID: id, UserID: userID, AiResult: &text, AiInputTokens: input, AiOutputTokens: output})
 	if err != nil {
 		return db.Company{}, fmt.Errorf("save company analysis: %w", err)
 	}
