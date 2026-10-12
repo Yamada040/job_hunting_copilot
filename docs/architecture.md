@@ -128,10 +128,11 @@ flowchart LR
     PR["PR"] --> Checks["checks<br/>lint / type-check / format / APIの型の鮮度"]
     PR --> Build["build"]
     PR --> Unit["unit (Vitest)"]
-    PR --> GoJob["go<br/>生成コードの鮮度 / golangci-lint / go test（実際のDB）"]
+    PR --> Backend["backend<br/>生成コードの鮮度 / golangci-lint / go test（実際のDB）"]
     PR --> E2E["e2e (Playwright)"]
-    Merge["dev へのマージ"] --> Migrate["migrate<br/>本番にマイグレーションを適用"]
-    Merge --> Deploy["Vercel が本番にデプロイ"]
+    Release["master へのリリース"] --> Migrate["本番にマイグレーションを適用"]
+    Migrate --> Deploy["Vercel の本番にデプロイ"]
+    Deploy --> Tag["日付のタグと GitHub Release"]
 ```
 
 - バックエンドのDBを使うテストは、Supabase の Postgres イメージをサービスコンテナとして起動し、マイグレーションを当ててから実行する

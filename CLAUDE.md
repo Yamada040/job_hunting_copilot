@@ -139,7 +139,7 @@ backend/
 
 ### データベース
 
-スキーマは `supabase/migrations/` が正。dev へのマージで GitHub Actions（`migrate.yml`）が本番に適用する。**マイグレーションは1つ前のバージョンのコードでも動く形で書く**（列の追加が先、不要な列の削除は次のリリース）。
+スキーマは `supabase/migrations/` が正。master へのリリースで GitHub Actions（`release.yml`）が本番に適用し、成功してからデプロイする。**マイグレーションは1つ前のバージョンのコードでも動く形で書く**（適用してからデプロイが終わるまでは古いコードが新しいDBで動く。列の追加が先、不要な列の削除は次のリリース）。
 
 - `profiles`: プロフィール、XP、レベル
 - `companies`: 企業（中心のエンティティ）。正規化した企業名（`normalized_name`）はユーザーごとに一意
@@ -286,17 +286,17 @@ backend/
   - `build`（本番ビルド確認）・`unit`（Vitest）: フロント・依存・ワークフローの変更
   - `backend`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）: `backend/`・`supabase/`・ワークフローの変更
   - `e2e`（Playwright。CIの中で Supabase を起動する）: `backend/`・`supabase/`・`e2e/`・依存・ワークフローの変更。フロントだけの変更では走らせない
+  - `migrations`: リリース PR（dev → master）でだけ、本番に当たるマイグレーションを `supabase db push --dry-run` で表示する
 - `.github/workflows/cache.yml`: dev への push で、Go のモジュールとビルド結果・npm・Playwright のブラウザのキャッシュを dev に置く（PR は自分のキャッシュと dev のキャッシュしか読めないため）
-- `.github/workflows/migrate.yml`: dev へのマージで、本番の Supabase にマイグレーションを適用する
+- `.github/workflows/release.yml`: master へのマージで、本番の Supabase にマイグレーションを適用し、成功したら Vercel の本番にデプロイし、日付のタグと GitHub Release を作る
 - `.github/workflows/keepalive.yml`: 毎日 `/v1/health` を呼び、Supabase の無料プランの一時停止（7日間アクセスが無いと止まる）を防ぐ
 - Dependabot: 依存パッケージの既知の脆弱性を検知し、直すPRを作る。普段のバージョンアップのPRは作らない（`infra/github.tf`）
-- devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`backend`/`e2e`）を要求し、マージ前にブランチを最新化するルールセットが設定されている（`infra/github.tf`）
+- devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`backend`/`e2e`）を要求し、マージ前にブランチを最新化するルールセットが設定されている。master はそれに `migrations` を加え、マージコミットでのマージだけを許す（`infra/github.tf`）
 
 ### ブランチ運用
 
-- GitHubのデフォルトブランチは `dev`。通常の開発ブランチ・PRのbase・CI保護ルール・Vercelの本番デプロイは `dev` を基準にする。
-- `master` は現在の開発フローでは使用しない。古い履歴が残っているだけの非アクティブブランチとして扱い、新規PRのbaseや作業開始地点にしない。
-- リリース運用を `master` に戻す場合は、事前に運用方針をIssue/PRで明文化し、`dev` との差分を解消してから切り替える。
+- GitHubのデフォルトブランチは `dev`。通常の開発ブランチ・PRのbase・作業開始地点は `dev`。dev へのマージでは本番に出ない
+- `master` は本番用のブランチ。dev からのリリース PR でだけ更新し、直接 push や急ぎの修正の直接のマージはしない
 - ローカル作業を始めるときは `git checkout dev && git pull --rebase origin dev` で最新の `dev` から作業ブランチを作成する。
 
 ### 環境変数
@@ -375,9 +375,20 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 ### デプロイ
 
 - **Vercel**（無料のHobbyプラン）でホスティング。`vercel.json` の Services で、`/v1/*` を Go、それ以外を Next.js に振り分ける。関数のリージョンは東京（`hnd1`、Supabase と同じ）
-- `dev` ブランチへのマージで自動デプロイ
+- 本番へのデプロイはリリース（下記）でだけ行う。Vercel の Git 連携は master をデプロイしない（`vercel.json` の `git.deploymentEnabled`）。マイグレーションとの順番を保証するため、`release.yml` が Vercel CLI でデプロイする
 - 環境変数は `infra/vercel.tf`（Terraform）で設定する。変えたら Vercel で再デプロイするまで反映されない
-- ブランチごとにプレビューデプロイが作成される
+- ブランチごとにプレビューデプロイが作成される。プレビューは本番と同じ Supabase につながるので、本番のデータに触れることに注意する。マイグレーションを含む変更は、リリースまでプレビューでは動かない
+
+### リリース
+
+dev にたまった変更を、まとめて master に出す。
+
+1. 手元で dev の最新を確かめる: `supabase db reset` でマイグレーションを最初から当て直し、`mise run dev` で主要な画面を一通り触る
+2. dev → master のリリース PR を作る（`gh pr create --base master --head dev`）。CIの `migrations` ジョブの Summary に、本番に当たるマイグレーションが出る
+3. マージコミットでマージする。`release.yml` が、マイグレーション → 本番へのデプロイ → 日付のタグ（`v2026.10.12`、同じ日の2回目からは `.2`）と GitHub Release の作成を順に行う
+
+- **戻すとき**: コードは Vercel の Instant Rollback で1つ前のデプロイに戻す。マイグレーションは戻さない（1つ前のコードでも動く形で書いているため）
+- **急ぎの修正**: いつも通り dev に PR を出してマージし、すぐにリリースする。master に直接入れない
 
 ### 既知のパターン・落とし穴
 

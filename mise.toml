@@ -8,7 +8,7 @@ idiomatic_version_file_enable_tools = ["node"]
 [tools]
 go = "1.27.2" # backend/go.mod の go と合わせる
 golangci-lint = "2.14.0" # .github/workflows/ci.yml と合わせる
-supabase = "2.120.0" # .github/workflows/ci.yml・migrate.yml と合わせる
+supabase = "2.120.0" # .github/workflows/ci.yml・release.yml と合わせる
 
 [tasks.db]
 description = "手元の Supabase（DB と認証）を起動する。動いていれば何もしない"
