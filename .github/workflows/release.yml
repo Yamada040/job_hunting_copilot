@@ -1,0 +1,56 @@
+name: Release
+
+# master へのリリース PR のマージで、本番の DB にマイグレーションを当て、成功したら Vercel の本番にデプロイし、日付のタグを付ける。
+# Vercel の Git 連携に master をデプロイさせない（vercel.json）のは、マイグレーションとの順番が保証されず、
+# マイグレーションが失敗しても新しいコードが本番に出てしまうため。
+# マイグレーションを当ててからデプロイが終わるまでは古いコードが新しい DB で動くので、
+# マイグレーションは1つ前のバージョンのコードでも動く形で書くこと
+on:
+  push:
+    branches: [master]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write # タグと GitHub Release を作る
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0 # mise.toml・ci.yml と合わせる。latest だと新しい版が出た日に本番へのマイグレーションの動きが変わりうる
+      # Secrets が未設定のまま黙って飛ばすと、本番にマイグレーションが当たっていないことに気づけないため、失敗させる
+      # config.toml が手元・CI用の JWT の署名鍵のファイルを指しており、無いと CLI が止まる。本番には使わないので使い捨てで作る
+      - run: npm run supabase:signing-key
+      - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      - name: 本番の DB にマイグレーションを当てる
+        run: supabase db push
+      - name: Vercel の本番にデプロイする
+        run: |
+          npm install --global vercel@63.1.2
+          vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+      # 同じ日の2回目からは末尾に回数を付ける（v2026.10.12.2）
+      - name: 日付のタグを付け、GitHub Release を作る
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base="v$(TZ=Asia/Tokyo date +%Y.%m.%d)"
+          tag="$base"
+          count=1
+          while git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; do
+            count=$((count + 1))
+            tag="$base.$count"
+          done
+          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --generate-notes

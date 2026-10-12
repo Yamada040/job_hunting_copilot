@@ -2,11 +2,11 @@
 
 Vercel・GitHub・Supabase の設定を Terraform で管理する（Issue #134）。
 
-| ファイル      | 管理するもの                                                                      |
-| ------------- | --------------------------------------------------------------------------------- |
-| `vercel.tf`   | Vercel の環境変数（Production・Preview・Development）                             |
-| `github.tf`   | GitHub Actions の Secrets、dev ブランチのルールセット、Dependabot の脆弱性の検知  |
-| `supabase.tf` | Supabase Auth（サイトURL・リダイレクト先・ログイン方法）、Data API の公開スキーマ |
+| ファイル      | 管理するもの                                                                             |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `vercel.tf`   | Vercel の環境変数（Production・Preview・Development）                                    |
+| `github.tf`   | GitHub Actions の Secrets、dev・master ブランチのルールセット、Dependabot の脆弱性の検知 |
+| `supabase.tf` | Supabase Auth（サイトURL・リダイレクト先・ログイン方法）、Data API の公開スキーマ        |
 
 管理しないもの: Supabase のプロジェクト自体と JWT の署名鍵・APIキー、Google Cloud の OAuth クライアント、外部APIのキーの発行。
 
@@ -21,9 +21,10 @@ Vercel・GitHub・Supabase の設定を Terraform で管理する（Issue #134�
 ## 初回の準備
 
 1. Vercel の Account Settings → Tokens で、このプロジェクトだけを対象にしたトークンを発行する
-2. Supabase の Account → Access Tokens で、Auth Config・Data API Config・Project の Read-write 権限のトークンを発行する
-3. `terraform.tfvars.example` をコピーして `terraform.tfvars` を作り、値を埋める
-4. Vercel に画面で登録した環境変数を消す（Terraform は既存の同名の変数を取り込めないため。デプロイ済みの本番は影響を受けない）
+2. 同じく、GitHub Actions が本番にデプロイするためのトークン（`vercel_deploy_token`）を、1とは別に発行する
+3. Supabase の Account → Access Tokens で、Auth Config・Data API Config・Project の Read-write 権限のトークンを発行する
+4. `terraform.tfvars.example` をコピーして `terraform.tfvars` を作り、値を埋める
+5. Vercel に画面で登録した環境変数を消す（Terraform は既存の同名の変数を取り込めないため。デプロイ済みの本番は影響を受けない）
 
 ```bash
 cd infra
