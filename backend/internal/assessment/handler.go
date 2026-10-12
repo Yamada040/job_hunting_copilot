@@ -2,6 +2,7 @@ package assessment
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
@@ -22,7 +23,10 @@ func (h Handler) GetAptitudeResult(ctx context.Context, _ openapi.GetAptitudeRes
 	if err != nil {
 		return nil, err
 	}
-	return openapi.GetAptitudeResult200JSONResponse(aptitudeToAPI(r)), nil
+	if r == nil {
+		return notAnswered{}, nil
+	}
+	return openapi.GetAptitudeResult200JSONResponse(aptitudeToAPI(*r)), nil
 }
 
 func (h Handler) SubmitAptitudeAnswers(ctx context.Context, req openapi.SubmitAptitudeAnswersRequestObject) (openapi.SubmitAptitudeAnswersResponseObject, error) {
@@ -58,7 +62,10 @@ func (h Handler) GetSelfAnalysisResult(ctx context.Context, _ openapi.GetSelfAna
 	if err != nil {
 		return nil, err
 	}
-	return openapi.GetSelfAnalysisResult200JSONResponse(selfAnalysisToAPI(r)), nil
+	if r == nil {
+		return notAnswered{}, nil
+	}
+	return openapi.GetSelfAnalysisResult200JSONResponse(selfAnalysisToAPI(*r)), nil
 }
 
 func (h Handler) SubmitSelfAnalysisAnswers(ctx context.Context, req openapi.SubmitSelfAnalysisAnswersRequestObject) (openapi.SubmitSelfAnalysisAnswersResponseObject, error) {
@@ -91,4 +98,20 @@ func aptitudeToAPI(r Result[openapi.AptitudeAnswers]) openapi.AptitudeResult {
 
 func selfAnalysisToAPI(r Result[openapi.SelfAnalysisAnswers]) openapi.SelfAnalysisResult {
 	return openapi.SelfAnalysisResult{Id: r.ID, Answers: r.Answers, AiResult: r.AIResult, CreatedAt: r.CreatedAt}
+}
+
+// notAnswered は、まだ回答していないときの 200 と null。生成された 200 の型は null を表せないので、ここで書く。
+type notAnswered struct{}
+
+func (notAnswered) VisitGetAptitudeResultResponse(w http.ResponseWriter) error { return writeNull(w) }
+
+func (notAnswered) VisitGetSelfAnalysisResultResponse(w http.ResponseWriter) error {
+	return writeNull(w)
+}
+
+func writeNull(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write([]byte("null\n"))
+	return err
 }

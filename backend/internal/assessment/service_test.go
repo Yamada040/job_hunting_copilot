@@ -27,8 +27,9 @@ func TestAptitudeFlow(t *testing.T) {
 	fake := &aitest.Fake{Reply: "診断結果"}
 	s := NewAptitudeService(pool, xp.NewService(), fake, ratelimit.NewLimiter())
 
-	_, err := s.Get(t.Context(), userID)
-	assertKind(t, err, platform.KindNotFound)
+	if before, err := s.Get(t.Context(), userID); err != nil || before != nil {
+		t.Fatalf("Get before answering = %v, %v; want nil without an error", before, err)
+	}
 
 	answers := openapi.AptitudeAnswers{Interests: []string{"IT", "教育"}, Strengths: []string{}, Values: []string{}, Enjoy: "ものづくり"}
 	result, reward, err := s.Submit(t.Context(), userID, answers)
@@ -37,6 +38,10 @@ func TestAptitudeFlow(t *testing.T) {
 	}
 	if result.Answers.Enjoy != "ものづくり" || reward.Awarded != 15 {
 		t.Errorf("result = %+v, reward = %+v; want answers saved and 15 XP", result, reward)
+	}
+
+	if saved, err := s.Get(t.Context(), userID); err != nil || saved == nil || saved.Answers.Enjoy != "ものづくり" {
+		t.Errorf("Get after answering = %v, %v; want the saved answers", saved, err)
 	}
 
 	_, _, err = s.Submit(t.Context(), userID, answers)
