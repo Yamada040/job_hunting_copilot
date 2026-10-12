@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { daysFrom, todayXp, unreviewedInterviews, upcomingEvents, urgentDrafts } from "./menu-summaries";
+import { daysFrom, relativeDay, todayXp, unreviewedInterviews, upcomingEvents, urgentDrafts } from "./menu-summaries";
 
 describe("daysFrom", () => {
   it("月をまたいでも日数を数える", () => {
@@ -56,5 +56,13 @@ describe("todayXp", () => {
     ];
 
     expect(todayXp(logs, today)).toBe(30);
+  });
+});
+
+describe("relativeDay", () => {
+  it("今日・明日、それ以降は日数で言う", () => {
+    expect(relativeDay("2026-10-12", "2026-10-12")).toBe("今日");
+    expect(relativeDay("2026-10-12", "2026-10-13")).toBe("明日");
+    expect(relativeDay("2026-10-12", "2026-10-15")).toBe("3日後");
   });
 });

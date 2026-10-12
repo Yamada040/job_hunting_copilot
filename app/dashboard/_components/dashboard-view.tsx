@@ -5,8 +5,9 @@ import { formatDateKey } from "@/app/calendar/_components/calendar/utils";
 import { MenuCarousel } from "./menu-carousel";
 import { useMenuItems } from "./menu-items";
 import { todayXp } from "./menu-summaries";
+import { UpcomingEvents } from "./upcoming-events";
 
-/** ダッシュボードの本体。まずはカルーセルだけを置き、必要になった情報を足していく。 */
+/** ダッシュボードの本体。カルーセルと直近の予定を置き、必要になった情報を足していく。 */
 export function DashboardView() {
   const today = formatDateKey(new Date());
   const items = useMenuItems(today);
@@ -22,6 +23,7 @@ export function DashboardView() {
         </p>
       </div>
       <MenuCarousel items={items} />
+      <UpcomingEvents today={today} />
     </>
   );
 }

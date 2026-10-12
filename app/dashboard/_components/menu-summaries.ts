@@ -43,3 +43,11 @@ export function upcomingEvents<T extends Pick<CalendarItem, "date" | "time">>(
 export function todayXp(logs: Pick<XpLog, "xp" | "createdAt">[], today: string) {
   return logs.filter((log) => formatDateKey(log.createdAt) === today).reduce((sum, log) => sum + log.xp, 0);
 }
+
+/** 予定の日が今日から見ていつか。今日・明日、それ以降は「○日後」。 */
+export function relativeDay(today: string, date: string): string {
+  const days = daysFrom(today, date);
+  if (days === 0) return "今日";
+  if (days === 1) return "明日";
+  return `${days}日後`;
+}
