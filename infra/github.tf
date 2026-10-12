@@ -57,7 +57,7 @@ resource "github_repository_ruleset" "default_branch" {
       strict_required_status_checks_policy = true
 
       dynamic "required_check" {
-        for_each = ["checks", "build", "unit", "go", "e2e"]
+        for_each = ["checks", "build", "unit", "backend", "e2e"]
         content {
           context        = required_check.value
           integration_id = 15368 # GitHub Actions
