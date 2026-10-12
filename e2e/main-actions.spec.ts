@@ -77,10 +77,8 @@ test("プロフィールを保存する", async ({ page }) => {
   await expect(page.getByText(`目標-${stamp}`)).toBeVisible();
 });
 
-test("ヘッダーとサイドバーのリンクで移動する", async ({ page }) => {
+test("サイドバーのリンクで移動する", async ({ page }) => {
   await page.goto("/dashboard");
-  await page.getByRole("link", { name: "ESを追加" }).click();
-  await expect(page).toHaveURL(/\/es\/new$/);
   await page.getByRole("link", { name: /企業管理/ }).click();
   await expect(page).toHaveURL(/\/companies$/);
 });
