@@ -13,10 +13,8 @@ export interface BreadcrumbItem {
 interface HeaderProps {
   title?: string;
   description?: string;
-  actions?: React.ReactNode;
   leftContent?: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
-  actionsPlacement?: "left" | "right";
   showBrand?: boolean;
 }
 
@@ -76,39 +74,20 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
   return breadcrumbs;
 }
 
-export function Header({
-  title,
-  description,
-  actions,
-  leftContent,
-  actionsPlacement = "left",
-  showBrand,
-}: HeaderProps) {
+export function Header({ title, description, leftContent, showBrand }: HeaderProps) {
   return (
     <header className="fixed left-0 top-0 z-50 w-full border-b border-sky-300/45 bg-white/94 px-6 py-4 backdrop-blur">
       <div className="flex flex-col gap-3">
-        {actionsPlacement === "left" ? (
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              {showBrand ? <BrandLogo className="w-60 pl-16" logoClassName="h-14" /> : null}
-              {leftContent ? <div className="flex-shrink-0">{leftContent}</div> : null}
-            </div>
-            <div className="flex-1 min-w-0">
-              {title && <h1 className="truncate text-2xl font-semibold">{title}</h1>}
-              {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
-            </div>
-            {actions ? <div className="flex flex-shrink-0 items-center gap-2">{actions}</div> : null}
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            {showBrand ? <BrandLogo className="w-60 pl-16" logoClassName="h-14" /> : null}
+            {leftContent ? <div className="flex-shrink-0">{leftContent}</div> : null}
           </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              {title && <h1 className="truncate text-2xl font-semibold">{title}</h1>}
-              {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
-            </div>
-
-            <div className="ml-4 flex items-center gap-2">{actions}</div>
+          <div className="flex-1 min-w-0">
+            {title && <h1 className="truncate text-2xl font-semibold">{title}</h1>}
+            {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
           </div>
-        )}
+        </div>
       </div>
     </header>
   );

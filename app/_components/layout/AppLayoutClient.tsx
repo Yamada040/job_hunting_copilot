@@ -11,24 +11,20 @@ export interface AppLayoutProps {
   children: React.ReactNode;
   headerTitle?: string;
   headerDescription?: string;
-  headerActions?: React.ReactNode;
   headerLeftContent?: React.ReactNode;
   showHeader?: boolean;
   showSidebar?: boolean;
   className?: string;
-  actionsPlacement?: "left" | "right";
 }
 
 export function AppLayoutClient({
   children,
   headerTitle,
   headerDescription,
-  headerActions,
   headerLeftContent,
   showHeader = true,
   showSidebar = true,
   className,
-  actionsPlacement,
 }: AppLayoutProps) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -74,14 +70,7 @@ export function AppLayoutClient({
           "ml-0": !shouldShowSidebar,
         })}
       >
-        {showHeader && (
-          <Header
-            actions={headerActions}
-            leftContent={leftContent}
-            actionsPlacement={actionsPlacement ?? "left"}
-            showBrand
-          />
-        )}
+        {showHeader && <Header leftContent={leftContent} showBrand />}
 
         <main className={cn("mx-auto max-w-7xl px-6 pb-8 pt-24 sm:px-10 sm:pb-12", className)}>
           <Breadcrumbs />
