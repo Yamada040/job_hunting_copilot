@@ -90,6 +90,22 @@ func TestAwardStopsAtDailyCapAndResetsNextDayInJST(t *testing.T) {
 	}
 }
 
+func TestAwardGivesInterviewLogXPUpToFiveTimesADay(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	s := NewService()
+
+	awarded := 0
+	for range 6 {
+		awarded += award(t, pool, s, userID, db.XpActionInterviewLog, newRef()).Awarded
+	}
+
+	// 面接ログを消して作り直すと別のログとして数えられるため、日次上限が無いと無限にXPを稼げてしまう
+	if awarded != 100 {
+		t.Errorf("awarded %d XP in a day, want 100 (5 times x 20 XP)", awarded)
+	}
+}
+
 func TestAwardGivesFirstTimeOnlyActionsOnce(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)

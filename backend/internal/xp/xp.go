@@ -32,7 +32,7 @@ type rule struct {
 
 var rules = map[db.XpAction]rule{
 	db.XpActionEsSubmitted:            {amount: 25, perTarget: true, dailyCap: 5},
-	db.XpActionInterviewLog:           {amount: 20, perTarget: true},
+	db.XpActionInterviewLog:           {amount: 20, perTarget: true, dailyCap: 5},
 	db.XpActionCompanyNew:             {amount: 5, perTarget: true, dailyCap: 5},
 	db.XpActionAptitudeComplete:       {amount: 15, once: true},
 	db.XpActionSelfAnalysisComplete:   {amount: 15, once: true},

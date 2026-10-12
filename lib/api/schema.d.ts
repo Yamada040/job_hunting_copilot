@@ -226,7 +226,7 @@ export interface paths {
     put?: never;
     /**
      * 面接ログを作成する
-     * @description XPが付く（同じ面接ログには1回）。
+     * @description XPが付く（同じ面接ログには1回、1日5回まで）。
      */
     post: operations["createInterviewLog"];
     delete?: never;
