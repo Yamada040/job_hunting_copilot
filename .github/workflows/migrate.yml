@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.120.0 # mise.toml と合わせる。latest だと新しい版が出た日に本番へのマイグレーションの動きが変わりうる
       # Secrets が未設定のまま黙って飛ばすと、本番にマイグレーションが当たっていないことに気づけないため、失敗させる
       # config.toml が手元・CI用の JWT の署名鍵のファイルを指しており、無いと CLI が止まる。本番には使わないので使い捨てで作る
       - run: npm run supabase:signing-key
