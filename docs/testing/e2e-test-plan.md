@@ -58,7 +58,7 @@ npm run test:e2e
 
 ## 6. CI
 
-`.github/workflows/test.yml` の `e2e` ジョブで、Supabase を起動してから実行する。認証・DB・その前段の API ゲートウェイだけを起動し、使わないもの（Studio・Storage・Data API など）は起動しない。
+`.github/workflows/ci.yml` の `e2e` ジョブで、Supabase を起動してから実行する。認証・DB・その前段の API ゲートウェイだけを起動し、使わないもの（Studio・Storage・Data API など）は起動しない。
 
 ## 7. セキュリティ上の注意
 
