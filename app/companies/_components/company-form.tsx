@@ -144,7 +144,7 @@ export function CompanyForm({ initial, submitLabel, pending, error, onSubmit }: 
 
         <ApiErrorMessage error={error} labels={COMPANY_FIELD_LABELS} />
 
-        <Button type="submit" variant="quest" disabled={pending}>
+        <Button type="submit" variant="default" disabled={pending}>
           {pending ? "保存中…" : submitLabel}
         </Button>
       </form>

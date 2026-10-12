@@ -85,7 +85,7 @@ export function NewWebtestForm() {
         </div>
         <ApiErrorMessage error={createQuestion.error} labels={FIELD_LABELS} />
         <div className="flex justify-start pt-2">
-          <Button type="submit" variant="quest" disabled={createQuestion.isPending}>
+          <Button type="submit" variant="default" disabled={createQuestion.isPending}>
             {createQuestion.isPending ? "保存中…" : "保存する"}
           </Button>
         </div>

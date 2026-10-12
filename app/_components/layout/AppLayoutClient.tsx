@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs, Header } from "./Header";
@@ -27,6 +28,7 @@ export function AppLayoutClient({
   className,
 }: AppLayoutProps) {
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     const stored = window.localStorage.getItem("sidebar-open");
@@ -72,7 +74,15 @@ export function AppLayoutClient({
       >
         {showHeader && <Header leftContent={leftContent} showBrand />}
 
-        <main className={cn("mx-auto max-w-7xl px-6 pb-8 pt-24 sm:px-10 sm:pb-12", className)}>
+        {/* 各画面はこのレイアウトごと描き直されるので、画面を移るたびに中身が奥から手前へせり出す。
+            カルーセルの「窓へ飛び込む」動きとつなげるため。ヘッダーとサイドバーは動かさない */}
+        <motion.main
+          className={cn("mx-auto max-w-7xl px-6 pb-8 pt-24 sm:px-10 sm:pb-12", className)}
+          initial={reduceMotion ? false : { opacity: 0, scale: 0.96, rotateX: 6, y: 16 }}
+          animate={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          style={{ transformPerspective: 1200, transformOrigin: "50% 0%" }}
+        >
           <Breadcrumbs />
           {(headerTitle || headerDescription) && (
             <div className="mt-4">
@@ -81,7 +91,7 @@ export function AppLayoutClient({
             </div>
           )}
           {children}
-        </main>
+        </motion.main>
       </div>
     </div>
   );

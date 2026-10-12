@@ -115,7 +115,7 @@ export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>聞かれた質問と自分の回答</span>
-            <Button type="button" variant="quest" onClick={() => setQuestions((qs) => [...qs, emptyQuestion])}>
+            <Button type="button" variant="outline" onClick={() => setQuestions((qs) => [...qs, emptyQuestion])}>
               質問を追加
             </Button>
           </div>
@@ -153,9 +153,9 @@ export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }
                 {questions.length > 1 && (
                   <Button
                     type="button"
-                    variant="quest"
+                    variant="destructive"
                     onClick={() => setQuestions((qs) => qs.filter((_, i) => i !== index))}
-                    className="text-xs text-destructive hover:text-destructive/80"
+                    className="text-xs"
                   >
                     削除
                   </Button>
@@ -191,7 +191,7 @@ export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }
         <ApiErrorMessage error={error} labels={FIELD_LABELS} />
 
         <div>
-          <Button type="submit" variant="quest" disabled={pending || !company}>
+          <Button type="submit" variant="default" disabled={pending || !company}>
             {pending ? "保存中…" : submitLabel}
           </Button>
         </div>

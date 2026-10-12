@@ -44,7 +44,7 @@ function CompanyDetailLoaded({
       <div className="flex flex-wrap items-center gap-3">
         <Button
           type="button"
-          variant="quest-muted"
+          variant="outline"
           onClick={() => updateCompany.mutate({ favorite: !company.favorite })}
           aria-pressed={company.favorite}
         >
@@ -52,7 +52,7 @@ function CompanyDetailLoaded({
           {company.favorite ? "お気に入りから外す" : "お気に入りにする"}
         </Button>
         {company.mypageUrl && (
-          <Button asChild variant="quest-muted">
+          <Button asChild variant="outline">
             <a href={company.mypageUrl} target="_blank" rel="noopener noreferrer">
               <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               マイページを開く
@@ -87,12 +87,7 @@ function CompanyDetailLoaded({
       <div className="space-y-2">
         <ConfirmDialog
           trigger={
-            <Button
-              type="button"
-              variant="quest"
-              disabled={deleteCompany.isPending}
-              className="text-destructive hover:text-destructive/80"
-            >
+            <Button type="button" variant="destructive" disabled={deleteCompany.isPending}>
               <TrashIcon className="h-4 w-4" />
               {deleteCompany.isPending ? "削除中…" : "この企業を削除する"}
             </Button>

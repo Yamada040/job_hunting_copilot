@@ -1,13 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useMe } from "@/lib/api/me";
 import { levelThresholds, XP_PER_LEVEL } from "@/lib/xp/compute-level";
-import { QuestWindow } from "./quest-window";
 
 /**
  * ヘッダーのレベル・XPの表示。値は TanStack Query の useMe のキャッシュから読むので、
@@ -29,33 +27,16 @@ export function XpBadge() {
     <>
       <XpBadgeStatus xp={data?.xp ?? 0} level={level ?? 1} />
 
-      {/* レベルアップ演出：背景画像の上にDQ風のメッセージウィンドウを重ねる */}
       <Dialog open={levelUp !== null} onOpenChange={(open) => !open && setLevelUp(null)}>
-        <DialogContent
-          showCloseButton={false}
-          className="aspect-video max-w-[650px] overflow-hidden rounded-none border-4 border-white p-0 shadow-2xl sm:max-w-[650px]"
-        >
-          <Image
-            src="/levelup.jpeg"
-            alt=""
-            fill
-            sizes="(max-width: 650px) 100vw, 650px"
-            className="object-cover opacity-90"
-            priority
-          />
-          <QuestWindow title="LEVEL UP!" className="absolute inset-x-8 bottom-8 p-6 text-center">
-            <DialogTitle className="text-xl font-bold leading-relaxed">
-              おめでとう！
-              <br />
-              あなたは Lv.{levelUp} に なった！
-            </DialogTitle>
-            <DialogDescription className="sr-only">レベルが上がりました</DialogDescription>
-            <DialogClose asChild>
-              <Button type="button" variant="quest" className="mx-auto text-2xl">
-                つぎへ
-              </Button>
-            </DialogClose>
-          </QuestWindow>
+        <DialogContent className="gap-3 text-center">
+          <p className="text-xs font-bold tracking-widest text-primary">LEVEL UP</p>
+          <DialogTitle className="text-2xl font-bold">レベル {levelUp} になりました</DialogTitle>
+          <DialogDescription>就活の記録を積み重ねた分だけ、レベルが上がります。</DialogDescription>
+          <DialogClose asChild>
+            <Button type="button" className="mx-auto mt-2">
+              閉じる
+            </Button>
+          </DialogClose>
         </DialogContent>
       </Dialog>
     </>
@@ -88,7 +69,7 @@ function XpBadgeStatus({ xp, level }: { xp: number; level: number }) {
           />
         </div>
         <div className="flex justify-between text-[10px] font-bold tracking-tight text-muted-foreground">
-          <span>つぎの レベルまで {xpToNext} XP</span>
+          <span>次のレベルまで {xpToNext} XP</span>
           <span>
             {xpIntoLevel} / {XP_PER_LEVEL}
           </span>

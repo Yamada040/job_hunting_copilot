@@ -48,7 +48,7 @@ export function EsListClient() {
   if (items?.length === 0) {
     return (
       <EmptyState title="まだESがありません" description="企業を選んで、設問と回答を書くところから始めましょう。">
-        <Button asChild variant="quest">
+        <Button asChild variant="default">
           <Link href={ROUTES.ES_NEW}>ESを作成する</Link>
         </Button>
       </EmptyState>

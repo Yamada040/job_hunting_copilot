@@ -6,6 +6,7 @@ import {
   HomeIcon,
   DocumentTextIcon,
   BuildingOfficeIcon,
+  CalendarDaysIcon,
   UserIcon,
   ArrowRightOnRectangleIcon,
   ChatBubbleLeftRightIcon,
@@ -32,13 +33,10 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
       href={item.href}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "group flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold transition hover:text-sky-500",
-        isActive ? "text-sky-600" : "text-foreground",
+        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-bold transition-colors hover:bg-secondary",
+        isActive ? "bg-accent text-primary" : "text-foreground",
       )}
     >
-      <span aria-hidden className="shrink-0 text-[0.7rem] transition-transform group-hover:translate-x-1">
-        ▶
-      </span>
       <item.icon className="h-4 w-4 shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs">{item.label}</div>
@@ -68,6 +66,12 @@ const navigationItems: NavItem[] = [
     href: "/companies",
     icon: BuildingOfficeIcon,
     description: "企業カードと進捗を記録",
+  },
+  {
+    label: "カレンダー",
+    href: ROUTES.CALENDAR,
+    icon: CalendarDaysIcon,
+    description: "予定と締切を確認",
   },
   {
     label: "適性チェック",
@@ -134,7 +138,7 @@ export function Sidebar() {
     <div className="fixed left-0 top-20 z-40 h-[calc(100vh-5rem)] w-60 border-r border-slate-400/20 bg-[#f8fcff]/98 backdrop-blur">
       <div className="flex h-full flex-col gap-6 overflow-y-auto px-5 py-7">
         <nav className="flex-1">
-          <div className="space-y-3">
+          <div className="space-y-1">
             {navigationItems.map((item) => (
               <NavLink
                 key={item.href}
@@ -151,14 +155,8 @@ export function Sidebar() {
             <form action="/auth/signout" method="post">
               <button
                 type="submit"
-                className="group flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-xs font-bold text-foreground transition hover:text-sky-500"
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-secondary"
               >
-                <span
-                  aria-hidden={true}
-                  className="shrink-0 text-[0.7rem] transition-transform group-hover:translate-x-1"
-                >
-                  ▶
-                </span>
                 <ArrowRightOnRectangleIcon className="h-4 w-4 shrink-0" />
                 <div className="min-w-0 flex-1 text-left">
                   <div className="truncate text-xs">ログアウト</div>

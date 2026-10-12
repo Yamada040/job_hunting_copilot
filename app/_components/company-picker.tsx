@@ -26,7 +26,7 @@ export function CompanyPicker({ value, onChange }: Props) {
     return (
       <div className="flex items-center gap-2">
         <Input value={value.name} readOnly aria-label="企業" className="flex-1" />
-        <Button type="button" variant="quest-muted" className="text-xs" onClick={() => onChange(null)}>
+        <Button type="button" variant="ghost" className="text-xs" onClick={() => onChange(null)}>
           変更
         </Button>
       </div>

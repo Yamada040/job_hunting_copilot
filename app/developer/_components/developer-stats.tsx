@@ -4,11 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, ApiError, unwrap } from "@/lib/api/client";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
-import { QuestWindow } from "@/app/_components/quest-window";
 import { AiUsageTable } from "./ai-usage-table";
 
 const nf = new Intl.NumberFormat("ja-JP");
@@ -61,38 +60,52 @@ export function DeveloperStats() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <QuestWindow title="7日投稿グラフ" className="pb-5">
-          <div className="space-y-4 text-sm">
-            {[
-              { label: "ES", value: summary.esCreated7d, tone: "bg-sky-400" },
-              { label: "企業", value: summary.companiesCreated7d, tone: "bg-emerald-400" },
-              { label: "面接ログ", value: summary.interviewsCreated7d, tone: "bg-indigo-400" },
-            ].map((item) => (
-              <div key={item.label} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span>{item.label}</span>
-                  <span>{nf.format(item.value)}件</span>
+        <Card className="gap-4 py-6">
+          <CardHeader className="px-6">
+            <CardTitle>
+              <h2 className="text-base font-semibold">7日投稿グラフ</h2>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-6">
+            <div className="space-y-4 text-sm">
+              {[
+                { label: "ES", value: summary.esCreated7d, tone: "bg-sky-400" },
+                { label: "企業", value: summary.companiesCreated7d, tone: "bg-emerald-400" },
+                { label: "面接ログ", value: summary.interviewsCreated7d, tone: "bg-indigo-400" },
+              ].map((item) => (
+                <div key={item.label} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>{item.label}</span>
+                    <span>{nf.format(item.value)}件</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-secondary p-[2px]">
+                    <div
+                      className={`h-full rounded-full ${item.tone} transition-all`}
+                      style={{ width: `${Math.max(8, Math.round((item.value / maxBar) * 100))}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-3 rounded-full bg-secondary p-[2px]">
-                  <div
-                    className={`h-full rounded-full ${item.tone} transition-all`}
-                    style={{ width: `${Math.max(8, Math.round((item.value / maxBar) * 100))}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </QuestWindow>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-        <QuestWindow title="稼働サマリー" className="pb-5">
-          <div className="space-y-3 text-sm">
-            <SummaryRow label="本日アクティブ" value={`${nf.format(summary.activeUsersToday)}人`} />
-            <SummaryRow label="ES総数" value={`${nf.format(summary.totalEs)}件`} />
-            <SummaryRow label="企業総数" value={`${nf.format(summary.totalCompanies)}件`} />
-            <SummaryRow label="面接ログ総数" value={`${nf.format(summary.totalInterviews)}件`} />
-            <p className="pt-3 text-[11px] text-muted-foreground">最終更新: {updatedAt}</p>
-          </div>
-        </QuestWindow>
+        <Card className="gap-4 py-6">
+          <CardHeader className="px-6">
+            <CardTitle>
+              <h2 className="text-base font-semibold">稼働サマリー</h2>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-6">
+            <div className="space-y-3 text-sm">
+              <SummaryRow label="本日アクティブ" value={`${nf.format(summary.activeUsersToday)}人`} />
+              <SummaryRow label="ES総数" value={`${nf.format(summary.totalEs)}件`} />
+              <SummaryRow label="企業総数" value={`${nf.format(summary.totalCompanies)}件`} />
+              <SummaryRow label="面接ログ総数" value={`${nf.format(summary.totalInterviews)}件`} />
+              <p className="pt-3 text-[11px] text-muted-foreground">最終更新: {updatedAt}</p>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       <AiUsageTable usage={summary.aiUsage} />

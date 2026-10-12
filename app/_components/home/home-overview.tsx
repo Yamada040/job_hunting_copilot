@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { fadeInUp, homeAccent, homeCard, homeCardMuted, homeHeading, homeIconBox, staggerChildren } from "./theme";
+import { fadeInUp, homeCard, homeCardMuted, homeHeading, homeIconBox, staggerChildren } from "./theme";
 import { SectionHeading } from "./section-heading";
 
 const summaries = [
@@ -65,7 +65,7 @@ export function HomeQuickGuide() {
         <ul className="space-y-2 text-sm leading-6">
           {quickGuide.map((item) => (
             <li key={item} className="flex items-start gap-2">
-              <span className={cn("pt-1 text-[0.7rem]", homeAccent)}>▶</span>
+              <span aria-hidden className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
               <span>{item}</span>
             </li>
           ))}

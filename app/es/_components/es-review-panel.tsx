@@ -30,7 +30,12 @@ export function EsReviewPanel({ entryId, companyId }: { entryId: string; company
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 px-6">
-        <Button type="button" variant="quest" onClick={() => reviewEsEntry.mutate()} disabled={reviewEsEntry.isPending}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => reviewEsEntry.mutate()}
+          disabled={reviewEsEntry.isPending}
+        >
           {reviewEsEntry.isPending
             ? "AIが処理中です（数十秒かかることがあります）…"
             : latest

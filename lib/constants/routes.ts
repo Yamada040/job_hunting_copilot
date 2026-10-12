@@ -27,6 +27,7 @@ export const ROUTES = {
   WEBTEST_DETAIL: (id: string) => `/webtests/${id}`,
 
   // その他
+  CALENDAR: "/calendar",
   SELF_ANALYSIS: "/self-analysis",
   APTITUDE: "/aptitude",
 } as const;

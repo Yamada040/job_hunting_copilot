@@ -84,10 +84,10 @@ export function EventForm({ selectedDate, formState, editing, saving, dispatch, 
         />
       </div>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="quest" onClick={() => dispatch({ type: "resetForm" })}>
+        <Button type="button" variant="outline" onClick={() => dispatch({ type: "resetForm" })}>
           入力をクリア
         </Button>
-        <Button type="submit" variant="quest" disabled={saving}>
+        <Button type="submit" variant="default" disabled={saving}>
           <PlusIcon className="h-4 w-4" />
           {saving ? "保存中..." : editing ? "予定を更新" : "予定を保存"}
         </Button>

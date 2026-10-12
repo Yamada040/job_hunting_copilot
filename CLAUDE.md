@@ -166,24 +166,25 @@ backend/
 
 - 推奨クラスを使う（`bg-linear-to-r`, `text-balance`, `text-wrap` など）
 - v3の非推奨構文は警告を避けるため使わない
-- 色: `app/globals.css` の shadcn の変数（白い窓・空色の枠・濃い紺の文字）を使い、`text-foreground` / `text-muted-foreground` / `bg-card` / `border` などのトークンで書く。`text-white` や `bg-[#111111]` のような色の直書きはしない。ダークモードは用意していない
+- 色: `app/globals.css` の shadcn の変数（白い面・空色の枠・濃い紺の文字）を使い、`text-foreground` / `text-muted-foreground` / `bg-card` / `border` などのトークンで書く。`text-white` や `bg-[#111111]` のような色の直書きはしない。ダークモードは用意していない
 
 **shadcn/ui**:
 
 - 部品は `./node_modules/.bin/shadcn add <名前>` で `components/ui/` に追加する。select はフォームの値を保つため Radix の Select ではなく `NativeSelect` を使う
 - `window.confirm` は使わず `app/_components/confirm-dialog.tsx`（`ConfirmDialog`）、モーダルは `Dialog` を使う
 
-**DQ風UI**（ドラゴンクエスト風）:
+**世界観**: 普通の就活アプリ。ゲームの世界観（クエスト・戦歴などの言葉、ドラクエ風の窓）は使わない。続けるきっかけとしてのXP・レベルと、ダッシュボードの3Dのカルーセルは、世界観に頼らない仕組みとして残している
 
-- `QuestWindow`（`app/_components/quest-window.tsx`）: 枠に見出しが割り込む窓。見出しの無い窓・パネルは `Card`（淡い面は `variant="muted"`）
-- `Button` の `variant="quest"` / `"quest-muted"`: 枠の無い文字だけのボタン（左向き三角 `▶` がホバーで右へ移動）
-- 用語: 「クエスト」「ログ」「追加へ」など
+- 見出しのあるパネルは `Card` + `CardHeader`（`CardTitle` に `h2`）+ `CardContent`。淡い面は `Card` の `variant="muted"`
+- `Button` の種類は役割で選ぶ: 主な操作（保存・送信・作成・AIの実行）は `default`、補助の操作は `outline`、コピーなどの小さな操作は `ghost`、削除は `destructive`
+- 用語: 「ES」「企業」「面接ログ」「予定」など、就活でそのまま通じる言葉を使う
+- UIの動き・演出の提案は https://motion-reference.takayustudio.jp/ の事例から選ぶ（事例は `#motion=<ID>` で個別に開ける）
 
 **コンポーネント構成**:
 
 - ページレベルのレイアウト: `app/_components/layout/`（`AppLayout`）
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
-- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示、`QuestWindow`、`ConfirmDialog`）
+- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示、`ConfirmDialog`）
 - shadcn/ui の部品: `components/ui/`
 - APIのフック・型: `lib/api/`（生成した `schema.d.ts` とクライアント）
 
@@ -207,8 +208,9 @@ backend/
 
 **ダッシュボード（`/dashboard`）**:
 
-- 専用のAPIは作らず、プロフィール・カレンダー・ES・面接ログ・XP履歴の一覧APIを組み合わせる
-- 表示内容: サマリーカード、カレンダー、目標/軸エディタ、直近のアクティビティ
+- 専用のAPIは作らず、各機能の一覧APIを組み合わせる
+- 表示内容: 3Dのカルーセル（`MenuCarousel`）だけ。回して選ぶと各画面を開く。カードには各機能の今の状況（件数・締切が近いESなどの急ぎのもの）と、今日の獲得XPを出す。情報は必要になったら足していく
+- カルーセルは CSS の3D変形で作る（three.js などは使わない）。←→キー・ドラッグ・ホイールで回せ、OS の「視差効果を減らす」設定では動きを止める
 - 保護ルート: 未ログインならリダイレクト
 
 **ES管理**（`/es`, `/es/new`, `/es/[id]`）:
@@ -252,9 +254,8 @@ backend/
 
 **UIの一貫性**:
 
-- shadcn/ui の部品（`Card`・`QuestWindow`・`Button` の quest）をベースにする
-- メニュー項目は左向き三角のホバー効果（`variant="quest"`）を使う（ボックス状のボタンにしない）
-- クエスト/ログ用語を使う
+- shadcn/ui の部品（`Card`・`Button`）をベースにする
+- サイドバーのメニューは、ホバーで淡い背景、今いる画面は `bg-accent` で示す
 
 ### テスト
 
@@ -354,7 +355,8 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 - `/` — ホーム（MVP紹介、ログイン/サインアップ導線）
 - `/login` — Google OAuthの入口
 - `/auth/callback` — OAuthコールバックハンドラ。codeをセッションに交換する
-- `/dashboard` — メインハブ（保護ルート）
+- `/dashboard` — メインハブ（保護ルート）。カルーセルのメニュー
+- `/calendar` — カレンダー（予定とESの締切）
 - `/es`, `/es/new`, `/es/[id]` — ES管理
 - `/companies`, `/companies/new`, `/companies/[id]` — 企業管理
 - `/interviews`, `/interviews/new`, `/interviews/[id]` — 面接ログ

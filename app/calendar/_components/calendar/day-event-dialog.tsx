@@ -53,7 +53,7 @@ export function DayEventDialog({
         </DialogHeader>
 
         <div>
-          <Button type="button" variant="quest" className="text-xs" onClick={() => dispatch({ type: "resetForm" })}>
+          <Button type="button" variant="outline" className="text-xs" onClick={() => dispatch({ type: "resetForm" })}>
             <PlusIcon className="h-4 w-4" />
             新しい予定を追加
           </Button>
@@ -73,7 +73,7 @@ export function DayEventDialog({
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {fromEs ? (
                       <>
-                        <Button asChild variant="quest" size="xs">
+                        <Button asChild variant="ghost" size="xs">
                           <Link href={ROUTES.ES_DETAIL(event.id.replace("es-", ""))}>ES詳細へ</Link>
                         </Button>
                         <span className="text-[11px] opacity-70">ES由来の予定はここでは削除できません</span>
@@ -82,7 +82,7 @@ export function DayEventDialog({
                       <>
                         <Button
                           type="button"
-                          variant="quest"
+                          variant="ghost"
                           size="xs"
                           onClick={() => dispatch({ type: "editPrefill", event })}
                         >
@@ -97,9 +97,9 @@ export function DayEventDialog({
                           trigger={
                             <Button
                               type="button"
-                              variant="quest"
+                              variant="destructive"
                               size="xs"
-                              className="text-destructive hover:text-destructive/80"
+
                               disabled={deletingId === event.id}
                             >
                               <TrashIcon className="h-3.5 w-3.5" />

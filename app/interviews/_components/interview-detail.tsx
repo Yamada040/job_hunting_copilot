@@ -79,12 +79,7 @@ function InterviewDetailLoaded({
           destructive
           onConfirm={handleDelete}
           trigger={
-            <Button
-              type="button"
-              variant="quest"
-              disabled={deleteLog.isPending}
-              className="text-destructive hover:text-destructive/80"
-            >
+            <Button type="button" variant="destructive" disabled={deleteLog.isPending}>
               {deleteLog.isPending ? "削除中…" : "この面接ログを削除する"}
             </Button>
           }

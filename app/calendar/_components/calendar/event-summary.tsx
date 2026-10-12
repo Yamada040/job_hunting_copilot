@@ -26,11 +26,8 @@ export function EventSummary({ title, events, emptyText, describe, onSelect }: P
               key={event.id}
               type="button"
               onClick={() => onSelect(event)}
-              className="group flex w-full items-start gap-2.5 rounded-md px-2 py-2 text-left text-xs font-bold transition hover:text-sky-500"
+              className="flex w-full items-start gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-bold transition-colors hover:bg-secondary"
             >
-              <span aria-hidden className="shrink-0 text-[0.7rem] transition-transform group-hover:translate-x-1">
-                ▶
-              </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{event.company || event.title}</span>
                 <span className="mt-0.5 block text-muted-foreground">{describe(event)}</span>

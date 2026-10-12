@@ -114,7 +114,7 @@ export function ContactForm({ accountName, email }: ContactFormProps) {
       {submitState?.status === "success" ? <p className="text-xs text-emerald-600">{submitState.message}</p> : null}
       <div className="flex items-center justify-between gap-4">
         <p className="text-xs text-muted-foreground">送信内容には登録ユーザー名とログインメールが含まれます。</p>
-        <Button type="submit" variant="quest" disabled={isPending}>
+        <Button type="submit" variant="default" disabled={isPending}>
           {isPending ? "送信状態を確認中..." : "送信する"}
         </Button>
       </div>

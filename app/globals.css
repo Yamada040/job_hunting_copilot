@@ -5,7 +5,7 @@
 /* ダークモードは用意していない。shadcn の部品に含まれる dark: を OS の設定で効かせないよう、.dark クラスに限定する */
 @custom-variant dark (&:is(.dark *));
 
-/* DQ風の白い窓と空色の枠を、shadcn の色の変数で表す */
+/* 白い面・空色の枠・濃い紺の文字を、shadcn の色の変数で表す */
 :root {
   --background: #f8fbff;
   --foreground: #0f172a;
@@ -29,7 +29,7 @@
 }
 
 @theme inline {
-  --font-sans: "魔導太丸ゴシック", "Hiragino Maru Gothic ProN", "Yu Gothic UI", "Yu Gothic", system-ui, sans-serif;
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, system-ui, sans-serif;
   --font-heading: var(--font-sans);
   --font-mono: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
   --color-background: var(--background);

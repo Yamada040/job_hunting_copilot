@@ -26,7 +26,7 @@ export function QuestionsEditor({ questions, onChange }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>設問カード（必要に応じて追加できます）</span>
-        <Button type="button" variant="quest" onClick={() => onChange([...questions, { prompt: "", answer: "" }])}>
+        <Button type="button" variant="outline" onClick={() => onChange([...questions, { prompt: "", answer: "" }])}>
           カードを追加
         </Button>
       </div>
@@ -81,7 +81,7 @@ export function QuestionsEditor({ questions, onChange }: Props) {
           <div className="flex justify-end">
             <Button
               type="button"
-              variant="quest"
+              variant="destructive"
               className="text-xs"
               onClick={() => onChange(questions.filter((_, i) => i !== index))}
             >

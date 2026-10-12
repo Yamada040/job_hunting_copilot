@@ -22,7 +22,7 @@ export function InterviewList() {
         title="まだ面接ログがありません"
         description="面接で聞かれた質問と答えを記録して、次の面接に活かしましょう。"
       >
-        <Button asChild variant="quest">
+        <Button asChild variant="default">
           <Link href={ROUTES.INTERVIEWS_NEW}>面接ログを追加する</Link>
         </Button>
       </EmptyState>

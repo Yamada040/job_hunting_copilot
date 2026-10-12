@@ -41,6 +41,9 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
       case "companies":
         label = "企業管理";
         break;
+      case "calendar":
+        label = "カレンダー";
+        break;
       case "aptitude":
         label = "適性チェック";
         break;

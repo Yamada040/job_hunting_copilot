@@ -59,7 +59,7 @@ test("Webテストの問題を作って解答する", async ({ page }) => {
 });
 
 test("カレンダーに予定を追加する", async ({ page }) => {
-  await page.goto("/dashboard");
+  await page.goto("/calendar");
   await page.getByRole("button", { name: "今日に追加" }).click();
   await page.getByLabel("タイトル").fill(`説明会-${stamp}`);
   await page.getByRole("button", { name: "予定を保存" }).click();
@@ -75,6 +75,13 @@ test("プロフィールを保存する", async ({ page }) => {
   await expect(page.getByText("保存しました")).toBeVisible();
   await page.goto("/dashboard");
   await expect(page.getByText(`目標-${stamp}`)).toBeVisible();
+});
+
+test("ダッシュボードのカルーセルを回して画面を開く", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "企業管理を正面に回す" }).click();
+  await page.getByRole("button", { name: "企業管理を開く" }).click();
+  await expect(page).toHaveURL(/\/companies$/);
 });
 
 test("サイドバーのリンクで移動する", async ({ page }) => {
