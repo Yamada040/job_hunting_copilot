@@ -48,7 +48,7 @@ func (q *Queries) CreateSelfAnalysisResult(ctx context.Context, arg CreateSelfAn
 }
 
 const getAptitudeResult = `-- name: GetAptitudeResult :one
-select id, user_id, answers, ai_result, created_at from aptitude_results where user_id = $1
+select id, user_id, answers, ai_result, created_at, ai_input_tokens, ai_output_tokens from aptitude_results where user_id = $1
 `
 
 func (q *Queries) GetAptitudeResult(ctx context.Context, userID uuid.UUID) (AptitudeResult, error) {
@@ -60,12 +60,14 @@ func (q *Queries) GetAptitudeResult(ctx context.Context, userID uuid.UUID) (Apti
 		&i.Answers,
 		&i.AiResult,
 		&i.CreatedAt,
+		&i.AiInputTokens,
+		&i.AiOutputTokens,
 	)
 	return i, err
 }
 
 const getSelfAnalysisResult = `-- name: GetSelfAnalysisResult :one
-select id, user_id, answers, ai_result, created_at from self_analysis_results where user_id = $1
+select id, user_id, answers, ai_result, created_at, ai_input_tokens, ai_output_tokens from self_analysis_results where user_id = $1
 `
 
 func (q *Queries) GetSelfAnalysisResult(ctx context.Context, userID uuid.UUID) (SelfAnalysisResult, error) {
@@ -77,21 +79,30 @@ func (q *Queries) GetSelfAnalysisResult(ctx context.Context, userID uuid.UUID) (
 		&i.Answers,
 		&i.AiResult,
 		&i.CreatedAt,
+		&i.AiInputTokens,
+		&i.AiOutputTokens,
 	)
 	return i, err
 }
 
 const setAptitudeAiResultOnce = `-- name: SetAptitudeAiResultOnce :execrows
-update aptitude_results set ai_result = $1 where user_id = $2 and ai_result is null
+update aptitude_results set ai_result = $1, ai_input_tokens = $2, ai_output_tokens = $3 where user_id = $4 and ai_result is null
 `
 
 type SetAptitudeAiResultOnceParams struct {
-	AiResult *string
-	UserID   uuid.UUID
+	AiResult       *string
+	AiInputTokens  *int32
+	AiOutputTokens *int32
+	UserID         uuid.UUID
 }
 
 func (q *Queries) SetAptitudeAiResultOnce(ctx context.Context, arg SetAptitudeAiResultOnceParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setAptitudeAiResultOnce, arg.AiResult, arg.UserID)
+	result, err := q.db.Exec(ctx, setAptitudeAiResultOnce,
+		arg.AiResult,
+		arg.AiInputTokens,
+		arg.AiOutputTokens,
+		arg.UserID,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -99,16 +110,23 @@ func (q *Queries) SetAptitudeAiResultOnce(ctx context.Context, arg SetAptitudeAi
 }
 
 const setSelfAnalysisAiResultOnce = `-- name: SetSelfAnalysisAiResultOnce :execrows
-update self_analysis_results set ai_result = $1 where user_id = $2 and ai_result is null
+update self_analysis_results set ai_result = $1, ai_input_tokens = $2, ai_output_tokens = $3 where user_id = $4 and ai_result is null
 `
 
 type SetSelfAnalysisAiResultOnceParams struct {
-	AiResult *string
-	UserID   uuid.UUID
+	AiResult       *string
+	AiInputTokens  *int32
+	AiOutputTokens *int32
+	UserID         uuid.UUID
 }
 
 func (q *Queries) SetSelfAnalysisAiResultOnce(ctx context.Context, arg SetSelfAnalysisAiResultOnceParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setSelfAnalysisAiResultOnce, arg.AiResult, arg.UserID)
+	result, err := q.db.Exec(ctx, setSelfAnalysisAiResultOnce,
+		arg.AiResult,
+		arg.AiInputTokens,
+		arg.AiOutputTokens,
+		arg.UserID,
+	)
 	if err != nil {
 		return 0, err
 	}

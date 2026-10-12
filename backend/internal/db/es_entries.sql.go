@@ -65,6 +65,41 @@ func (q *Queries) CreateEsEntry(ctx context.Context, arg CreateEsEntryParams) (u
 	return id, err
 }
 
+const createEsReview = `-- name: CreateEsReview :one
+insert into es_reviews (user_id, es_entry_id, ai_result, ai_input_tokens, ai_output_tokens)
+values ($1, $2, $3, $4, $5)
+returning id, user_id, es_entry_id, ai_result, created_at, ai_input_tokens, ai_output_tokens
+`
+
+type CreateEsReviewParams struct {
+	UserID         uuid.UUID
+	EsEntryID      uuid.UUID
+	AiResult       json.RawMessage
+	AiInputTokens  *int32
+	AiOutputTokens *int32
+}
+
+func (q *Queries) CreateEsReview(ctx context.Context, arg CreateEsReviewParams) (EsReview, error) {
+	row := q.db.QueryRow(ctx, createEsReview,
+		arg.UserID,
+		arg.EsEntryID,
+		arg.AiResult,
+		arg.AiInputTokens,
+		arg.AiOutputTokens,
+	)
+	var i EsReview
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.EsEntryID,
+		&i.AiResult,
+		&i.CreatedAt,
+		&i.AiInputTokens,
+		&i.AiOutputTokens,
+	)
+	return i, err
+}
+
 const deleteEsEntry = `-- name: DeleteEsEntry :execrows
 delete from es_entries where id = $1 and user_id = $2
 `
@@ -119,6 +154,31 @@ func (q *Queries) GetEsEntry(ctx context.Context, arg GetEsEntryParams) (GetEsEn
 		&i.EsEntry.UpdatedAt,
 		&i.CompanyName,
 	)
+	return i, err
+}
+
+const getEsReviewContext = `-- name: GetEsReviewContext :one
+select companies.ai_result as company_analysis, self_analysis_results.ai_result as self_analysis
+from companies
+left join self_analysis_results on self_analysis_results.user_id = companies.user_id
+where companies.id = $1 and companies.user_id = $2
+`
+
+type GetEsReviewContextParams struct {
+	CompanyID uuid.UUID
+	UserID    uuid.UUID
+}
+
+type GetEsReviewContextRow struct {
+	CompanyAnalysis *string
+	SelfAnalysis    *string
+}
+
+// AI添削に渡す、企業分析の分析結果と自己分析の分析結果。どちらもまだ無ければ null
+func (q *Queries) GetEsReviewContext(ctx context.Context, arg GetEsReviewContextParams) (GetEsReviewContextRow, error) {
+	row := q.db.QueryRow(ctx, getEsReviewContext, arg.CompanyID, arg.UserID)
+	var i GetEsReviewContextRow
+	err := row.Scan(&i.CompanyAnalysis, &i.SelfAnalysis)
 	return i, err
 }
 
@@ -180,22 +240,44 @@ func (q *Queries) ListEsEntries(ctx context.Context, arg ListEsEntriesParams) ([
 	return items, nil
 }
 
-const setEsAiResult = `-- name: SetEsAiResult :execrows
-update es_entries set ai_result = $1 where id = $2 and user_id = $3
+const listEsReviews = `-- name: ListEsReviews :many
+select id, user_id, es_entry_id, ai_result, created_at, ai_input_tokens, ai_output_tokens from es_reviews
+where es_entry_id = $1 and user_id = $2
+order by created_at desc
 `
 
-type SetEsAiResultParams struct {
-	AiResult *string
-	ID       uuid.UUID
-	UserID   uuid.UUID
+type ListEsReviewsParams struct {
+	EsEntryID uuid.UUID
+	UserID    uuid.UUID
 }
 
-func (q *Queries) SetEsAiResult(ctx context.Context, arg SetEsAiResultParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setEsAiResult, arg.AiResult, arg.ID, arg.UserID)
+// 新しい順。ESが本人のものかは、呼び出す前に GetEsEntry で確かめる
+func (q *Queries) ListEsReviews(ctx context.Context, arg ListEsReviewsParams) ([]EsReview, error) {
+	rows, err := q.db.Query(ctx, listEsReviews, arg.EsEntryID, arg.UserID)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return result.RowsAffected(), nil
+	defer rows.Close()
+	var items []EsReview
+	for rows.Next() {
+		var i EsReview
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.EsEntryID,
+			&i.AiResult,
+			&i.CreatedAt,
+			&i.AiInputTokens,
+			&i.AiOutputTokens,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const submitEsEntry = `-- name: SubmitEsEntry :execrows

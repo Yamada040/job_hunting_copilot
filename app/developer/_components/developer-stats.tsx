@@ -9,6 +9,7 @@ import { api, ApiError, unwrap } from "@/lib/api/client";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { QuestWindow } from "@/app/_components/quest-window";
+import { AiUsageTable } from "./ai-usage-table";
 
 const nf = new Intl.NumberFormat("ja-JP");
 
@@ -93,6 +94,8 @@ export function DeveloperStats() {
           </div>
         </QuestWindow>
       </section>
+
+      <AiUsageTable usage={summary.aiUsage} />
     </div>
   );
 }

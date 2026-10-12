@@ -60,3 +60,50 @@ func (q *Queries) GetAdminStats(ctx context.Context, arg GetAdminStatsParams) (G
 	)
 	return i, err
 }
+
+const listAiUsage = `-- name: ListAiUsage :many
+select usage.feature::text as feature, count(*) as calls,
+  sum(usage.ai_input_tokens)::bigint as input_tokens, sum(usage.ai_output_tokens)::bigint as output_tokens
+from (
+  select 'es_review' as feature, ai_input_tokens, ai_output_tokens from es_reviews
+  union all select 'interview_review', ai_input_tokens, ai_output_tokens from interview_logs
+  union all select 'company_analysis', ai_input_tokens, ai_output_tokens from companies
+  union all select 'aptitude_diagnosis', ai_input_tokens, ai_output_tokens from aptitude_results
+  union all select 'self_analysis', ai_input_tokens, ai_output_tokens from self_analysis_results
+) as usage
+where usage.ai_input_tokens is not null
+group by usage.feature
+`
+
+type ListAiUsageRow struct {
+	Feature      string
+	Calls        int64
+	InputTokens  int64
+	OutputTokens int64
+}
+
+// AIの機能ごとの、トークン数を記録した呼び出しの回数と合計。トークン数の列ができる前の結果は数えない
+func (q *Queries) ListAiUsage(ctx context.Context) ([]ListAiUsageRow, error) {
+	rows, err := q.db.Query(ctx, listAiUsage)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAiUsageRow
+	for rows.Next() {
+		var i ListAiUsageRow
+		if err := rows.Scan(
+			&i.Feature,
+			&i.Calls,
+			&i.InputTokens,
+			&i.OutputTokens,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

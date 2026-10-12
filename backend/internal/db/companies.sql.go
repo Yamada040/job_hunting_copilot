@@ -14,7 +14,7 @@ import (
 const createCompany = `-- name: CreateCompany :one
 insert into companies (user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-returning id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at
+returning id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at, ai_input_tokens, ai_output_tokens
 `
 
 type CreateCompanyParams struct {
@@ -62,6 +62,8 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.AiResult,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiInputTokens,
+		&i.AiOutputTokens,
 	)
 	return i, err
 }
@@ -84,7 +86,7 @@ func (q *Queries) DeleteCompany(ctx context.Context, arg DeleteCompanyParams) (i
 }
 
 const getCompany = `-- name: GetCompany :one
-select id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at from companies where id = $1 and user_id = $2
+select id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at, ai_input_tokens, ai_output_tokens from companies where id = $1 and user_id = $2
 `
 
 type GetCompanyParams struct {
@@ -111,12 +113,14 @@ func (q *Queries) GetCompany(ctx context.Context, arg GetCompanyParams) (Company
 		&i.AiResult,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiInputTokens,
+		&i.AiOutputTokens,
 	)
 	return i, err
 }
 
 const listCompanies = `-- name: ListCompanies :many
-select id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at from companies
+select id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at, ai_input_tokens, ai_output_tokens from companies
 where user_id = $1
   and ($2::text is null or normalized_name like '%' || $2::text || '%')
 order by updated_at desc
@@ -153,6 +157,8 @@ func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([
 			&i.AiResult,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AiInputTokens,
+			&i.AiOutputTokens,
 		); err != nil {
 			return nil, err
 		}
@@ -165,18 +171,26 @@ func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([
 }
 
 const setCompanyAiResultOnce = `-- name: SetCompanyAiResultOnce :execrows
-update companies set ai_result = $1 where id = $2 and user_id = $3 and ai_result is null
+update companies set ai_result = $1, ai_input_tokens = $2, ai_output_tokens = $3 where id = $4 and user_id = $5 and ai_result is null
 `
 
 type SetCompanyAiResultOnceParams struct {
-	AiResult *string
-	ID       uuid.UUID
-	UserID   uuid.UUID
+	AiResult       *string
+	AiInputTokens  *int32
+	AiOutputTokens *int32
+	ID             uuid.UUID
+	UserID         uuid.UUID
 }
 
 // 企業分析は企業ごとに1回だけ（docs/backend-design.md 3章）。同時に2回実行されても、先に保存した方だけを残す
 func (q *Queries) SetCompanyAiResultOnce(ctx context.Context, arg SetCompanyAiResultOnceParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setCompanyAiResultOnce, arg.AiResult, arg.ID, arg.UserID)
+	result, err := q.db.Exec(ctx, setCompanyAiResultOnce,
+		arg.AiResult,
+		arg.AiInputTokens,
+		arg.AiOutputTokens,
+		arg.ID,
+		arg.UserID,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -196,7 +210,7 @@ update companies set
   preference      = case when $16::boolean then $17 else preference end,
   favorite        = case when $18::boolean   then $19::boolean     else favorite end
 where id = $20 and user_id = $21
-returning id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at
+returning id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at, ai_input_tokens, ai_output_tokens
 `
 
 type UpdateCompanyParams struct {
@@ -265,6 +279,8 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		&i.AiResult,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiInputTokens,
+		&i.AiOutputTokens,
 	)
 	return i, err
 }

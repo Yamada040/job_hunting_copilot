@@ -201,31 +201,157 @@ func TestOtherUsersEntryIsNotFound(t *testing.T) {
 	}
 }
 
-func TestReviewSendsSavedContentToAIAndSavesResult(t *testing.T) {
+// oneItemReply は、項目が1つのESに対するAIの返答。
+const oneItemReply = `{"summary":"全体の講評","items":[{
+	"structure":{"score":7,"comment":"結論が先"},
+	"specificity":{"score":5,"comment":"数字が無い"},
+	"companyFit":{"score":null,"comment":"情報不足：企業分析"},
+	"improvement":"改善点","rewrite":"修正版"}]}`
+
+func TestReviewSendsSavedContentWithCharRangeAndKeepsHistory(t *testing.T) {
 	f := setup(t)
+	f.ai.Reply = oneItemReply
 	userID := dbtest.CreateUser(t, f.pool)
 	companyID := f.company(t, userID, "サンプル")
 	e, err := f.es.Create(t.Context(), userID, Fields{
 		CompanyID: &companyID, Title: ptr("本選考ES"),
-		Questions: &[]Question{{Prompt: "志望動機", Answer: "貴社の事業に惹かれた"}},
+		Questions: &[]Question{
+			{Prompt: "志望動機", Answer: "貴社の事業に惹かれた", CharLimit: ptr(400)},
+			{Prompt: "まだ書いていない設問", Answer: ""},
+		},
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	reviewed, err := f.es.Review(t.Context(), userID, e.ID)
+	first, err := f.es.Review(t.Context(), userID, e.ID)
+	if err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+	second, err := f.es.Review(t.Context(), userID, e.ID)
+	if err != nil {
+		t.Fatalf("second Review: %v", err)
+	}
+
+	item := first.Result.Items[0]
+	if len(first.Result.Items) != 1 || *item.Prompt != "志望動機" || *item.CharLimit != 400 || item.Rewrite != "修正版" || *item.Structure.Value != 7 {
+		t.Errorf("items = %+v, want the answered question merged with the AI reply", first.Result.Items)
+	}
+	input := f.ai.Inputs[0]
+	for _, want := range []string{"サンプル", "志望動機", "貴社の事業に惹かれた", "360〜400字"} {
+		if !strings.Contains(input, want) {
+			t.Errorf("AI input %q does not contain %q", input, want)
+		}
+	}
+	if strings.Contains(input, "まだ書いていない設問") {
+		t.Errorf("AI input %q contains a question without an answer", input)
+	}
+	if first.Result.UsedCompanyAnalysis || first.Result.UsedSelfAnalysis {
+		t.Errorf("result = %+v, want no analyses used before any analysis is saved", first.Result)
+	}
+	reviews, err := f.es.ListReviews(t.Context(), userID, e.ID)
+	if err != nil || len(reviews) != 2 || reviews[0].ID != second.ID {
+		t.Errorf("reviews = %d, %v; want both reviews, newest first", len(reviews), err)
+	}
+}
+
+func TestReviewPassesCompanyAndSelfAnalysisResults(t *testing.T) {
+	f := setup(t)
+	f.ai.Reply = oneItemReply
+	userID := dbtest.CreateUser(t, f.pool)
+	other := dbtest.CreateUser(t, f.pool)
+	companyID := f.company(t, userID, "サンプル")
+	q := db.New(f.pool)
+	if _, err := q.SetCompanyAiResultOnce(t.Context(), db.SetCompanyAiResultOnceParams{ID: companyID, UserID: userID, AiResult: ptr("求める人物像：挑戦する人")}); err != nil {
+		t.Fatalf("set company analysis: %v", err)
+	}
+	for _, id := range []uuid.UUID{userID, other} {
+		if _, err := q.CreateSelfAnalysisResult(t.Context(), db.CreateSelfAnalysisResultParams{UserID: id, Answers: []byte(`{}`)}); err != nil {
+			t.Fatalf("create self analysis: %v", err)
+		}
+		if _, err := q.SetSelfAnalysisAiResultOnce(t.Context(), db.SetSelfAnalysisAiResultOnceParams{UserID: id, AiResult: ptr("強み：粘り強さ（" + id.String() + "）")}); err != nil {
+			t.Fatalf("set self analysis: %v", err)
+		}
+	}
+	e, err := f.es.Create(t.Context(), userID, Fields{
+		CompanyID: &companyID, Title: ptr("ES"), Questions: &[]Question{{Prompt: "志望動機", Answer: "回答"}},
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	review, err := f.es.Review(t.Context(), userID, e.ID)
 	if err != nil {
 		t.Fatalf("Review: %v", err)
 	}
 
-	if reviewed.AiResult == nil || *reviewed.AiResult != "添削結果" {
-		t.Errorf("ai result = %v, want the AI reply saved", reviewed.AiResult)
-	}
 	input := f.ai.Inputs[0]
-	for _, want := range []string{"サンプル", "志望動機", "貴社の事業に惹かれた"} {
+	for _, want := range []string{"求める人物像：挑戦する人", "強み：粘り強さ（" + userID.String() + "）"} {
 		if !strings.Contains(input, want) {
 			t.Errorf("AI input %q does not contain %q", input, want)
 		}
+	}
+	if strings.Contains(input, other.String()) {
+		t.Errorf("AI input %q contains another user's self analysis", input)
+	}
+	if !review.Result.UsedCompanyAnalysis || !review.Result.UsedSelfAnalysis {
+		t.Errorf("result = %+v, want both analyses marked as used", review.Result)
+	}
+}
+
+func TestReviewRejectsAIResultWithWrongItemCount(t *testing.T) {
+	f := setup(t)
+	f.ai.Reply = `{"summary":"講評","items":[]}`
+	userID := dbtest.CreateUser(t, f.pool)
+	companyID := f.company(t, userID, "サンプル")
+	e, err := f.es.Create(t.Context(), userID, Fields{
+		CompanyID: &companyID, Title: ptr("ES"), Questions: &[]Question{{Prompt: "志望動機", Answer: "回答"}},
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	_, err = f.es.Review(t.Context(), userID, e.ID)
+
+	assertKind(t, err, platform.KindUnavailable)
+	if reviews, _ := f.es.ListReviews(t.Context(), userID, e.ID); len(reviews) != 0 {
+		t.Errorf("reviews = %d, want the broken result not saved", len(reviews))
+	}
+}
+
+func TestOtherUsersReviewsAreNotFound(t *testing.T) {
+	f := setup(t)
+	f.ai.Reply = oneItemReply
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	companyID := f.company(t, alice, "サンプル")
+	e, err := f.es.Create(t.Context(), alice, Fields{
+		CompanyID: &companyID, Title: ptr("ES"), Questions: &[]Question{{Prompt: "志望動機", Answer: "回答"}},
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := f.es.Review(t.Context(), alice, e.ID); err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+
+	_, err = f.es.ListReviews(t.Context(), bob, e.ID)
+	assertKind(t, err, platform.KindNotFound)
+	_, err = f.es.Review(t.Context(), bob, e.ID)
+	assertKind(t, err, platform.KindNotFound)
+}
+
+func TestOverallScoreAveragesScoresExceptMissing(t *testing.T) {
+	r := ReviewResult{Items: []ReviewItem{
+		{Structure: Score{Value: ptr(7)}, Specificity: Score{Value: ptr(5)}, CompanyFit: Score{}},
+		{Structure: Score{Value: ptr(8)}, Specificity: Score{}, CompanyFit: Score{}},
+	}}
+
+	if got := r.OverallScore(); got == nil || *got != 6.7 {
+		t.Errorf("overall = %v, want 6.7 (20 / 3, rounded)", got)
+	}
+	if got := (ReviewResult{Items: []ReviewItem{{}}}).OverallScore(); got != nil {
+		t.Errorf("overall = %v, want nil when nothing is scored", *got)
 	}
 }
 

@@ -4,21 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-import {
-  useDeleteEsEntry,
-  useEsEntry,
-  useReviewEsEntry,
-  useSubmitEsEntry,
-  useUpdateEsEntry,
-  type EsEntry,
-} from "@/lib/api/es";
+import { useDeleteEsEntry, useEsEntry, useSubmitEsEntry, useUpdateEsEntry, type EsEntry } from "@/lib/api/es";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
-import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { EsForm } from "./es-form";
+import { EsReviewPanel } from "./es-review-panel";
 
 export function EsDetail({ id }: { id: string }) {
   const { data: entry, error } = useEsEntry(id);
@@ -44,7 +37,6 @@ function EsDetailLoaded({
   const updateEsEntry = useUpdateEsEntry(entry.id);
   const submitEsEntry = useSubmitEsEntry();
   const deleteEsEntry = useDeleteEsEntry(entry.id);
-  const reviewEsEntry = useReviewEsEntry(entry.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,15 +58,7 @@ function EsDetailLoaded({
       />
       {saved && <p className="text-sm text-emerald-600">保存しました</p>}
 
-      <AiResultPanel
-        title="AI添削"
-        description="保存済みの設問・回答と本文をAIが添削します。編集した内容は、保存してから添削してください。何度でも実行でき、結果は上書きされます（1日の上限あり）。"
-        result={entry.aiResult}
-        runLabel={entry.aiResult ? "もう一度添削する" : "AI添削する"}
-        onRun={() => reviewEsEntry.mutate()}
-        pending={reviewEsEntry.isPending}
-        error={reviewEsEntry.error}
-      />
+      <EsReviewPanel entryId={entry.id} companyId={entry.company.id} />
 
       <div className="space-y-2">
         <ConfirmDialog

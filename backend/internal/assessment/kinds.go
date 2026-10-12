@@ -31,8 +31,9 @@ func NewAptitudeService(pool *pgxpool.Pool, x *xp.Service, gen ai.Generator, lim
 			create: func(ctx context.Context, q *db.Queries, userID uuid.UUID, answers []byte) (int64, error) {
 				return q.CreateAptitudeResult(ctx, db.CreateAptitudeResultParams{UserID: userID, Answers: answers})
 			},
-			setAIOnce: func(ctx context.Context, q *db.Queries, userID uuid.UUID, text string) (int64, error) {
-				return q.SetAptitudeAiResultOnce(ctx, db.SetAptitudeAiResultOnceParams{UserID: userID, AiResult: &text})
+			setAIOnce: func(ctx context.Context, q *db.Queries, userID uuid.UUID, text string, usage ai.Usage) (int64, error) {
+				input, output := usage.ColumnValues()
+				return q.SetAptitudeAiResultOnce(ctx, db.SetAptitudeAiResultOnceParams{UserID: userID, AiResult: &text, AiInputTokens: input, AiOutputTokens: output})
 			},
 		},
 	}}
@@ -52,8 +53,9 @@ func NewSelfAnalysisService(pool *pgxpool.Pool, x *xp.Service, gen ai.Generator,
 			create: func(ctx context.Context, q *db.Queries, userID uuid.UUID, answers []byte) (int64, error) {
 				return q.CreateSelfAnalysisResult(ctx, db.CreateSelfAnalysisResultParams{UserID: userID, Answers: answers})
 			},
-			setAIOnce: func(ctx context.Context, q *db.Queries, userID uuid.UUID, text string) (int64, error) {
-				return q.SetSelfAnalysisAiResultOnce(ctx, db.SetSelfAnalysisAiResultOnceParams{UserID: userID, AiResult: &text})
+			setAIOnce: func(ctx context.Context, q *db.Queries, userID uuid.UUID, text string, usage ai.Usage) (int64, error) {
+				input, output := usage.ColumnValues()
+				return q.SetSelfAnalysisAiResultOnce(ctx, db.SetSelfAnalysisAiResultOnceParams{UserID: userID, AiResult: &text, AiInputTokens: input, AiOutputTokens: output})
 			},
 		},
 	}}
