@@ -1,86 +1,18 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ChevronRightIcon, HomeIcon } from "@heroicons/react/24/outline";
 import { BrandLogo } from "./BrandLogo";
-
-export interface BreadcrumbItem {
-  label: string;
-  href: string;
-}
 
 interface HeaderProps {
   title?: string;
   description?: string;
   leftContent?: React.ReactNode;
   rightContent?: React.ReactNode;
-  breadcrumbs?: BreadcrumbItem[];
   showBrand?: boolean;
-}
-
-function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
-  const segments = pathname.split("/").filter(Boolean);
-  const breadcrumbs: BreadcrumbItem[] = [];
-
-  if (pathname !== "/dashboard") {
-    breadcrumbs.push({ label: "ダッシュボード", href: "/dashboard" });
-  }
-
-  let currentPath = "";
-  segments.forEach((segment) => {
-    currentPath += `/${segment}`;
-
-    let label = segment;
-    switch (segment) {
-      case "dashboard":
-        label = "ダッシュボード";
-        break;
-      case "es":
-        label = "ES管理";
-        break;
-      case "companies":
-        label = "企業管理";
-        break;
-      case "calendar":
-        label = "カレンダー";
-        break;
-      case "aptitude":
-        label = "適性チェック";
-        break;
-      case "self-analysis":
-        label = "自己分析";
-        break;
-      case "interviews":
-        label = "面接ログ";
-        break;
-      case "webtests":
-        label = "Webテスト対策";
-        break;
-      case "profile":
-        label = "プロフィール";
-        break;
-      case "contact":
-        label = "お問い合わせ";
-        break;
-      case "new":
-        label = "新規作成";
-        break;
-      default:
-        if (segment.length > 20) {
-          label = "詳細";
-        }
-    }
-
-    breadcrumbs.push({ label, href: currentPath });
-  });
-
-  return breadcrumbs;
 }
 
 export function Header({ title, description, leftContent, rightContent, showBrand }: HeaderProps) {
   return (
-    <header className="fixed left-0 top-0 z-50 w-full border-b border-ring/45 bg-white/94 px-6 py-4 backdrop-blur">
+    <header className="fixed left-0 top-0 z-50 w-full border-b border-ring/45 bg-card/94 px-6 py-4 backdrop-blur">
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-3">
@@ -95,34 +27,5 @@ export function Header({ title, description, leftContent, rightContent, showBran
         </div>
       </div>
     </header>
-  );
-}
-
-export function Breadcrumbs({ breadcrumbs }: { breadcrumbs?: BreadcrumbItem[] }) {
-  const pathname = usePathname();
-  const generatedBreadcrumbs = breadcrumbs || generateBreadcrumbs(pathname);
-
-  if (generatedBreadcrumbs.length <= 1) return null;
-
-  return (
-    <nav className="mt-4 flex items-center space-x-1 text-xs font-bold text-muted-foreground">
-      <HomeIcon className="h-4 w-4" />
-      <ChevronRightIcon className="h-4 w-4 opacity-60" />
-
-      {generatedBreadcrumbs.map((item, index) => (
-        <div key={item.href} className="flex items-center space-x-1">
-          {index === generatedBreadcrumbs.length - 1 ? (
-            <span className="text-foreground">{item.label}</span>
-          ) : (
-            <>
-              <Link href={item.href} className="transition-colors hover:text-primary">
-                {item.label}
-              </Link>
-              <ChevronRightIcon className="h-4 w-4 opacity-60" />
-            </>
-          )}
-        </div>
-      ))}
-    </nav>
   );
 }

@@ -3,7 +3,6 @@
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Breadcrumbs } from "./Header";
 
 export interface AppLayoutProps {
   children: React.ReactNode;
@@ -43,9 +42,8 @@ export function AppLayoutClient({
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         style={{ transformPerspective: 1200, transformOrigin: "50% 0%" }}
       >
-        <Breadcrumbs />
         {(headerTitle || headerDescription || avatar) && (
-          <div className="mt-4 mb-8 flex items-end justify-between gap-4">
+          <div className="mb-8 flex items-end justify-between gap-4">
             <div className="min-w-0 space-y-2">
               {headerTitle && (
                 <h1 className="text-3xl leading-tight font-black tracking-tight sm:text-4xl">{headerTitle}</h1>
