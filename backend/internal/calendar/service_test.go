@@ -155,6 +155,28 @@ func TestEventLinkCanBeSetAndCleared(t *testing.T) {
 	}
 }
 
+func TestEventNoteCanBeSetAndCleared(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	s := NewService(pool)
+
+	item, err := s.Create(t.Context(), userID, Fields{Title: ptr("説明会"), Date: day("2026-11-01"), Note: ptr("  持ち物: 筆記用具  ")})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if item.Note == nil || *item.Note != "持ち物: 筆記用具" {
+		t.Fatalf("Note = %v, want 前後の空白を除いた備考", item.Note)
+	}
+
+	updated, err := s.Update(t.Context(), userID, item.ID, Fields{SetNote: true})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if updated.Note != nil {
+		t.Fatalf("Note = %v, want 備考を消した状態", *updated.Note)
+	}
+}
+
 func TestEventSpanRules(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)

@@ -87,6 +87,7 @@ export function InteractiveCalendar({ events }: Props) {
         time,
         endDate,
         url,
+        note: formState.note || null,
       },
     });
     try {
@@ -100,6 +101,7 @@ export function InteractiveCalendar({ events }: Props) {
           endDate,
           companyId: formState.company?.id ?? null,
           url,
+          note: formState.note || null,
         });
       } else {
         await createCalendarEvent({
@@ -110,6 +112,7 @@ export function InteractiveCalendar({ events }: Props) {
           endDate: endDate ?? undefined,
           companyId: formState.company?.id,
           url: url ?? undefined,
+          note: formState.note || undefined,
         });
       }
       await queryClient.invalidateQueries({ queryKey: calendarKeys.all });

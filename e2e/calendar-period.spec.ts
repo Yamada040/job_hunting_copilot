@@ -21,6 +21,7 @@ test("インターンは終日のときに期間を選べ、詳細に初日か�
   await expect(page.getByRole("radio", { name: "インターン" })).toBeChecked();
   await expect(page.getByLabel("終日", { exact: true })).toBeChecked();
   await page.getByLabel("最終日").fill(dateKey(last));
+  await page.getByLabel("備考").fill("受付で名前を伝える");
   await page.getByRole("dialog").getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 
@@ -31,6 +32,7 @@ test("インターンは終日のときに期間を選べ、詳細に初日か�
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText(`${last.getMonth() + 1}月${last.getDate()}日`, { exact: false })).toBeVisible();
   await expect(dialog.getByText("〜", { exact: false })).toBeVisible();
+  await expect(dialog.getByText("受付で名前を伝える", { exact: true })).toBeVisible();
 
   // 終日を外すと期間は消え、時刻を入れる形になる
   await dialog.getByRole("button", { name: "予定を編集" }).click();

@@ -266,6 +266,7 @@ type CalendarEvent struct {
 	UpdatedAt time.Time
 	Url       *string
 	EndDate   *time.Time
+	Note      *string
 }
 
 type CalendarFeed struct {

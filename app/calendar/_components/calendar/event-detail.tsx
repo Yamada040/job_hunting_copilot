@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { BuildingOffice2Icon, ClockIcon, PencilIcon, TrashIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
+import {
+  BuildingOffice2Icon,
+  ClockIcon,
+  DocumentTextIcon,
+  PencilIcon,
+  TrashIcon,
+  VideoCameraIcon,
+} from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
 import { DialogTitle } from "@/components/ui/dialog";
@@ -80,6 +87,12 @@ export function EventDetail({
             </Button>
             <p className="truncate text-xs text-muted-foreground">{event.url}</p>
           </div>
+        </div>
+      )}
+      {event.note && (
+        <div className="flex items-start gap-3 text-sm">
+          <DocumentTextIcon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+          <p className="whitespace-pre-wrap">{event.note}</p>
         </div>
       )}
       {event.company && (

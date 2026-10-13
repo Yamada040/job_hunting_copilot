@@ -51,6 +51,7 @@ describe("modalReducer", () => {
       time: "15:00",
       endDate: "",
       url: "",
+      note: "",
       company: { id: "c1", name: "サンプル" },
     });
   });

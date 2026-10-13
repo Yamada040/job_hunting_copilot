@@ -40,6 +40,8 @@ type Item struct {
 	CompanyName *string
 	// URL は、予定のリンク（オンライン面接のURLなど）。ESの締切には無い
 	URL *string
+	// Note は、予定の備考。ESの締切には無い
+	Note *string
 }
 
 // Fields は、予定の登録・更新で受け取る項目。nil の項目は、登録では未入力、更新では変更しないことを表す。
@@ -59,6 +61,9 @@ type Fields struct {
 	// SetURL が true のときだけ URL を書き換える（登録では URL をそのまま使う）。URL が nil ならリンクを消す
 	SetURL bool
 	URL    *string
+	// SetNote が true のときだけ Note を書き換える（登録では Note をそのまま使う）。Note が nil なら備考を消す
+	SetNote bool
+	Note    *string
 }
 
 type Service struct {
@@ -131,7 +136,7 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (Item,
 		}
 		id, err := q.CreateCalendarEvent(ctx, db.CreateCalendarEventParams{
 			UserID: userID, CompanyID: f.CompanyID, Title: *f.Title, Type: eventType, Date: *f.Date, EndDate: endDate, Time: t,
-			Url: platform.EmptyToNil(platform.TrimPtr(f.URL)),
+			Url: platform.EmptyToNil(platform.TrimPtr(f.URL)), Note: platform.EmptyToNil(platform.TrimPtr(f.Note)),
 		})
 		if err != nil {
 			return fmt.Errorf("create calendar event: %w", err)
@@ -191,6 +196,7 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, f Fields) (I
 			SetEndDate: f.SetEndDate, EndDate: f.EndDate,
 			SetTime: f.SetTime, Time: t,
 			SetUrl: f.SetURL, Url: platform.EmptyToNil(platform.TrimPtr(f.URL)),
+			SetNote: f.SetNote, Note: platform.EmptyToNil(platform.TrimPtr(f.Note)),
 		}
 		n, err := q.UpdateCalendarEvent(ctx, params)
 		if err != nil {
@@ -230,7 +236,7 @@ func get(ctx context.Context, q *db.Queries, userID, id uuid.UUID) (Item, error)
 func fromEvent(e db.CalendarEvent, companyName *string) Item {
 	return Item{
 		ID: e.ID, Source: SourceEvent, Title: e.Title, Type: e.Type, Date: e.Date, EndDate: e.EndDate,
-		Time: fromPgTime(e.Time), CompanyID: e.CompanyID, CompanyName: companyName, URL: e.Url,
+		Time: fromPgTime(e.Time), CompanyID: e.CompanyID, CompanyName: companyName, URL: e.Url, Note: e.Note,
 	}
 }
 

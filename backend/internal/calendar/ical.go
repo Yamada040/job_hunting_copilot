@@ -64,6 +64,9 @@ func BuildICal(items []Item, now time.Time) string {
 			write("URL:" + *item.URL)
 			description = append(description, "リンク: "+*item.URL)
 		}
+		if item.Note != nil && *item.Note != "" {
+			description = append(description, "備考: "+*item.Note)
+		}
 		if len(description) > 0 {
 			write("DESCRIPTION:" + escapeText(strings.Join(description, "\n")))
 		}

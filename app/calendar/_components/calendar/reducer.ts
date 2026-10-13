@@ -9,6 +9,7 @@ export const emptyForm: CalendarFormState = {
   time: "",
   endDate: "",
   url: "",
+  note: "",
 };
 
 /**
@@ -75,6 +76,7 @@ export function modalReducer(state: ModalState, action: ModalAction): ModalState
           time: action.event.time || "",
           endDate: action.event.endDate || "",
           url: action.event.url || "",
+          note: action.event.note || "",
         },
         error: null,
       };

@@ -14,6 +14,8 @@ export type CalendarEvent = {
   time?: string | null; // HH:MM
   /** リンク（オンライン面接のURLなど） */
   url?: string | null;
+  /** 予定の備考 */
+  note?: string | null;
 };
 
 export type CalendarFormState = {
@@ -25,6 +27,7 @@ export type CalendarFormState = {
   time: string;
   endDate: string;
   url: string;
+  note: string;
 };
 
 /** バックエンドが返すカレンダーの1件を、画面で扱う形にする。 */
@@ -39,6 +42,7 @@ export function toCalendarEvent(item: CalendarItem): CalendarEvent {
     type: item.type,
     time: item.time,
     url: item.url,
+    note: item.note,
   };
 }
 

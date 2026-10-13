@@ -42,6 +42,7 @@ function QuickEventForm({ onDone }: { onDone: () => void }) {
     endDate: "",
     company: null,
     url: "",
+    note: "",
   }));
 
   return (
@@ -59,6 +60,7 @@ function QuickEventForm({ onDone }: { onDone: () => void }) {
             endDate: endDate ?? undefined,
             companyId: values.company?.id,
             url: eventLink(values) ?? undefined,
+            note: values.note || undefined,
           },
           { onSuccess: onDone },
         );

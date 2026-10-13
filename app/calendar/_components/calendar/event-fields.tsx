@@ -1,8 +1,9 @@
 "use client";
 
-import { BuildingOffice2Icon, ClockIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
+import { BuildingOffice2Icon, ClockIcon, DocumentTextIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
 
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { CompanySummary } from "@/lib/api/companies";
 import { cn } from "@/lib/utils";
 import { CompanyPicker } from "@/app/_components/company-picker";
@@ -18,6 +19,7 @@ export type EventFieldValues = {
   endDate: string;
   company: CompanySummary | null;
   url: string;
+  note: string;
 };
 
 /**
@@ -160,6 +162,20 @@ export function EventFields({
           />
         </div>
       )}
+
+      <div className="flex items-start gap-3">
+        <DocumentTextIcon className="mt-2.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+        <Textarea
+          id={`${idPrefix}-note`}
+          aria-label="備考"
+          value={value.note}
+          onChange={(e) => onChange({ note: e.target.value })}
+          maxLength={2000}
+          rows={3}
+          placeholder="備考（任意）"
+          className="flex-1 resize-y"
+        />
+      </div>
 
       <div className="flex items-start gap-3">
         <BuildingOffice2Icon className="mt-2.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />

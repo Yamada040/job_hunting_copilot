@@ -895,6 +895,8 @@ export interface components {
       company: components["schemas"]["CompanySummary"] | null;
       /** @description リンク（オンライン面接のURLなど） */
       url: string | null;
+      /** @description 備考 */
+      note: string | null;
     };
     CalendarEventCreate: {
       title: string;
@@ -911,6 +913,8 @@ export interface components {
       companyId?: string;
       /** @description リンク（オンライン面接のURLなど） */
       url?: string;
+      /** @description 備考 */
+      note?: string;
     };
     CalendarEventUpdate: {
       title?: string;
@@ -923,6 +927,7 @@ export interface components {
       /** Format: uuid */
       companyId?: string | null;
       url?: string | null;
+      note?: string | null;
     };
     /**
      * @description XPが付いた操作。日本語の表示名はフロントエンドが持つ
