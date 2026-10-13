@@ -45,7 +45,7 @@ export function WebtestDetail({ id }: { id: string }) {
         </Card>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <Card className="gap-4 p-6">
           <div className="flex flex-wrap gap-2">
             <QuestionAttribute label="テスト形式" value={question.testType ?? "未設定"} />

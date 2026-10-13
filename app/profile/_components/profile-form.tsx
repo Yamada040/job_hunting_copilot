@@ -13,6 +13,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
+import { FormActions } from "@/app/_components/form/form-actions";
+import { LeaveGuard } from "@/app/_components/form/leave-guard";
+import { useFormEditing } from "@/app/_components/form/use-form-editing";
 
 // backend/api/openapi.yaml の ProfileUpdate の maxLength と同じ値（超えた入力はバックエンドが400で拒否する）
 const MAX_LENGTH = 100;
@@ -54,6 +57,7 @@ function ProfileFormFields({
   saved: boolean;
   onSavedChange: (saved: boolean) => void;
 }) {
+  const { dirty, formProps } = useFormEditing();
   const updateMe = useUpdateMe();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -76,9 +80,9 @@ function ProfileFormFields({
   };
 
   return (
-    <Card>
+    <Card className="overflow-visible">
       <CardContent className="px-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form {...formProps} onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             {textFields.map((field) => (
               <div key={field.name} className="space-y-2">
@@ -144,13 +148,14 @@ function ProfileFormFields({
             error={updateMe.error}
             labels={Object.fromEntries(textFields.map((f) => [f.name, f.label]))}
           />
-          {saved && <p className="text-sm text-success">保存しました</p>}
-
-          <Button type="submit" variant="default" disabled={updateMe.isPending}>
-            <UserCircleIcon className="h-4 w-4" />
-            {updateMe.isPending ? "保存中…" : "保存する"}
-          </Button>
+          <FormActions dirty={dirty} saved={saved}>
+            <Button type="submit" variant="default" disabled={updateMe.isPending}>
+              <UserCircleIcon className="h-4 w-4" />
+              {updateMe.isPending ? "保存中…" : "保存する"}
+            </Button>
+          </FormActions>
         </form>
+        <LeaveGuard when={dirty && !updateMe.isPending} />
       </CardContent>
     </Card>
   );

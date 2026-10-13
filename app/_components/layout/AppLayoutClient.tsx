@@ -32,7 +32,9 @@ export function AppLayoutClient({
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    // はみ出しを切るのに overflow-hidden ではなく clip を使う。hidden の要素はスクロールの箱になり、その中では
+    // 保存の帯（FormActions）の sticky が効かなくなるため
+    <div className="relative min-h-screen overflow-clip">
       {/* 各画面はこのレイアウトごと描き直されるので、画面を移るたびに中身が奥から手前へせり出す。
             カルーセルの「カードを開く」動きとつなげるため。ヘッダーと下のメニューは動かさない */}
       <motion.main

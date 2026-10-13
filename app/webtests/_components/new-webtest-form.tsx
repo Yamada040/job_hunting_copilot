@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCreateWebtestQuestion } from "@/lib/api/webtests";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { FormActions } from "@/app/_components/form/form-actions";
+import { LeaveGuard } from "@/app/_components/form/leave-guard";
+import { useFormEditing } from "@/app/_components/form/use-form-editing";
 
 const FIELD_LABELS: Record<string, string> = {
   title: "タイトル",
@@ -25,6 +28,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export function NewWebtestForm() {
+  const { dirty, formProps } = useFormEditing();
   const router = useRouter();
   const createQuestion = useCreateWebtestQuestion();
 
@@ -54,8 +58,8 @@ export function NewWebtestForm() {
   };
 
   return (
-    <Card className="p-6">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Card className="overflow-visible p-6">
+      <form {...formProps} onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <Field name="title" label="タイトル" maxLength={100} required placeholder="例）表の読み取り（売上推移）" />
           <Field name="category" label="カテゴリ" placeholder="非言語 / 言語 / 英語 など" />
@@ -84,12 +88,13 @@ export function NewWebtestForm() {
           <Textarea id="webtest-explanation" name="explanation" rows={4} placeholder="解答の考え方や計算手順を記載" />
         </div>
         <ApiErrorMessage error={createQuestion.error} labels={FIELD_LABELS} />
-        <div className="flex justify-start pt-2">
+        <FormActions dirty={dirty}>
           <Button type="submit" variant="default" disabled={createQuestion.isPending}>
             {createQuestion.isPending ? "保存中…" : "保存する"}
           </Button>
-        </div>
+        </FormActions>
       </form>
+      <LeaveGuard when={dirty && !createQuestion.isPending} />
     </Card>
   );
 }

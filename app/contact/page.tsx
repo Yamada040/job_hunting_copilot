@@ -19,7 +19,7 @@ export default async function ContactPage() {
       headerDescription="不具合やご要望を運営に送信できます"
       className="space-y-6"
     >
-      <Card className="py-6">
+      <Card className="overflow-visible py-6">
         <CardHeader className="px-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Contact</p>
           <CardTitle>
@@ -28,7 +28,7 @@ export default async function ContactPage() {
           <CardDescription>内容を入力して送信すると、そのまま運営に送信されます。</CardDescription>
         </CardHeader>
         <CardContent className="px-6">
-          <Card variant="muted" className="px-4">
+          <Card variant="muted" className="overflow-visible px-4">
             <ContactForm accountName={accountName} email={email} />
           </Card>
         </CardContent>

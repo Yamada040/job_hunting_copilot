@@ -9,6 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Company, CompanyStage } from "@/lib/api/companies";
 import { COMPANY_STAGES, COMPANY_STAGE_LABELS } from "@/lib/companies/stages";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { FormActions } from "@/app/_components/form/form-actions";
+import { FormSection } from "@/app/_components/form/form-section";
+import { LeaveGuard } from "@/app/_components/form/leave-guard";
+import { useFormEditing } from "@/app/_components/form/use-form-editing";
 
 /** フォームの入力値。送り方（登録か更新か）は呼び出し側が決める。 */
 export type CompanyFormValues = {
@@ -35,10 +39,12 @@ export const COMPANY_FIELD_LABELS: Record<string, string> = {
 };
 
 // maxLength は backend/api/openapi.yaml の CompanyCreate / CompanyUpdate と同じ値（超えた入力はバックエンドが400で拒否する）
-const textFields = [
+const basicFields = [
   { name: "name", maxLength: 100, placeholder: "例）株式会社サンプル", required: true },
   { name: "industry", maxLength: 100, placeholder: "例）IT / コンサル / メーカー" },
   { name: "url", maxLength: 500, placeholder: "https://example.com" },
+] as const;
+const mypageFields = [
   { name: "mypageId", maxLength: 100, placeholder: "ログインID" },
   { name: "mypageUrl", maxLength: 500, placeholder: "https://mypage.example.com" },
 ] as const;
@@ -48,10 +54,13 @@ type Props = {
   submitLabel: string;
   pending: boolean;
   error: unknown;
+  /** 直前の保存がうまくいったか（保存の帯に「保存しました」を出す） */
+  saved?: boolean;
   onSubmit: (values: CompanyFormValues) => void;
 };
 
-export function CompanyForm({ initial, submitLabel, pending, error, onSubmit }: Props) {
+export function CompanyForm({ initial, submitLabel, pending, error, saved, onSubmit }: Props) {
+  const { dirty, formProps } = useFormEditing();
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -71,22 +80,15 @@ export function CompanyForm({ initial, submitLabel, pending, error, onSubmit }: 
   };
 
   return (
-    <Card className="p-8">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          {textFields.map((f) => (
-            <div key={f.name} className="space-y-2">
-              <Label htmlFor={`company-${f.name}`}>{COMPANY_FIELD_LABELS[f.name]}</Label>
-              <Input
-                id={`company-${f.name}`}
-                name={f.name}
-                defaultValue={initial?.[f.name] ?? ""}
-                maxLength={f.maxLength}
-                required={"required" in f}
-                placeholder={f.placeholder}
-              />
-            </div>
+    <Card className="overflow-visible p-8">
+      <form {...formProps} onSubmit={handleSubmit} className="space-y-8">
+        <FormSection title="基本情報" className="md:grid-cols-2">
+          {basicFields.map((f) => (
+            <TextField key={f.name} field={f} initial={initial} />
           ))}
+        </FormSection>
+
+        <FormSection title="選考" className="md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="company-stage">{COMPANY_FIELD_LABELS.stage}</Label>
             <NativeSelect
@@ -118,8 +120,11 @@ export function CompanyForm({ initial, submitLabel, pending, error, onSubmit }: 
               ))}
             </NativeSelect>
           </div>
+          {mypageFields.map((f) => (
+            <TextField key={f.name} field={f} initial={initial} />
+          ))}
           {/* FormData の favorite で値を読むので、Radix の Checkbox ではなくネイティブの checkbox のままにする */}
-          <Label className="self-end font-normal">
+          <Label className="font-normal">
             <input
               type="checkbox"
               name="favorite"
@@ -128,26 +133,55 @@ export function CompanyForm({ initial, submitLabel, pending, error, onSubmit }: 
             />
             お気に入り
           </Label>
-        </div>
+        </FormSection>
 
-        <div className="space-y-2">
-          <Label htmlFor="company-memo">{COMPANY_FIELD_LABELS.memo}</Label>
-          <Textarea
-            id="company-memo"
-            name="memo"
-            defaultValue={initial?.memo ?? ""}
-            maxLength={2000}
-            rows={4}
-            className="min-h-24"
-          />
-        </div>
+        <FormSection title="メモ">
+          <div className="space-y-2">
+            <Label htmlFor="company-memo" className="sr-only">
+              {COMPANY_FIELD_LABELS.memo}
+            </Label>
+            <Textarea
+              id="company-memo"
+              name="memo"
+              defaultValue={initial?.memo ?? ""}
+              maxLength={2000}
+              rows={4}
+              className="min-h-24"
+            />
+          </div>
+        </FormSection>
 
         <ApiErrorMessage error={error} labels={COMPANY_FIELD_LABELS} />
 
-        <Button type="submit" variant="default" disabled={pending}>
-          {pending ? "保存中…" : submitLabel}
-        </Button>
+        <FormActions dirty={dirty} saved={saved}>
+          <Button type="submit" variant="default" disabled={pending}>
+            {pending ? "保存中…" : submitLabel}
+          </Button>
+        </FormActions>
       </form>
+      <LeaveGuard when={dirty && !pending} />
     </Card>
+  );
+}
+
+function TextField({
+  field,
+  initial,
+}: {
+  field: (typeof basicFields)[number] | (typeof mypageFields)[number];
+  initial?: Company;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={`company-${field.name}`}>{COMPANY_FIELD_LABELS[field.name]}</Label>
+      <Input
+        id={`company-${field.name}`}
+        name={field.name}
+        defaultValue={initial?.[field.name] ?? ""}
+        maxLength={field.maxLength}
+        required={"required" in field}
+        placeholder={field.placeholder}
+      />
+    </div>
   );
 }

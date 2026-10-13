@@ -66,12 +66,12 @@ function CompanyDetailLoaded({
         submitLabel="保存する"
         pending={updateCompany.isPending}
         error={updateCompany.error}
+        saved={saved}
         onSubmit={(values) => {
           setSaved(false);
           updateCompany.mutate(values, { onSuccess: () => setSaved(true) });
         }}
       />
-      {saved && <p className="text-sm text-success">保存しました</p>}
 
       <AiResultPanel
         title="AI企業分析"

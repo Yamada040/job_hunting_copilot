@@ -49,6 +49,7 @@ function EsDetailLoaded({
         canSubmit={entry.status === "draft"}
         pending={updateEsEntry.isPending || submitEsEntry.isPending}
         error={updateEsEntry.error ?? submitEsEntry.error}
+        saved={saved}
         onSubmit={(values, submit) => {
           setSaved(false);
           updateEsEntry.mutate(values, {
@@ -56,7 +57,6 @@ function EsDetailLoaded({
           });
         }}
       />
-      {saved && <p className="text-sm text-success">保存しました</p>}
 
       <EsReviewPanel entryId={entry.id} companyId={entry.company.id} />
 

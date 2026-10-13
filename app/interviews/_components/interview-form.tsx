@@ -13,6 +13,10 @@ import type { InterviewFormat, InterviewLog, InterviewQuestion, InterviewRating 
 import { INTERVIEW_FORMAT_LABELS, INTERVIEW_RATING_LABELS } from "@/lib/interviews/labels";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { CompanyPicker } from "@/app/_components/company-picker";
+import { FormActions } from "@/app/_components/form/form-actions";
+import { FormSection } from "@/app/_components/form/form-section";
+import { LeaveGuard } from "@/app/_components/form/leave-guard";
+import { useFormEditing } from "@/app/_components/form/use-form-editing";
 
 export type InterviewFormValues = {
   companyId: string;
@@ -41,12 +45,15 @@ type Props = {
   submitLabel: string;
   pending: boolean;
   error: unknown;
+  /** 直前の保存がうまくいったか（保存の帯に「保存しました」を出す） */
+  saved?: boolean;
   onSubmit: (values: InterviewFormValues) => void;
 };
 
-export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }: Props) {
+export function InterviewForm({ initial, submitLabel, pending, error, saved, onSubmit }: Props) {
   const [company, setCompany] = useState<CompanySummary | null>(initial?.company ?? null);
   const [questions, setQuestions] = useState<InterviewQuestion[]>(initial?.questions ?? [emptyQuestion]);
+  const { dirty, markDirty, formProps } = useFormEditing();
 
   const updateQuestion = (index: number, patch: Partial<InterviewQuestion>) =>
     setQuestions((qs) => qs.map((q, i) => (i === index ? { ...q, ...patch } : q)));
@@ -67,12 +74,18 @@ export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }
   };
 
   return (
-    <Card className="p-8">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
+    <Card className="overflow-visible p-8">
+      <form {...formProps} onSubmit={handleSubmit} className="space-y-8">
+        <FormSection title="基本情報" className="md:grid-cols-2">
           <div className="space-y-2">
             <span className="text-sm font-medium">企業</span>
-            <CompanyPicker value={company} onChange={setCompany} />
+            <CompanyPicker
+              value={company}
+              onChange={(next) => {
+                setCompany(next);
+                markDirty();
+              }}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="interview-format">面接形式</Label>
@@ -110,12 +123,18 @@ export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }
               required
             />
           </div>
-        </div>
+        </FormSection>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>聞かれた質問と自分の回答</span>
-            <Button type="button" variant="outline" onClick={() => setQuestions((qs) => [...qs, emptyQuestion])}>
+        <FormSection title="聞かれた質問と自分の回答" className="gap-3">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setQuestions((qs) => [...qs, emptyQuestion]);
+                markDirty();
+              }}
+            >
               質問を追加
             </Button>
           </div>
@@ -154,7 +173,10 @@ export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }
                   <Button
                     type="button"
                     variant="destructive"
-                    onClick={() => setQuestions((qs) => qs.filter((_, i) => i !== index))}
+                    onClick={() => {
+                      setQuestions((qs) => qs.filter((_, i) => i !== index));
+                      markDirty();
+                    }}
                     className="text-xs"
                   >
                     削除
@@ -163,9 +185,9 @@ export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }
               </div>
             </Card>
           ))}
-        </div>
+        </FormSection>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <FormSection title="振り返り" className="md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="interview-improvement">{FIELD_LABELS.improvement}</Label>
             <Textarea
@@ -186,16 +208,17 @@ export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }
               rows={3}
             />
           </div>
-        </div>
+        </FormSection>
 
         <ApiErrorMessage error={error} labels={FIELD_LABELS} />
 
-        <div>
+        <FormActions dirty={dirty} saved={saved}>
           <Button type="submit" variant="default" disabled={pending || !company}>
             {pending ? "保存中…" : submitLabel}
           </Button>
-        </div>
+        </FormActions>
       </form>
+      <LeaveGuard when={dirty && !pending} />
     </Card>
   );
 }

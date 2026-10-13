@@ -54,12 +54,12 @@ function InterviewDetailLoaded({
         submitLabel="保存する"
         pending={updateLog.isPending}
         error={updateLog.error}
+        saved={saved}
         onSubmit={(values) => {
           setSaved(false);
           updateLog.mutate(values, { onSuccess: () => setSaved(true) });
         }}
       />
-      {saved && <p className="text-sm text-success">保存しました</p>}
 
       <AiResultPanel
         title="AI振り返り"
