@@ -145,7 +145,7 @@ function ProfileFormFields({
           />
           {saved && <p className="text-sm text-emerald-600">保存しました</p>}
 
-          <Button type="submit" variant="quest" disabled={updateMe.isPending}>
+          <Button type="submit" variant="default" disabled={updateMe.isPending}>
             <UserCircleIcon className="h-4 w-4" />
             {updateMe.isPending ? "保存中…" : "保存する"}
           </Button>

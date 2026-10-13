@@ -21,7 +21,7 @@ test.describe("認証済みセッションでのダッシュボード表示", ()
   test("セッションが確立されていれば/dashboardが表示される", async ({ page }) => {
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/dashboard$/);
-    await expect(page.getByText("現在の目標")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "今日は何から進めますか？" })).toBeVisible();
   });
 
   test("ログイン済みで/loginにアクセスすると/dashboardへリダイレクトされる", async ({ page }) => {

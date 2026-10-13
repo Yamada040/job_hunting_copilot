@@ -1,13 +1,15 @@
 "use client";
 
-import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useMe } from "@/lib/api/me";
-import { levelThresholds, XP_PER_LEVEL } from "@/lib/xp/compute-level";
-import { QuestWindow } from "./quest-window";
+import { LevelEmblem } from "./xp/level-emblem";
+import { LevelUpDialog } from "./xp/level-up-dialog";
+import { XpGauge } from "./xp/xp-gauge";
+
+// XPのゲージが満ちて次のレベルへ繰り上がるまでの時間（ms）。これを待ってからレベルアップの演出を開く
+const LEVEL_UP_DELAY = 1100;
 
 /**
  * ヘッダーのレベル・XPの表示。値は TanStack Query の useMe のキャッシュから読むので、
@@ -15,85 +17,60 @@ import { QuestWindow } from "./quest-window";
  */
 export function XpBadge() {
   const { data } = useMe();
-  const level = data?.level;
+  const reduceMotion = useReducedMotion();
+  const xp = data?.xp ?? 0;
+  const level = data?.level ?? 1;
 
-  // レベルが上がったことを、前回の描画時のレベルと比べて検出する（初回の読み込みでは演出しない）
-  const [prevLevel, setPrevLevel] = useState(level);
+  // XP・レベルが増えたことを、前回の描画時の値と比べて検出する（初回の読み込みでは演出しない）
+  const [prev, setPrev] = useState(data ? { xp, level } : null);
+  const [gains, setGains] = useState<{ id: number; amount: number }[]>([]);
+  const [reachedLevel, setReachedLevel] = useState<number | null>(null);
   const [levelUp, setLevelUp] = useState<number | null>(null);
-  if (level !== prevLevel) {
-    if (prevLevel !== undefined && level !== undefined && level > prevLevel) setLevelUp(level);
-    setPrevLevel(level);
+  if (data && (prev?.xp !== xp || prev?.level !== level)) {
+    if (prev && xp > prev.xp) setGains((g) => [...g, { id: Date.now(), amount: xp - prev.xp }]);
+    if (prev && level > prev.level) setReachedLevel(level);
+    setPrev({ xp, level });
   }
+
+  // ダイアログの暗い幕でゲージの繰り上がりが隠れないよう、ゲージが満ちて繰り上がるのを見せてから開く
+  useEffect(() => {
+    if (reachedLevel === null) return;
+    const timer = setTimeout(
+      () => {
+        setLevelUp(reachedLevel);
+        setReachedLevel(null);
+      },
+      reduceMotion ? 0 : LEVEL_UP_DELAY,
+    );
+    return () => clearTimeout(timer);
+  }, [reachedLevel, reduceMotion]);
+
+  // 届く前に描くと XP 0・Lv 1 から始まり、届いた瞬間に大きく増えたように動いてしまうので、届くまでは場所だけ取る
+  if (!data) return <div className="h-16 w-[28rem]" />;
 
   return (
     <>
-      <XpBadgeStatus xp={data?.xp ?? 0} level={level ?? 1} />
+      <div className="relative flex w-[28rem] items-center gap-3">
+        <LevelEmblem level={level} className="h-16 w-14 shrink-0 text-base" />
+        <XpGauge xp={xp} level={level} />
+        {/* 獲得したXPが、ゲージの上へ浮かんで消える */}
+        <AnimatePresence>
+          {gains.map((gain) => (
+            <motion.span
+              key={gain.id}
+              className="pointer-events-none absolute -top-1 right-0 text-sm font-black text-primary"
+              initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+              animate={{ opacity: [0, 1, 1, 0], y: reduceMotion ? 0 : -18 }}
+              transition={{ duration: 1.4, times: [0, 0.15, 0.7, 1], ease: "easeOut" }}
+              onAnimationComplete={() => setGains((g) => g.filter((x) => x.id !== gain.id))}
+            >
+              +{gain.amount} XP
+            </motion.span>
+          ))}
+        </AnimatePresence>
+      </div>
 
-      {/* レベルアップ演出：背景画像の上にDQ風のメッセージウィンドウを重ねる */}
-      <Dialog open={levelUp !== null} onOpenChange={(open) => !open && setLevelUp(null)}>
-        <DialogContent
-          showCloseButton={false}
-          className="aspect-video max-w-[650px] overflow-hidden rounded-none border-4 border-white p-0 shadow-2xl sm:max-w-[650px]"
-        >
-          <Image
-            src="/levelup.jpeg"
-            alt=""
-            fill
-            sizes="(max-width: 650px) 100vw, 650px"
-            className="object-cover opacity-90"
-            priority
-          />
-          <QuestWindow title="LEVEL UP!" className="absolute inset-x-8 bottom-8 p-6 text-center">
-            <DialogTitle className="text-xl font-bold leading-relaxed">
-              おめでとう！
-              <br />
-              あなたは Lv.{levelUp} に なった！
-            </DialogTitle>
-            <DialogDescription className="sr-only">レベルが上がりました</DialogDescription>
-            <DialogClose asChild>
-              <Button type="button" variant="quest" className="mx-auto text-2xl">
-                つぎへ
-              </Button>
-            </DialogClose>
-          </QuestWindow>
-        </DialogContent>
-      </Dialog>
+      <LevelUpDialog level={levelUp} onClose={() => setLevelUp(null)} />
     </>
-  );
-}
-
-function XpBadgeStatus({ xp, level }: { xp: number; level: number }) {
-  const { progress, xpIntoLevel, xpToNext } = useMemo(() => {
-    const { prev, next } = levelThresholds(level);
-    const into = xp - prev;
-    return {
-      progress: Math.min(1, into / XP_PER_LEVEL),
-      xpIntoLevel: into,
-      xpToNext: Math.max(0, next - xp),
-    };
-  }, [xp, level]);
-
-  return (
-    <div className="flex min-w-[600px] flex-1 items-center gap-4 rounded-md px-2 py-1">
-      <div className="flex items-baseline gap-2">
-        <span className="text-[10px] font-bold tracking-widest text-sky-600">LEVEL</span>
-        <span className="text-2xl font-bold tracking-tighter">Lv {level}</span>
-        <span className="text-xs text-muted-foreground">XP {xp}</span>
-      </div>
-      <div className="flex min-w-[180px] flex-1 flex-col gap-1">
-        <div className="h-2.5 w-full rounded-full border border-sky-300 bg-sky-100 p-[2px]">
-          <div
-            className="h-full rounded-full bg-linear-to-r from-sky-400 to-sky-600"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-[10px] font-bold tracking-tight text-muted-foreground">
-          <span>つぎの レベルまで {xpToNext} XP</span>
-          <span>
-            {xpIntoLevel} / {XP_PER_LEVEL}
-          </span>
-        </div>
-      </div>
-    </div>
   );
 }

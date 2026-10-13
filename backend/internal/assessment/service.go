@@ -61,8 +61,17 @@ type Service[A any] struct {
 	kind    kind[A]
 }
 
-func (s *Service[A]) Get(ctx context.Context, userID uuid.UUID) (Result[A], error) {
-	return s.get(ctx, db.New(s.pool), userID)
+// Get は、回答と結果を返す。まだ回答していなければ nil（回答が無いのは普通の状態なので、エラーにはしない）。
+func (s *Service[A]) Get(ctx context.Context, userID uuid.UUID) (*Result[A], error) {
+	r, err := s.get(ctx, db.New(s.pool), userID)
+	var appErr *platform.Error
+	if errors.As(err, &appErr) && appErr.Kind == platform.KindNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
 }
 
 // Submit は、回答を保存し、初回だけXPを付与する。2回目は 409。

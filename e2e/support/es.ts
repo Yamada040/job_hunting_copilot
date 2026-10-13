@@ -6,7 +6,7 @@ export async function createDraftEs(page: Page, title: string): Promise<string> 
   const companyName = `E2E商事-${Date.now()}`;
 
   await page.goto("/es/new");
-  await page.getByLabel("企業").fill(companyName);
+  await page.getByLabel("企業", { exact: true }).fill(companyName);
   await page.getByRole("button", { name: `＋「${companyName}」を新しく登録する` }).click();
   await expect(page.getByText(companyName)).toBeVisible();
 

@@ -54,7 +54,7 @@ export function MonthGrid({
           </Button>
         </div>
 
-        <Button type="button" variant="quest" onClick={onAddToday}>
+        <Button type="button" variant="outline" onClick={onAddToday}>
           <PlusIcon className="h-4 w-4" />
           今日に追加
         </Button>

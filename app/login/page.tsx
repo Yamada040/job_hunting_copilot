@@ -32,7 +32,7 @@ export default async function LoginPage() {
             <p className="text-xs text-muted-foreground">
               サインイン後は、アカウントに紐づくデータが自動で読み込まれます。
             </p>
-            <Button asChild variant="quest" className="text-xs">
+            <Button asChild variant="outline" className="text-xs">
               <Link href={ROUTES.DASHBOARD}>ダッシュボードを見る</Link>
             </Button>
           </CardFooter>

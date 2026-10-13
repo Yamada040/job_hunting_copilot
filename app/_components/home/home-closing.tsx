@@ -26,7 +26,7 @@ export function HomeCallToAction() {
         <p className="text-lg">無料で始められます。面倒な設定は不要で、登録後すぐに利用可能です。</p>
         <div className="flex flex-wrap justify-center gap-4">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button asChild variant="quest">
+            <Button asChild variant="default">
               <Link href={ROUTES.LOGIN}>ログイン</Link>
             </Button>
           </motion.div>

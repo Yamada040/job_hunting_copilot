@@ -63,7 +63,7 @@ function Rewrite({ text, charLimit }: { text: string; charLimit: number | null }
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-muted-foreground">修正版</p>
-        <Button type="button" variant="quest" size="xs" onClick={copy}>
+        <Button type="button" variant="ghost" size="xs" onClick={copy}>
           {copied ? <CheckIcon className="h-4 w-4" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
           {copied ? "コピー済み" : "コピー"}
         </Button>

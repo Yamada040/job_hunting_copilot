@@ -28,7 +28,7 @@ export function WebtestList() {
         title="まだ問題がありません"
         description="受ける予定のWebテストの問題を登録して、解答の練習ができます。"
       >
-        <Button asChild variant="quest">
+        <Button asChild variant="default">
           <Link href={ROUTES.WEBTESTS_NEW}>問題を追加する</Link>
         </Button>
       </EmptyState>

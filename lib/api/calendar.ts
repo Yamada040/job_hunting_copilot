@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, unwrap } from "./client";
 import type { components } from "./schema";
@@ -21,6 +21,15 @@ export function useCalendarItems() {
 
 export function createCalendarEvent(body: CalendarEventCreate) {
   return unwrap(api.POST("/v1/calendar-events", { body }));
+}
+
+/** 予定を追加し、カレンダーとホームの直近の予定を取り直す。 */
+export function useCreateCalendarEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createCalendarEvent,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: calendarKeys.all }),
+  });
 }
 
 export function updateCalendarEvent(id: string, body: CalendarEventUpdate) {

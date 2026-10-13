@@ -522,14 +522,16 @@ paths:
     get:
       operationId: getAptitudeResult
       summary: 自分の適性診断の回答と診断結果を取得する
-      description: まだ回答していなければ 404。
+      description: まだ回答していなければ null を返す（回答が無いのはエラーではなく普通の状態なので、404 にはしない）。
       responses:
         "200":
-          description: 適性診断
+          description: 適性診断。まだ回答していなければ null
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AptitudeResult"
+                allOf:
+                  - $ref: "#/components/schemas/AptitudeResult"
+                nullable: true
         default:
           $ref: "#/components/responses/Problem"
     post:
@@ -576,14 +578,16 @@ paths:
     get:
       operationId: getSelfAnalysisResult
       summary: 自分の自己分析の回答と分析結果を取得する
-      description: まだ回答していなければ 404。
+      description: まだ回答していなければ null を返す（回答が無いのはエラーではなく普通の状態なので、404 にはしない）。
       responses:
         "200":
-          description: 自己分析
+          description: 自己分析。まだ回答していなければ null
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SelfAnalysisResult"
+                allOf:
+                  - $ref: "#/components/schemas/SelfAnalysisResult"
+                nullable: true
         default:
           $ref: "#/components/responses/Problem"
     post:

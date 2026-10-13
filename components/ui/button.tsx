@@ -18,10 +18,6 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
-        quest:
-          "font-bold text-primary hover:text-sky-500 before:inline-block before:text-[0.7rem] before:transition-transform before:content-['▶'] hover:before:translate-x-1",
-        "quest-muted":
-          "font-bold text-muted-foreground hover:text-sky-500 before:inline-block before:text-[0.7rem] before:transition-transform before:content-['▶'] hover:before:translate-x-1",
       },
       size: {
         default: "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
@@ -35,10 +31,6 @@ const buttonVariants = cva(
         "icon-lg": "size-9",
       },
     },
-    compoundVariants: [
-      // DQ風のメニューは枠のない文字だけのボタンなので、高さを決めずに文字の大きさに合わせる
-      { variant: ["quest", "quest-muted"], className: "h-auto px-2 py-1" },
-    ],
     defaultVariants: {
       variant: "default",
       size: "default",

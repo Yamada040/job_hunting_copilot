@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { api, ApiError, unwrap } from "./client";
+import { api, unwrap } from "./client";
 import type { components } from "./schema";
 import { applyXpResult } from "./xp";
 
@@ -12,19 +12,9 @@ export type SelfAnalysisResult = components["schemas"]["SelfAnalysisResult"];
 const aptitudeKey = ["aptitude-result"] as const;
 const selfAnalysisKey = ["self-analysis-result"] as const;
 
-/** 404（まだ回答していない）を null に変える。それ以外のエラーはそのまま投げる。 */
-async function orNull<T>(result: Promise<T>): Promise<T | null> {
-  try {
-    return await result;
-  } catch (e) {
-    if (e instanceof ApiError && e.problem.status === 404) return null;
-    throw e;
-  }
-}
-
 /** 適性診断の回答と診断結果。まだ回答していなければ null。 */
 export function useAptitudeResult() {
-  return useQuery({ queryKey: aptitudeKey, queryFn: () => orNull(unwrap(api.GET("/v1/aptitude-result"))) });
+  return useQuery({ queryKey: aptitudeKey, queryFn: () => unwrap(api.GET("/v1/aptitude-result")) });
 }
 
 export function useSubmitAptitude() {
@@ -50,7 +40,7 @@ export function useDiagnoseAptitude() {
 export function useSelfAnalysisResult() {
   return useQuery({
     queryKey: selfAnalysisKey,
-    queryFn: () => orNull(unwrap(api.GET("/v1/self-analysis-result"))),
+    queryFn: () => unwrap(api.GET("/v1/self-analysis-result")),
   });
 }
 

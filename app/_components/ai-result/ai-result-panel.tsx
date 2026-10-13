@@ -49,7 +49,7 @@ export function AiResultPanel({
 
   const runAction = (
     <div className="space-y-1">
-      <Button type="button" variant="quest" onClick={onRun} disabled={pending || !!blockedReason}>
+      <Button type="button" variant="default" onClick={onRun} disabled={pending || !!blockedReason}>
         {pending ? "AIが処理中です（数十秒かかることがあります）…" : runLabel}
       </Button>
       {blockedReason && <p className="text-xs text-muted-foreground">{blockedReason}</p>}
@@ -81,7 +81,7 @@ export function AiResultPanel({
         {text && (
           <Card variant="muted" className="gap-2 px-4">
             <div className="flex justify-end">
-              <Button type="button" variant="quest" size="xs" onClick={copy}>
+              <Button type="button" variant="ghost" size="xs" onClick={copy}>
                 {copied ? <CheckIcon className="h-4 w-4" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
                 {copied ? "コピー済み" : "コピー"}
               </Button>

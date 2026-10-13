@@ -39,7 +39,7 @@ export function CompanyTable() {
         title="まだ企業がありません"
         description="気になる企業を登録すると、選考状況やES・面接ログをまとめて管理できます。"
       >
-        <Button asChild variant="quest">
+        <Button asChild variant="default">
           <Link href={ROUTES.COMPANIES_NEW}>企業を登録する</Link>
         </Button>
       </EmptyState>

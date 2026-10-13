@@ -354,7 +354,7 @@ export interface paths {
     };
     /**
      * 自分の適性診断の回答と診断結果を取得する
-     * @description まだ回答していなければ 404。
+     * @description まだ回答していなければ null を返す（回答が無いのはエラーではなく普通の状態なので、404 にはしない）。
      */
     get: operations["getAptitudeResult"];
     put?: never;
@@ -398,7 +398,7 @@ export interface paths {
     };
     /**
      * 自分の自己分析の回答と分析結果を取得する
-     * @description まだ回答していなければ 404。
+     * @description まだ回答していなければ null を返す（回答が無いのはエラーではなく普通の状態なので、404 にはしない）。
      */
     get: operations["getSelfAnalysisResult"];
     put?: never;
@@ -1752,13 +1752,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description 適性診断 */
+      /** @description 適性診断。まだ回答していなければ null */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["AptitudeResult"];
+          "application/json": components["schemas"]["AptitudeResult"] | null;
         };
       };
       default: components["responses"]["Problem"];
@@ -1821,13 +1821,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description 自己分析 */
+      /** @description 自己分析。まだ回答していなければ null */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["SelfAnalysisResult"];
+          "application/json": components["schemas"]["SelfAnalysisResult"] | null;
         };
       };
       default: components["responses"]["Problem"];

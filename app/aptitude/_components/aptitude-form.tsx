@@ -112,7 +112,7 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
           <div className="flex flex-wrap gap-3">
             <ConfirmDialog
               trigger={
-                <Button type="button" variant="quest" disabled={saving || locked}>
+                <Button type="button" variant="default" disabled={saving || locked}>
                   {locked ? "実施済み" : saving ? "保存中..." : "保存する"}
                 </Button>
               }

@@ -96,7 +96,7 @@ export function WebtestDetail({ id }: { id: string }) {
                 />
               </div>
               <div className="flex justify-start pt-2">
-                <Button type="submit" variant="quest" disabled={answer.isPending}>
+                <Button type="submit" variant="default" disabled={answer.isPending}>
                   {answer.isPending ? "送信中…" : "解答を送信"}
                 </Button>
               </div>

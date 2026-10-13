@@ -42,7 +42,7 @@ export function HomeHeader() {
       className="flex items-center justify-between gap-4"
     >
       <BrandLogo className="font-semibold" logoClassName="h-16" />
-      <Button asChild variant="quest">
+      <Button asChild variant="default">
         <Link href={ROUTES.LOGIN}>ログイン</Link>
       </Button>
     </motion.header>
@@ -104,13 +104,13 @@ export function HomeHero() {
             transition={{ duration: 0.8, delay: 0.8 }}
             className="flex flex-wrap gap-4"
           >
-            <Button asChild variant="quest">
+            <Button asChild variant="default">
               <Link href={ROUTES.LOGIN}>
                 ログイン
                 <ArrowRightIcon />
               </Link>
             </Button>
-            <Button asChild variant="quest">
+            <Button asChild variant="outline">
               <Link href="#features">機能を見る</Link>
             </Button>
           </motion.div>
@@ -155,7 +155,7 @@ export function HomeHero() {
                 </motion.li>
               ))}
             </ul>
-            <Button asChild variant="quest" className="self-start">
+            <Button asChild variant="default" className="self-start">
               <Link href={ROUTES.LOGIN}>
                 ログインして始める
                 <ArrowRightIcon />

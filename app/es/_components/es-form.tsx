@@ -137,13 +137,13 @@ export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQu
         <ApiErrorMessage error={error} labels={ES_FIELD_LABELS} />
 
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" variant="quest-muted" disabled={pending || !company}>
+          <Button type="submit" variant="outline" disabled={pending || !company}>
             {pending ? "保存中…" : "下書きとして保存"}
           </Button>
           {canSubmit && (
             <ConfirmDialog
               trigger={
-                <Button type="button" variant="quest" disabled={pending || !company} onClick={checkBeforeConfirm}>
+                <Button type="button" variant="default" disabled={pending || !company} onClick={checkBeforeConfirm}>
                   保存して提出する
                 </Button>
               }

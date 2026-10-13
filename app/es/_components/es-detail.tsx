@@ -63,12 +63,7 @@ function EsDetailLoaded({
       <div className="space-y-2">
         <ConfirmDialog
           trigger={
-            <Button
-              type="button"
-              variant="quest"
-              disabled={deleteEsEntry.isPending}
-              className="text-destructive hover:text-destructive/80"
-            >
+            <Button type="button" variant="destructive" disabled={deleteEsEntry.isPending}>
               <TrashIcon className="h-4 w-4" />
               {deleteEsEntry.isPending ? "削除中…" : "このESを削除する"}
             </Button>
