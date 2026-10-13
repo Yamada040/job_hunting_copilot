@@ -302,6 +302,51 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/calendar-feed": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * カレンダーの購読用URLを作ってあるかを取得する
+     * @description URLそのものは作ったときにしか返さない（トークンはハッシュだけを保存しているため）。
+     */
+    get: operations["getCalendarFeed"];
+    put?: never;
+    /**
+     * カレンダーの購読用URLを作る（作り直す）
+     * @description 作り直すと、前に作ったURLは使えなくなる。返したトークンは二度と取得できない。
+     */
+    post: operations["createCalendarFeed"];
+    /** カレンダーの購読用URLを止める */
+    delete: operations["deleteCalendarFeed"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/calendar-feed/{token}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 購読用URL。予定とESの締切を iCal 形式で返す
+     * @description Googleカレンダーなどが、ログインせずに定期的に読みに来る。トークンが合わなければ 404 を返す。
+     */
+    get: operations["getCalendarFeedIcal"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/calendar-events/{calendarEventId}": {
     parameters: {
       query?: never;
@@ -815,6 +860,21 @@ export interface components {
      * @enum {string}
      */
     CalendarEventType: "es" | "interview" | "intern" | "other";
+    CalendarFeedStatus: {
+      /** @description 購読用URLを作ってあるか */
+      enabled: boolean;
+      /**
+       * Format: date-time
+       * @description URLを作った日時。作っていなければ null
+       */
+      createdAt: string | null;
+    };
+    CalendarFeedCreated: {
+      /** @description 購読用URLの秘密の部分。このときにしか返さない */
+      token: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
     /** @description カレンダーの1件。source が event ならユーザーが登録した予定（id は予定のID）、es_deadline ならESの締切（id はESのID） */
     CalendarItem: {
       /** Format: uuid */
@@ -825,27 +885,49 @@ export interface components {
       type: components["schemas"]["CalendarEventType"];
       /** Format: date */
       date: string;
+      /**
+       * Format: date
+       * @description 何日か続く予定（インターンなど）の最終日。null なら1日だけ
+       */
+      endDate: string | null;
       /** @description 時刻（HH:MM） */
       time: string | null;
       company: components["schemas"]["CompanySummary"] | null;
+      /** @description リンク（オンライン面接のURLなど） */
+      url: string | null;
+      /** @description 備考 */
+      note: string | null;
     };
     CalendarEventCreate: {
       title: string;
       type?: components["schemas"]["CalendarEventType"];
       /** Format: date */
       date: string;
+      /**
+       * Format: date
+       * @description 何日か続く予定の最終日（date 以降）。期間のある予定は終日として扱うので、time と一緒には送れない
+       */
+      endDate?: string;
       time?: string;
       /** Format: uuid */
       companyId?: string;
+      /** @description リンク（オンライン面接のURLなど） */
+      url?: string;
+      /** @description 備考 */
+      note?: string;
     };
     CalendarEventUpdate: {
       title?: string;
       type?: components["schemas"]["CalendarEventType"];
       /** Format: date */
       date?: string;
+      /** Format: date */
+      endDate?: string | null;
       time?: string | null;
       /** Format: uuid */
       companyId?: string | null;
+      url?: string | null;
+      note?: string | null;
     };
     /**
      * @description XPが付いた操作。日本語の表示名はフロントエンドが持つ
@@ -1667,6 +1749,90 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CalendarItem"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getCalendarFeed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 購読用URLの状態 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarFeedStatus"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  createCalendarFeed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 作ったトークン。URLは /v1/calendar-feed/{token} */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarFeedCreated"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteCalendarFeed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 止めた（作っていなくても成功する） */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getCalendarFeedIcal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description iCal（RFC 5545） */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/calendar": string;
         };
       };
       default: components["responses"]["Problem"];
