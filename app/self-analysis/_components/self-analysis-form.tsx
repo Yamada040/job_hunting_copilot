@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
 import { FormActions } from "@/app/_components/form/form-actions";
 import { LeaveGuard } from "@/app/_components/form/leave-guard";
+import { LoadError } from "@/app/_components/load-error";
 
 type Answers = SelfAnalysisAnswers;
 
@@ -35,7 +36,7 @@ const defaultAnswers: Answers = {
 export default function SelfAnalysisForm() {
   const { data: result, error, isPending } = useSelfAnalysisResult();
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   if (isPending) return <FormSkeleton />;
   return <SelfAnalysisFormLoaded result={result} />;
 }

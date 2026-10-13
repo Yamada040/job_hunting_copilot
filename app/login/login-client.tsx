@@ -20,7 +20,9 @@ export function LoginClient() {
       await new Promise<never>(() => {});
       return null;
     } catch (err) {
-      return { error: (err as Error)?.message ?? "Googleログインに失敗しました" };
+      console.error("signInWithOAuth error", err);
+      // supabase-js のメッセージは英語で、利用者には意味が分からないので出さない
+      return { error: "Googleログインを始められませんでした。時間をおいてもう一度お試しください。" };
     }
   }, null);
 

@@ -8,12 +8,12 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useWebtestQuestions, type WebtestQuestionSummary } from "@/lib/api/webtests";
 import { ROUTES } from "@/lib/constants/routes";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { EmptyState } from "@/app/_components/empty-state";
 import { CardListSkeleton } from "@/app/_components/loading-skeletons";
 import { ListCardLink, NoMatches, StaggerItem, StaggerList } from "@/app/_components/list/list-items";
 import { FilterChips, ListToolbar } from "@/app/_components/list/list-toolbar";
 import { useMediaQuery } from "@/app/_components/list/use-media-query";
+import { LoadError } from "@/app/_components/load-error";
 
 /** Webテストの問題の一覧。広い画面では属性を見比べられる表、狭い画面ではカードで出す。 */
 export function WebtestList() {
@@ -36,7 +36,7 @@ export function WebtestList() {
     );
   }, [data, query, testType]);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   if (isPending) return <CardListSkeleton />;
   if (data.length === 0) {
     return (

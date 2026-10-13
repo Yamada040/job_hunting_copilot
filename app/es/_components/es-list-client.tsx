@@ -6,13 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { useEsEntries, type EsEntry } from "@/lib/api/es";
 import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { EmptyState } from "@/app/_components/empty-state";
 import { CardListSkeleton } from "@/app/_components/loading-skeletons";
 import { ListCardLink, NoMatches, StaggerItem, StaggerList } from "@/app/_components/list/list-items";
 import { FilterChips, ListToolbar } from "@/app/_components/list/list-toolbar";
 import { formatDateKey } from "@/app/calendar/_components/calendar/utils";
 import { daysFrom } from "@/app/dashboard/_components/menu-summaries";
+import { LoadError } from "@/app/_components/load-error";
 
 type StatusFilter = "all" | EsEntry["status"];
 
@@ -45,7 +45,7 @@ export function EsListClient() {
     };
   }, [items, query, status]);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   if (isPending) return <CardListSkeleton className="xl:grid-cols-3" />;
   if (items.length === 0) {
     return (

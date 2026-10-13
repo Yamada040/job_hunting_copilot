@@ -16,6 +16,7 @@ import { FormSkeleton } from "@/app/_components/loading-skeletons";
 import { FormActions } from "@/app/_components/form/form-actions";
 import { LeaveGuard } from "@/app/_components/form/leave-guard";
 import { useFormEditing } from "@/app/_components/form/use-form-editing";
+import { LoadError } from "@/app/_components/load-error";
 
 // backend/api/openapi.yaml の ProfileUpdate の maxLength と同じ値（超えた入力はバックエンドが400で拒否する）
 const MAX_LENGTH = 100;
@@ -38,7 +39,7 @@ export function ProfileForm({ email }: { email: string }) {
   // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
   const [saved, setSaved] = useState(false);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   if (!data) return <FormSkeleton fields={4} />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return (
