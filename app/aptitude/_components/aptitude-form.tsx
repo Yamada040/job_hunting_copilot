@@ -14,11 +14,12 @@ import { CheckboxGroup, SelectBox, TextArea } from "./aptitude-fields";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
 import { FormActions } from "@/app/_components/form/form-actions";
 import { LeaveGuard } from "@/app/_components/form/leave-guard";
+import { LoadError } from "@/app/_components/load-error";
 
 export default function AptitudeForm() {
   const { data: result, error, isPending } = useAptitudeResult();
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   if (isPending) return <FormSkeleton />;
   return <AptitudeFormLoaded result={result} />;
 }

@@ -17,13 +17,14 @@ import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { InterviewForm } from "./interview-form";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
+import { LoadError } from "@/app/_components/load-error";
 
 export function InterviewDetail({ id }: { id: string }) {
   const { data: log, error } = useInterviewLog(id);
   // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
   const [saved, setSaved] = useState(false);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} back={{ href: ROUTES.INTERVIEWS, label: "面接ログの一覧へ戻る" }} />;
   if (!log) return <FormSkeleton />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return <InterviewDetailLoaded key={log.updatedAt} log={log} saved={saved} onSavedChange={setSaved} />;

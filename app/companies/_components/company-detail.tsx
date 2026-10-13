@@ -13,13 +13,14 @@ import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { CompanyForm } from "./company-form";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
+import { LoadError } from "@/app/_components/load-error";
 
 export function CompanyDetail({ id }: { id: string }) {
   const { data: company, error } = useCompany(id);
   // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
   const [saved, setSaved] = useState(false);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} back={{ href: ROUTES.COMPANIES, label: "企業の一覧へ戻る" }} />;
   if (!company) return <FormSkeleton />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return <CompanyDetailLoaded key={company.updatedAt} company={company} saved={saved} onSavedChange={setSaved} />;

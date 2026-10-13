@@ -12,13 +12,14 @@ import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { EsForm } from "./es-form";
 import { EsReviewPanel } from "./es-review-panel";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
+import { LoadError } from "@/app/_components/load-error";
 
 export function EsDetail({ id }: { id: string }) {
   const { data: entry, error } = useEsEntry(id);
   // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
   const [saved, setSaved] = useState(false);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} back={{ href: ROUTES.ES, label: "ESの一覧へ戻る" }} />;
   if (!entry) return <FormSkeleton />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return <EsDetailLoaded key={entry.updatedAt} entry={entry} saved={saved} onSavedChange={setSaved} />;

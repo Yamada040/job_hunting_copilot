@@ -6,11 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { useInterviewLogs } from "@/lib/api/interviews";
 import { ROUTES } from "@/lib/constants/routes";
 import { INTERVIEW_FORMAT_LABELS } from "@/lib/interviews/labels";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { EmptyState } from "@/app/_components/empty-state";
 import { CardListSkeleton } from "@/app/_components/loading-skeletons";
 import { ListCardLink, NoMatches, StaggerItem, StaggerList } from "@/app/_components/list/list-items";
 import { FilterChips, ListToolbar } from "@/app/_components/list/list-toolbar";
+import { LoadError } from "@/app/_components/load-error";
 
 type ReviewFilter = "all" | "unreviewed" | "reviewed";
 
@@ -36,7 +36,7 @@ export function InterviewList() {
     };
   }, [logs, query, review]);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   if (isPending) return <CardListSkeleton className="xl:grid-cols-3" />;
   if (logs.length === 0) {
     return (

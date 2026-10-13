@@ -11,13 +11,15 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { useAnswerWebtestQuestion, useWebtestQuestion } from "@/lib/api/webtests";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
+import { ROUTES } from "@/lib/constants/routes";
+import { LoadError } from "@/app/_components/load-error";
 
 export function WebtestDetail({ id }: { id: string }) {
   const { data: question, error } = useWebtestQuestion(id);
   const answer = useAnswerWebtestQuestion(id);
   const [status, setStatus] = useState<"correct" | "incorrect" | null>(null);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} back={{ href: ROUTES.WEBTESTS, label: "問題の一覧へ戻る" }} />;
   if (!question) return <FormSkeleton fields={4} />;
   const attempts = question.attempts.slice(0, 5);
 

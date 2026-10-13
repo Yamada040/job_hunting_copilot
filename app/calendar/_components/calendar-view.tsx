@@ -2,14 +2,14 @@
 
 import { useCalendarItems } from "@/lib/api/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { toCalendarEvent } from "./calendar/types";
 import { InteractiveCalendar } from "./interactive-calendar";
+import { LoadError } from "@/app/_components/load-error";
 
 export function CalendarView() {
   const { data, error } = useCalendarItems();
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   return (
     <Card className="gap-4 py-6">
       <CardHeader className="px-6">
