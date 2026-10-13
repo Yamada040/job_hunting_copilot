@@ -13,11 +13,11 @@ export function EmptyState({ title, description, children, className }: Props) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-2 rounded-xl border border-dashed bg-secondary/60 px-4 py-8 text-center",
+        "flex flex-col items-center gap-2 rounded-2xl border border-dashed bg-secondary/60 px-4 py-10 text-center",
         className,
       )}
     >
-      <p className="text-sm font-semibold">{title}</p>
+      <p className="text-base font-bold">{title}</p>
       {description && <p className="text-xs text-muted-foreground">{description}</p>}
       {children}
     </div>

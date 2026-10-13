@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { EsReviewItemCard } from "./es-review-item";
+import { EmptyState } from "@/app/_components/empty-state";
 
 /** AI添削の実行と、最新の添削結果・総合点の推移の表示。 */
 export function EsReviewPanel({ entryId, companyId }: { entryId: string; companyId: string }) {
@@ -21,7 +22,7 @@ export function EsReviewPanel({ entryId, companyId }: { entryId: string; company
       <CardHeader className="px-6">
         <CardTitle>
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            <SparklesIcon className="h-5 w-5 text-sky-500" />
+            <SparklesIcon className="h-5 w-5 text-primary" />
             AI添削
           </h2>
         </CardTitle>
@@ -45,9 +46,7 @@ export function EsReviewPanel({ entryId, companyId }: { entryId: string; company
         <ApiErrorMessage error={reviewEsEntry.error ?? loadError} />
 
         {reviews && reviews.length === 0 && (
-          <p className="rounded-xl border border-dashed bg-secondary/60 px-4 py-6 text-center text-sm text-muted-foreground">
-            まだ添削結果はありません。実行すると、ここに表示されます。
-          </p>
+          <EmptyState title="まだ添削結果はありません" description="実行すると、ここに表示されます。" />
         )}
 
         {latest && (

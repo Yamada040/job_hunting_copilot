@@ -22,7 +22,7 @@ export function SectionHeading({ title, description }: Props) {
           </span>
         ))}
       </h2>
-      {description && <p className="mx-auto max-w-2xl text-base text-slate-600">{description}</p>}
+      {description && <p className="mx-auto max-w-2xl text-base text-muted-foreground">{description}</p>}
     </motion.div>
   );
 }

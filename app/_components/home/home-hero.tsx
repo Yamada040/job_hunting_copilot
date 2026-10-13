@@ -32,14 +32,14 @@ const attractionBadges = [
   { icon: BoltIcon, label: "毎日の行動が明確" },
 ];
 
-const tagClass = "h-auto gap-2 border-sky-200 px-3 py-1 font-semibold tracking-[0.25em] text-sky-700";
+const tagClass = "h-auto gap-2 border-border px-3 py-1 font-semibold tracking-[0.25em] text-primary";
 
 export function HomeHero() {
   return (
-    <Card className="relative gap-0 rounded-2xl p-10 shadow-[0_20px_60px_rgba(14,165,233,0.12)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-sky-300 to-transparent opacity-70" />
-      <div className="pointer-events-none absolute -right-24 -top-20 h-56 w-56 rounded-full bg-linear-to-br from-sky-100/80 to-blue-100/50 blur-3xl" />
-      <div className="pointer-events-none absolute -left-28 bottom-[-110px] h-56 w-56 rounded-full bg-linear-to-br from-blue-100/70 to-sky-50/30 blur-3xl" />
+    <Card className="relative gap-0 rounded-2xl p-10 shadow-[0_20px_60px_color-mix(in_oklab,var(--color-ring)_12%,transparent)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-ring to-transparent opacity-70" />
+      <div className="pointer-events-none absolute -right-24 -top-20 h-56 w-56 rounded-full bg-linear-to-br from-accent/80 to-secondary/50 blur-3xl" />
+      <div className="pointer-events-none absolute -left-28 bottom-[-110px] h-56 w-56 rounded-full bg-linear-to-br from-accent/70 to-secondary/30 blur-3xl" />
       <div className="relative grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
         <motion.div
           initial={{ opacity: 0, x: -30 }}
@@ -48,16 +48,16 @@ export function HomeHero() {
           className="space-y-6"
         >
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className={cn(tagClass, "bg-sky-100")}>
+            <Badge variant="outline" className={cn(tagClass, "bg-accent")}>
               BETA
             </Badge>
             <Badge variant="outline" className={cn(tagClass, "bg-card")}>
               AI活用
-              <SparklesIcon className="text-sky-500" />
+              <SparklesIcon className="text-primary" />
             </Badge>
-            <Badge variant="outline" className={cn(tagClass, "bg-sky-100")}>
+            <Badge variant="outline" className={cn(tagClass, "bg-accent")}>
               無料で始められる
-              <CheckCircleIcon className="text-sky-500" />
+              <CheckCircleIcon className="text-primary" />
             </Badge>
           </div>
 
@@ -70,9 +70,9 @@ export function HomeHero() {
             {/* 日本語は文字の間のどこででも折り返すので、意味のまとまりごとに inline-block で区切り、途中で切れないようにする */}
             <span className="inline-block">情報過多な就活を</span>
             <span className="inline-block">
-              <span className="bg-linear-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">整理</span>して
+              <span className="bg-linear-to-r from-ring to-primary bg-clip-text text-transparent">整理</span>して
             </span>
-            <span className="block text-slate-600">
+            <span className="block text-muted-foreground">
               <span className="inline-block">やるべき行動を</span>
               <span className="inline-block">明確にする</span>
             </span>
@@ -82,7 +82,7 @@ export function HomeHero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="max-w-2xl text-lg leading-7 text-slate-600"
+            className="max-w-2xl text-lg leading-7 text-muted-foreground"
           >
             ES・企業・面接の情報がばらばらだと、何から手を付けるか迷う時間が増えます。
             <br />
@@ -124,7 +124,7 @@ export function HomeHero() {
               <Badge
                 key={badge.label}
                 variant="outline"
-                className="h-auto gap-1.5 border-sky-200 bg-white/80 px-3 py-1 font-semibold text-slate-600 shadow-sm"
+                className="h-auto gap-1.5 border-border bg-white/80 px-3 py-1 font-semibold text-muted-foreground shadow-sm"
               >
                 <badge.icon />
                 {badge.label}
@@ -150,7 +150,7 @@ export function HomeHero() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: 1 + index * 0.1 }}
-                  className="flex items-start gap-2 text-sm text-slate-700"
+                  className="flex items-start gap-2 text-sm text-muted-foreground"
                 >
                   <CheckCircleIcon className={cn("mt-0.5 h-4 w-4 shrink-0", homeAccent)} />
                   {point}

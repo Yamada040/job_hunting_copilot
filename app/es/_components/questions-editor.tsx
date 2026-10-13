@@ -25,9 +25,9 @@ export function QuestionsEditor({ questions, onChange }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>設問カード（必要に応じて追加できます）</span>
+        <span>必要に応じて、設問を追加できます</span>
         <Button type="button" variant="outline" onClick={() => onChange([...questions, { prompt: "", answer: "" }])}>
-          カードを追加
+          設問を追加
         </Button>
       </div>
 

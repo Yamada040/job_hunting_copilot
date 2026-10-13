@@ -16,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
+import { FormActions } from "@/app/_components/form/form-actions";
+import { LeaveGuard } from "@/app/_components/form/leave-guard";
 
 type Answers = SelfAnalysisAnswers;
 
@@ -33,7 +36,7 @@ export default function SelfAnalysisForm() {
   const { data: result, error, isPending } = useSelfAnalysisResult();
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (isPending) return <Card className="px-6 text-sm">読み込み中…</Card>;
+  if (isPending) return <FormSkeleton />;
   return <SelfAnalysisFormLoaded result={result} />;
 }
 
@@ -43,23 +46,27 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
   const analyze = useAnalyzeSelf();
   // 回答は1人1回だけ。保存済みなら回答を表示するだけにする（docs/backend-design.md 3章）
   const locked = result !== null;
+  // 回答を変えたか。保存すると result が届いて locked になるので、そのときは確かめない
+  const [touched, setTouched] = useState(false);
+  const dirty = touched && !locked;
   const saving = submit.isPending;
 
   const handleChange = (key: keyof Answers, value: string) => {
     if (locked) return;
+    setTouched(true);
     setAnswers((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
-      <Card>
+    <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+      <Card className="overflow-visible">
         <CardHeader>
           <CardTitle>
             <h2 className="text-lg font-semibold">質問リスト</h2>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-sky-700">
+          <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-primary">
             ※ 現在は一回しかできません。
           </Card>
           <TextArea label="強み・得意なこと" value={answers.strengths} onChange={(v) => handleChange("strengths", v)} />
@@ -89,7 +96,7 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
             value={answers.future}
             onChange={(v) => handleChange("future", v)}
           />
-          <div className="flex flex-wrap gap-3">
+          <FormActions dirty={dirty} shortcut={false}>
             <ConfirmDialog
               trigger={
                 <Button type="button" variant="default" disabled={saving || locked}>
@@ -101,8 +108,9 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
               confirmLabel="保存する"
               onConfirm={() => submit.mutate(answers)}
             />
-          </div>
+          </FormActions>
           <ApiErrorMessage error={submit.error} />
+          <LeaveGuard when={dirty && !saving} />
         </CardContent>
       </Card>
 

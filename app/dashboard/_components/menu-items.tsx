@@ -22,6 +22,7 @@ import { useWebtestQuestions } from "@/lib/api/webtests";
 import { ROUTES } from "@/lib/constants/routes";
 import type { CarouselItem } from "./menu-carousel";
 import { daysFrom, unreviewedInterviews, upcomingEvents, urgentDrafts } from "./menu-summaries";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Hot = ({ children }: { children: React.ReactNode }) => (
   <span className="font-bold text-destructive">{children}</span>
@@ -29,7 +30,12 @@ const Hot = ({ children }: { children: React.ReactNode }) => (
 const Count = ({ children }: { children: React.ReactNode }) => (
   <b className="text-foreground tabular-nums">{children}</b>
 );
-const loading = "読み込み中…";
+const loading = (
+  <span role="status" className="inline-block">
+    <span className="sr-only">読み込み中…</span>
+    <Skeleton className="mx-auto h-3 w-28" />
+  </span>
+);
 
 /**
  * カルーセルのカード。回しながら「どこに手をつけるべきか」が分かるよう、各機能の今の状況（件数・急ぎのもの）を添える。

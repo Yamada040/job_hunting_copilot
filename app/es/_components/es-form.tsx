@@ -12,6 +12,10 @@ import type { EsEntry, EsQuestion } from "@/lib/api/es";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { CompanyPicker } from "@/app/_components/company-picker";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
+import { FormActions } from "@/app/_components/form/form-actions";
+import { FormSection } from "@/app/_components/form/form-section";
+import { LeaveGuard } from "@/app/_components/form/leave-guard";
+import { useFormEditing } from "@/app/_components/form/use-form-editing";
 import { QuestionsEditor } from "./questions-editor";
 
 export type EsFormValues = {
@@ -40,6 +44,8 @@ type Props = {
   initial?: EsEntry;
   pending: boolean;
   error: unknown;
+  /** 直前の保存がうまくいったか（保存の帯に「保存しました」を出す） */
+  saved?: boolean;
   /** submit が true なら、保存したうえで提出する */
   onSubmit: (values: EsFormValues, submit: boolean) => void;
   /** 提出済みのESでは「提出する」を出さない */
@@ -48,10 +54,11 @@ type Props = {
   defaultQuestions?: EsQuestion[];
 };
 
-export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQuestions = [] }: Props) {
+export function EsForm({ initial, pending, error, saved, onSubmit, canSubmit, defaultQuestions = [] }: Props) {
   const [company, setCompany] = useState<CompanySummary | null>(initial?.company ?? null);
   const [questions, setQuestions] = useState<EsQuestion[]>(initial?.questions ?? defaultQuestions);
   const formRef = useRef<HTMLFormElement>(null);
+  const { dirty, markDirty, formProps } = useFormEditing();
 
   const readValues = (formElement: HTMLFormElement): EsFormValues => {
     const form = new FormData(formElement);
@@ -87,13 +94,19 @@ export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQu
   };
 
   return (
-    <Card className="px-8 py-8">
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
+    <Card className="overflow-visible px-8 py-8">
+      <form ref={formRef} {...formProps} onSubmit={handleSubmit} className="space-y-8">
+        <FormSection title="基本情報" className="md:grid-cols-2">
           <div className="space-y-2">
             {/* 企業の欄は CompanyPicker の入力が aria-label="企業" を持つので、ここを label にすると名前が二重になる */}
             <span className="text-sm font-medium">企業</span>
-            <CompanyPicker value={company} onChange={setCompany} />
+            <CompanyPicker
+              value={company}
+              onChange={(next) => {
+                setCompany(next);
+                markDirty();
+              }}
+            />
           </div>
           <Field
             label="タイトル"
@@ -118,12 +131,22 @@ export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQu
             placeholder="例）IT, 第一志望"
           />
           <Field label="メモ" name="memo" defaultValue={initial?.memo} maxLength={2000} placeholder="選考メモなど" />
-        </div>
+        </FormSection>
 
-        <QuestionsEditor questions={questions} onChange={setQuestions} />
+        <FormSection title="設問と回答">
+          <QuestionsEditor
+            questions={questions}
+            onChange={(next) => {
+              setQuestions(next);
+              markDirty();
+            }}
+          />
+        </FormSection>
 
-        <div className="space-y-2">
-          <Label htmlFor="es-contentMd">本文（設問とは別に自由に書けます）</Label>
+        <FormSection title="本文" description="設問とは別に、自由に書けます">
+          <Label htmlFor="es-contentMd" className="sr-only">
+            本文
+          </Label>
           <Textarea
             id="es-contentMd"
             name="contentMd"
@@ -132,11 +155,11 @@ export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQu
             rows={8}
             className="min-h-44"
           />
-        </div>
+        </FormSection>
 
         <ApiErrorMessage error={error} labels={ES_FIELD_LABELS} />
 
-        <div className="flex flex-wrap gap-3">
+        <FormActions dirty={dirty} saved={saved}>
           <Button type="submit" variant="outline" disabled={pending || !company}>
             {pending ? "保存中…" : "下書きとして保存"}
           </Button>
@@ -153,8 +176,9 @@ export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQu
               onConfirm={handleConfirmSubmit}
             />
           )}
-        </div>
+        </FormActions>
       </form>
+      <LeaveGuard when={dirty && !pending} />
     </Card>
   );
 }

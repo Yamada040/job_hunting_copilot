@@ -12,6 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
+import { FormActions } from "@/app/_components/form/form-actions";
+import { LeaveGuard } from "@/app/_components/form/leave-guard";
+import { useFormEditing } from "@/app/_components/form/use-form-editing";
 
 // backend/api/openapi.yaml の ProfileUpdate の maxLength と同じ値（超えた入力はバックエンドが400で拒否する）
 const MAX_LENGTH = 100;
@@ -35,7 +39,7 @@ export function ProfileForm({ email }: { email: string }) {
   const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!data) return <Card className="px-8 text-sm">読み込み中…</Card>;
+  if (!data) return <FormSkeleton fields={4} />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return (
     <ProfileFormFields key={JSON.stringify(data)} me={data} email={email} saved={saved} onSavedChange={setSaved} />
@@ -53,6 +57,7 @@ function ProfileFormFields({
   saved: boolean;
   onSavedChange: (saved: boolean) => void;
 }) {
+  const { dirty, formProps } = useFormEditing();
   const updateMe = useUpdateMe();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -75,9 +80,9 @@ function ProfileFormFields({
   };
 
   return (
-    <Card>
+    <Card className="overflow-visible">
       <CardContent className="px-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form {...formProps} onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             {textFields.map((field) => (
               <div key={field.name} className="space-y-2">
@@ -117,7 +122,7 @@ function ProfileFormFields({
                 <Label
                   key={option.id || "none"}
                   htmlFor={`avatar-${option.id || "none"}`}
-                  className="cursor-pointer gap-3 rounded-xl border bg-secondary/60 px-4 py-4 font-normal transition-colors hover:text-sky-500 has-data-[state=checked]:border-sky-400 has-data-[state=checked]:bg-accent"
+                  className="cursor-pointer gap-3 rounded-xl border bg-secondary/60 px-4 py-4 font-normal transition-colors hover:text-primary has-data-[state=checked]:border-ring has-data-[state=checked]:bg-accent"
                 >
                   <RadioGroupItem id={`avatar-${option.id || "none"}`} value={option.id} />
                   {option.src ? (
@@ -143,13 +148,14 @@ function ProfileFormFields({
             error={updateMe.error}
             labels={Object.fromEntries(textFields.map((f) => [f.name, f.label]))}
           />
-          {saved && <p className="text-sm text-emerald-600">保存しました</p>}
-
-          <Button type="submit" variant="default" disabled={updateMe.isPending}>
-            <UserCircleIcon className="h-4 w-4" />
-            {updateMe.isPending ? "保存中…" : "保存する"}
-          </Button>
+          <FormActions dirty={dirty} saved={saved}>
+            <Button type="submit" variant="default" disabled={updateMe.isPending}>
+              <UserCircleIcon className="h-4 w-4" />
+              {updateMe.isPending ? "保存中…" : "保存する"}
+            </Button>
+          </FormActions>
         </form>
+        <LeaveGuard when={dirty && !updateMe.isPending} />
       </CardContent>
     </Card>
   );

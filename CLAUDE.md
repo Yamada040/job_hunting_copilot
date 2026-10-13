@@ -166,7 +166,7 @@ backend/
 
 - 推奨クラスを使う（`bg-linear-to-r`, `text-balance`, `text-wrap` など）
 - v3の非推奨構文は警告を避けるため使わない
-- 色: `app/globals.css` の shadcn の変数（白い面・空色の枠・濃い紺の文字）を使い、`text-foreground` / `text-muted-foreground` / `bg-card` / `border` などのトークンで書く。`text-white` や `bg-[#111111]` のような色の直書きはしない。ダークモードは用意していない
+- 色: `app/globals.css` の shadcn の変数（白い面・空色の枠・濃い紺の文字）を使い、`text-foreground` / `text-muted-foreground` / `bg-card` / `border` などのトークンで書く。うまくいったことは `success`、カレンダーの曜日は `sunday` / `saturday`、予定の種類は `category-es` / `category-interview` / `category-intern` を使う。`text-white` や `bg-[#111111]` のような色の直書きはしない。ダークモードは用意していない
 
 **shadcn/ui**:
 
@@ -186,6 +186,10 @@ backend/
 - レベル・XPの表示: `app/_components/xp-badge.tsx` と `app/_components/xp/`（紋章・ゲージ・レベルアップの演出）。ゲージの繰り上がりの順番は `lib/xp/gauge.ts`
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
 - 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示、`ConfirmDialog`）
+- 画面の見出し: `AppLayout` の `headerTitle`・`headerDescription`・`headerActions`（主な操作）・`avatar`（見出しの横で話す `AvatarGuide`。話す一言は `app/_components/avatar/guide-messages.ts`）
+- フォーム: `app/_components/form/`。保存のボタンは `FormActions`（画面の下に付いてくる帯）に置き、`useFormEditing` で変更の有無と ⌘/Ctrl + Enter の送信、`LeaveGuard` で保存せずに離れる前の確認をする。項目は `FormSection` で区切る
+- 一覧: `app/_components/list/`（`ListToolbar`・`FilterChips` の絞り込み、`StaggerList`・`ListCardLink` のカード）。読み込み中は `loading-skeletons.tsx` の枠を出す
+- `overflow-hidden` の中では `sticky` が効かないので、はみ出しを切るだけなら `overflow-clip` を使う
 - shadcn/ui の部品: `components/ui/`
 - APIのフック・型: `lib/api/`（生成した `schema.d.ts` とクライアント）
 

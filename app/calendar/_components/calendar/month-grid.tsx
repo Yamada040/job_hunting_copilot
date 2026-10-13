@@ -66,8 +66,8 @@ export function MonthGrid({
             key={label}
             className={cn(
               "rounded-lg border bg-card py-2 shadow-sm",
-              index === 0 && "text-rose-500",
-              index === 6 && "text-sky-600",
+              index === 0 && "text-sunday",
+              index === 6 && "text-saturday",
             )}
           >
             {label}
@@ -87,15 +87,15 @@ export function MonthGrid({
               className={cn(
                 "h-14 rounded-lg border bg-card text-center text-sm font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-accent hover:shadow-md",
                 !inCurrentMonth && "border-dashed text-muted-foreground opacity-70",
-                date === todayKey && "border-2 border-sky-400 ring-1 ring-sky-300/70",
+                date === todayKey && "border-2 border-ring ring-1 ring-ring/70",
               )}
             >
               <span
                 className={cn(
                   "inline-flex h-full items-center justify-center",
                   !inCurrentMonth && "opacity-60",
-                  weekday === 0 && "text-rose-500",
-                  weekday === 6 && "text-sky-600",
+                  weekday === 0 && "text-sunday",
+                  weekday === 6 && "text-saturday",
                 )}
               >
                 {jsDate.getDate()}

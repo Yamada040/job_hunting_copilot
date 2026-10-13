@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { useAnswerWebtestQuestion, useWebtestQuestion } from "@/lib/api/webtests";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
 
 export function WebtestDetail({ id }: { id: string }) {
   const { data: question, error } = useWebtestQuestion(id);
@@ -17,7 +18,7 @@ export function WebtestDetail({ id }: { id: string }) {
   const [status, setStatus] = useState<"correct" | "incorrect" | null>(null);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!question) return <Card className="p-6 text-sm">読み込み中…</Card>;
+  if (!question) return <FormSkeleton fields={4} />;
   const attempts = question.attempts.slice(0, 5);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -35,7 +36,7 @@ export function WebtestDetail({ id }: { id: string }) {
     <>
       <h2 className="text-lg font-semibold">{question.title}</h2>
       {status === "correct" ? (
-        <Card variant="muted" className="px-4 py-3 text-sm text-emerald-600">
+        <Card variant="muted" className="px-4 py-3 text-sm text-success">
           正解です！
         </Card>
       ) : status === "incorrect" ? (
@@ -44,7 +45,7 @@ export function WebtestDetail({ id }: { id: string }) {
         </Card>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <Card className="gap-4 p-6">
           <div className="flex flex-wrap gap-2">
             <QuestionAttribute label="テスト形式" value={question.testType ?? "未設定"} />
@@ -121,7 +122,7 @@ export function WebtestDetail({ id }: { id: string }) {
             ) : (
               attempts.map((a) => (
                 <Card key={a.id} variant="muted" className="flex-row items-center justify-between px-3 py-2">
-                  <span className={a.isCorrect ? "text-emerald-600" : "text-destructive"}>
+                  <span className={a.isCorrect ? "text-success" : "text-destructive"}>
                     {a.isCorrect ? "正解" : "不正解"}
                   </span>
                   <span className="text-muted-foreground">

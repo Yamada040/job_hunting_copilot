@@ -42,7 +42,7 @@ export function HomeCallToAction() {
 export function HomeSecurity() {
   return (
     <Card className={cn("gap-4 rounded-3xl p-6", homeCardMuted)}>
-      <div className="flex items-center justify-center gap-3 text-slate-600">
+      <div className="flex items-center justify-center gap-3 text-muted-foreground">
         <ShieldCheckIcon className="h-6 w-6" />
         <p className="font-semibold">安全・安心なデータ管理</p>
       </div>

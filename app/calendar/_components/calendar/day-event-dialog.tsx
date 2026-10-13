@@ -12,9 +12,9 @@ import { ModalAction } from "./reducer";
 import { CalendarEvent, CalendarFormState } from "./types";
 
 const TYPE_TONE: Record<CalendarEvent["type"], string> = {
-  es: "border-rose-200 bg-rose-50 text-rose-900",
-  interview: "border-indigo-200 bg-indigo-50 text-indigo-900",
-  intern: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  es: "border-category-es/30 bg-category-es/10 text-foreground",
+  interview: "border-category-interview/30 bg-category-interview/10 text-foreground",
+  intern: "border-category-intern/30 bg-category-intern/10 text-foreground",
   other: "bg-secondary/60",
 };
 

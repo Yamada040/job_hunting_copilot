@@ -9,6 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, ApiError, unwrap } from "@/lib/api/client";
 import { useMe } from "@/lib/api/me";
 import { contactRequestSchema } from "@/lib/validation/schemas/contact";
+import { FormActions } from "@/app/_components/form/form-actions";
+import { LeaveGuard } from "@/app/_components/form/leave-guard";
+import { useFormEditing } from "@/app/_components/form/use-form-editing";
 
 interface ContactFormProps {
   /** プロフィールに氏名が無いときに使う、ログイン情報（Googleアカウント）の名前 */
@@ -31,6 +34,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export function ContactForm({ accountName, email }: ContactFormProps) {
   const { data: me } = useMe();
   const displayName = me?.fullName?.trim() || accountName || "未設定";
+  const { dirty, reset, formProps } = useFormEditing();
   const [submitState, formAction, isPending] = useActionState<SubmitState, FormData>(async (_prev, formData) => {
     const values: SubmitValues = {
       subject: String(formData.get("subject") ?? ""),
@@ -53,6 +57,8 @@ export function ContactForm({ accountName, email }: ContactFormProps) {
     try {
       // 送信中の表示が一瞬で消えてちらつかないよう、最低600msは待つ
       await Promise.all([unwrap(api.POST("/v1/contact", { body: validation.data })), wait(600)]);
+      // 送ると入力欄は空に戻るので、確かめずに移動してよい状態に戻す
+      reset();
       return { status: "success", message: "送信に成功しました。", values: null };
     } catch (e) {
       return {
@@ -67,7 +73,7 @@ export function ContactForm({ accountName, email }: ContactFormProps) {
   const preservedValues = submitState?.status === "error" ? submitState.values : null;
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form {...formProps} action={formAction} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="contact-account-name" className="text-xs text-muted-foreground">
@@ -111,13 +117,14 @@ export function ContactForm({ accountName, email }: ContactFormProps) {
       </div>
 
       {submitState?.status === "error" ? <p className="text-xs text-destructive">{submitState.message}</p> : null}
-      {submitState?.status === "success" ? <p className="text-xs text-emerald-600">{submitState.message}</p> : null}
-      <div className="flex items-center justify-between gap-4">
-        <p className="text-xs text-muted-foreground">送信内容には登録ユーザー名とログインメールが含まれます。</p>
+      {submitState?.status === "success" ? <p className="text-xs text-success">{submitState.message}</p> : null}
+      <p className="text-xs text-muted-foreground">送信内容には登録ユーザー名とログインメールが含まれます。</p>
+      <FormActions dirty={dirty} shortcut="送信">
         <Button type="submit" variant="default" disabled={isPending}>
           {isPending ? "送信状態を確認中..." : "送信する"}
         </Button>
-      </div>
+      </FormActions>
+      <LeaveGuard when={dirty && !isPending} />
     </form>
   );
 }
