@@ -1,390 +1,117 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+/* ダークモードは用意していない。shadcn の部品に含まれる dark: を OS の設定で効かせないよう、.dark クラスに限定する */
+@custom-variant dark (&:is(.dark *));
+
+/* ホームの、スクロールで奥からセクションが迫る見せ方を使う画面。セクションを1画面に収められる大きさに限り、
+   狭い画面と「視差効果を減らす」設定では縦に並べたままにする */
+@custom-variant depth (@media (min-width: 64rem) and (min-height: 45rem) and (prefers-reduced-motion: no-preference));
+
+/* 白い面・空色の枠・濃い紺の文字を、shadcn の色の変数で表す */
 :root {
-  --background-light: #f5f7fb;
-  --foreground-light: #0f172a;
-  --background-dark: #060b18;
-  --foreground-dark: #e2e8f0;
-  --background: var(--background-light);
-  --foreground: var(--foreground-light);
+  --background: #f8fbff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0369a1;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f9ff;
+  --secondary-foreground: #0c4a6e;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #e0f2fe;
+  --accent-foreground: #0369a1;
+  --destructive: #e11d48;
+  --border: #bae6fd;
+  --input: #bae6fd;
+  --ring: #38bdf8;
+  --radius: 0.75rem;
+  /* 保存できた・結果があるなど、うまくいったことを示す色 */
+  --success: #059669;
+  /* カレンダーの日曜・土曜の文字 */
+  --sunday: #f43f5e;
+  --saturday: #0284c7;
+  /* 予定の種類の色（ES・面接・インターン）。種類を見分けるためだけに使う */
+  --category-es: #e11d48;
+  --category-interview: #4f46e5;
+  --category-intern: #059669;
 }
 
-:root.dark {
-  --background: var(--background-dark);
-  --foreground: var(--foreground-dark);
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-body {
-  background:
-    url("/bg-abstract.svg"),
-    radial-gradient(circle at 20% 20%, rgba(255, 196, 38, 0.12), transparent 38%),
-    radial-gradient(circle at 80% 10%, rgba(56, 189, 248, 0.1), transparent 40%),
-    linear-gradient(135deg, #ffedd5 0%, #e0f2fe 45%, #e9d5ff 100%);
-  background-size: cover, 100% 100%, 100% 100%, 100% 100%;
-  background-repeat: no-repeat;
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-}
-
-.dark body {
-  background: #000000;
-  color: #f1f5f9;
-}
-
-.shadow-soft {
-  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.09);
-}
-
-.glass {
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  backdrop-filter: blur(14px);
-}
-
-.dark .glass {
-  background: rgba(17, 17, 17, 0.95);
-  border: 1px solid rgba(64, 64, 64, 0.4);
-  color: #f1f5f9;
-}
-
-/* MVP Style Button */
-.mvp-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
-  border-radius: 9999px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  border: none;
-}
-
-.mvp-button-primary {
-  background: linear-gradient(to right, #fbbf24, #fb923c, #f472b6);
-  color: #0f172a;
-  box-shadow: 0 10px 15px -3px rgba(251, 191, 36, 0.4);
-}
-
-.mvp-button-primary:hover {
-  transform: translateY(1px);
-  box-shadow: 0 4px 6px -1px rgba(251, 191, 36, 0.3);
-}
-
-.mvp-button-secondary {
-  background: rgba(255, 255, 255, 0.8);
-  color: #475569;
-  border: 1px solid rgba(148, 163, 184, 0.8);
-}
-
-.mvp-button-secondary:hover {
-  background: white;
-  color: #334155;
-}
-
-/* MVP Style Card */
-.mvp-card {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-.mvp-card:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.mvp-card-small {
-  padding: 1rem;
-  border-radius: 0.75rem;
-}
-
-.dark .mvp-card {
-  background: #111111;
-  border: 1px solid #333333;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-  color: #f1f5f9;
-}
-
-.dark .mvp-button-primary {
-  color: #0f172a;
-}
-
-.dark .mvp-button-secondary {
-  background: #1a1a1a;
-  color: #f1f5f9;
-  border: 1px solid #404040;
-}
-
-.dark .mvp-button-secondary:hover {
-  background: #262626;
-  color: #ffffff;
-  border: 1px solid #525252;
-}
-
-/* MVP Background Decorations */
-.mvp-bg {
-  position: relative;
-  background: linear-gradient(to bottom, #f1f5f9 0%, #ffffff 60%, #f5f7fb 100%);
-  min-height: 100vh;
-}
-
-.mvp-bg::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    radial-gradient(circle at 20% 20%, rgba(255, 196, 38, 0.07), transparent 35%),
-    radial-gradient(circle at 80% 10%, rgba(56, 189, 248, 0.08), transparent 40%),
-    linear-gradient(120deg, rgba(15, 23, 42, 0.04) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(15, 23, 42, 0.04) 100%);
-  pointer-events: none;
-  z-index: -1;
-}
-
-.dark .mvp-bg::before {
-  background:
-    radial-gradient(circle at 20% 20%, rgba(255, 196, 38, 0.12), transparent 35%),
-    radial-gradient(circle at 80% 10%, rgba(56, 189, 248, 0.12), transparent 40%),
-    linear-gradient(120deg, rgba(148, 163, 184, 0.1) 0%, rgba(15, 23, 42, 0.6) 50%, rgba(148, 163, 184, 0.1) 100%);
-}
-
-/* Layout utilities */
-.content-with-sidebar {
-  margin-left: 240px;
-}
-
-@media (max-width: 768px) {
-  .content-with-sidebar {
-    margin-left: 0;
+/* ホームのカードの中で、浮いた小物のようにゆっくり上下させる動き */
+@theme {
+  --animate-float: float 4s ease-in-out infinite;
+  @keyframes float {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -6px;
+    }
   }
 }
 
-/* Typography */
-.mvp-heading-lg {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #0f172a;
-  line-height: 1.2;
+@theme inline {
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-sunday: var(--sunday);
+  --color-saturday: var(--saturday);
+  --color-category-es: var(--category-es);
+  --color-category-interview: var(--category-interview);
+  --color-category-intern: var(--category-intern);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-window: 0 18px 45px rgba(14, 165, 233, 0.08);
 }
 
-.mvp-heading-md {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #0f172a;
-  line-height: 1.3;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply min-h-screen text-foreground;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(186, 230, 253, 0.55), transparent 26%),
+      linear-gradient(180deg, #ffffff 0%, #f8fbff 54%, #eef7ff 100%);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
-.mvp-text {
-  color: #475569;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.mvp-text-small {
-  color: #64748b;
-  font-size: 0.75rem;
-  line-height: 1.4;
-}
-
-.dark .mvp-heading-lg,
-.dark .mvp-heading-md {
-  color: #e2e8f0;
-}
-.dark .mvp-text,
-.dark .mvp-text-small {
-  color: #cbd5e1;
-}
-
-/* Form Elements Dark Mode */
-.dark input,
-.dark textarea,
-.dark select {
-  background: #1a1a1a !important;
-  color: #f1f5f9 !important;
-  border-color: #404040 !important;
-}
-
-.dark input:focus,
-.dark textarea:focus,
-.dark select:focus {
-  background: #262626 !important;
-  border-color: #fbbf24 !important;
-  color: #ffffff !important;
-}
-
-.dark input:disabled,
-.dark textarea:disabled,
-.dark select:disabled {
-  background: #0a0a0a !important;
-  color: #64748b !important;
-  opacity: 0.7;
-}
-
-/* Dark mode specific overrides for glassmorphism */
-.dark .bg-white\/80 {
-  background: rgba(17, 17, 17, 0.95) !important;
-}
-
-.dark .bg-white\/70 {
-  background: rgba(17, 17, 17, 0.9) !important;
-}
-
-.dark .bg-white\/90 {
-  background: rgba(17, 17, 17, 0.98) !important;
-}
-
-.dark .bg-white\/60 {
-  background: rgba(17, 17, 17, 0.85) !important;
-}
-
-.dark .border-white\/70 {
-  border-color: rgba(64, 64, 64, 0.5) !important;
-}
-
-.dark .border-white\/60 {
-  border-color: rgba(64, 64, 64, 0.4) !important;
-}
-
-.dark .border-white\/50 {
-  border-color: rgba(64, 64, 64, 0.3) !important;
-}
-
-.dark .border-white\/40 {
-  border-color: rgba(64, 64, 64, 0.25) !important;
-}
-
-.dark .border-slate-200 {
-  border-color: #404040 !important;
-}
-
-.dark .border-slate-200\/70 {
-  border-color: rgba(64, 64, 64, 0.7) !important;
-}
-
-.dark .border-slate-300 {
-  border-color: #333333 !important;
-}
-
-.dark .bg-slate-50 {
-  background: #1a1a1a !important;
-}
-
-.dark .bg-slate-100 {
-  background: #262626 !important;
-}
-
-.dark .bg-white {
-  background: #111111 !important;
-}
-
-.dark .bg-amber-50 {
-  background: #261a00 !important;
-}
-
-.dark .bg-amber-100 {
-  background: #331f00 !important;
-}
-
-.dark .text-slate-900 {
-  color: #f1f5f9 !important;
-}
-
-.dark .text-slate-800 {
-  color: #e2e8f0 !important;
-}
-
-.dark .text-slate-700 {
-  color: #cbd5e1 !important;
-}
-
-.dark .text-slate-600 {
-  color: #94a3b8 !important;
-}
-
-.dark .text-slate-500 {
-  color: #64748b !important;
-}
-
-.dark .text-amber-700 {
-  color: #fbbf24 !important;
-}
-
-.dark .text-amber-600 {
-  color: #fcd34d !important;
-}
-
-.dark .shadow-md {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
-}
-
-.dark .shadow-lg {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.6) !important;
-}
-
-.dark .shadow-xl {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7) !important;
-}
-
-.dark .shadow-2xl {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
-}
-
-.dark .shadow-soft {
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.4) !important;
-}
-
-.dark .hover\:bg-white:hover {
-  background: #1a1a1a !important;
-}
-
-.dark .bg-linear-to-br {
-  background: linear-gradient(135deg, #fbbf24, #f97316) !important;
-}
-
-.dark .bg-linear-to-r {
-  background: linear-gradient(to right, #fbbf24, #f97316) !important;
-}
-
-/* Status badges */
-.mvp-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.mvp-badge-amber {
-  background: rgba(252, 211, 77, 0.3);
-  color: #92400e;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.mvp-badge-emerald {
-  background: rgba(52, 211, 153, 0.3);
-  color: #047857;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.mvp-badge-slate {
-  background: rgba(148, 163, 184, 0.3);
-  color: #475569;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+.pixel-art {
+  image-rendering: pixelated;
 }

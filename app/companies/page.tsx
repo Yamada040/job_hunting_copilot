@@ -1,47 +1,24 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { PlusIcon, ArrowUturnLeftIcon, HomeIcon } from "@heroicons/react/24/outline";
 
 import { AppLayout } from "@/app/_components/layout";
-import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
-import { CompanyTable } from "./_components/company-table";
+import { CompanyList } from "./_components/company-list";
+import { CompanyListGuide } from "./_components/company-list-guide";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/constants/routes";
 
-export default async function CompaniesPage() {
-  const supabase = await createSupabaseReadonlyClient();
-  if (!supabase) return redirect("/login");
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user) return redirect("/login");
-
-  const { data, error } = await supabase
-    .from("companies")
-    .select("id, name, industry, stage, preference, memo, updated_at")
-    .eq("user_id", userData.user.id)
-    .order("updated_at", { ascending: false });
-
-  if (error) throw error;
-
+export default function CompaniesPage() {
   return (
     <AppLayout
-      headerTitle="企業管理"
-      headerDescription="業界・ステータス・志望度を一覧で把握し、編集ページへ遷移できます"
+      avatar={<CompanyListGuide />}
       headerActions={
-        <div className="flex flex-wrap gap-3">
-          <Link href="/" className="mvp-button mvp-button-secondary">
-            <HomeIcon className="h-4 w-4" />
-            MVPホーム
-          </Link>
-          <Link href="/dashboard" className="mvp-button mvp-button-secondary">
-            <ArrowUturnLeftIcon className="h-4 w-4" />
-            ダッシュボードへ
-          </Link>
-          <Link href="/companies/new" className="mvp-button mvp-button-primary">
-            <PlusIcon className="h-4 w-4" />
-            企業を追加
-          </Link>
-        </div>
+        <Button asChild>
+          <Link href={ROUTES.COMPANIES_NEW}>企業を登録する</Link>
+        </Button>
       }
+      headerTitle="企業管理"
+      headerDescription="業界・選考状況・志望度を一覧で把握し、編集ページへ遷移できます"
     >
-      <CompanyTable items={data ?? []} />
+      <CompanyList />
     </AppLayout>
   );
 }

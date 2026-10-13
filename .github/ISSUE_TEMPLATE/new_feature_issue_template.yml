@@ -1,0 +1,38 @@
+name: "機能作成"
+description: "新機能作成のIssueを作成してください。"
+title: "新機能のタイトルを記載"
+labels: ["new"]
+
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      placeholder: 機能追加のきっかけや課題
+
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 目的
+      placeholder: この機能によって達成したいこと
+
+  - type: textarea
+    id: overview
+    attributes:
+      label: 機能概要
+      placeholder: 機能の説明（文章・図示どちらでも）
+
+  - type: textarea
+    id: todo
+    attributes:
+      label: TODO（機能要件）
+      description: 実装で満たすべき条件をチェックリスト形式で書いてください。
+      placeholder: |
+        - [ ] ○○ができること
+        - [ ] △△が表示されること
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 補足
+      placeholder: スクショ、参考リンク、関連Issue/PRなど

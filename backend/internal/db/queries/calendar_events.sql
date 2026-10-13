@@ -1,0 +1,44 @@
+-- name: ListCalendarEvents :many
+-- 期間（from 〜 to、どちらも含む）で絞り込む。どちらも省略できる
+select sqlc.embed(calendar_events), companies.name as company_name
+from calendar_events
+left join companies on companies.id = calendar_events.company_id
+where calendar_events.user_id = @user_id
+  and (sqlc.narg(from_date)::date is null or calendar_events.date >= sqlc.narg(from_date)::date)
+  and (sqlc.narg(to_date)::date is null or calendar_events.date <= sqlc.narg(to_date)::date)
+order by calendar_events.date, calendar_events.time nulls last;
+
+-- name: ListEsDeadlines :many
+-- カレンダーには、ユーザーが登録した予定に加えてESの締切も表示する（docs/backend-design.md 3章）
+select es_entries.id, es_entries.title, es_entries.deadline::date as deadline, es_entries.company_id, companies.name as company_name
+from es_entries
+join companies on companies.id = es_entries.company_id
+where es_entries.user_id = @user_id
+  and es_entries.deadline is not null
+  and (sqlc.narg(from_date)::date is null or es_entries.deadline >= sqlc.narg(from_date)::date)
+  and (sqlc.narg(to_date)::date is null or es_entries.deadline <= sqlc.narg(to_date)::date)
+order by es_entries.deadline;
+
+-- name: GetCalendarEvent :one
+select sqlc.embed(calendar_events), companies.name as company_name
+from calendar_events
+left join companies on companies.id = calendar_events.company_id
+where calendar_events.id = @id and calendar_events.user_id = @user_id;
+
+-- name: CreateCalendarEvent :one
+insert into calendar_events (user_id, company_id, title, type, date, time)
+values (@user_id, @company_id, @title, @type, @date, @time)
+returning id;
+
+-- name: UpdateCalendarEvent :execrows
+-- PATCH なので、set_* が true の項目だけを書き換える
+update calendar_events set
+  company_id = case when @set_company_id::boolean then sqlc.narg(company_id)::uuid              else company_id end,
+  title      = case when @set_title::boolean      then sqlc.narg(title)::text                   else title end,
+  type       = case when @set_type::boolean       then sqlc.narg(type)::calendar_event_type     else type end,
+  date       = case when @set_date::boolean       then sqlc.narg(date)::date                    else date end,
+  time       = case when @set_time::boolean       then sqlc.narg(time)::time                    else time end
+where id = @id and user_id = @user_id;
+
+-- name: DeleteCalendarEvent :execrows
+delete from calendar_events where id = @id and user_id = @user_id;

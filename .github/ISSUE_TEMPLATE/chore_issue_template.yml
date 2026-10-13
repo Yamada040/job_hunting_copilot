@@ -1,0 +1,27 @@
+name: "Chore Task"
+description: "ドキュメント更新・設定調整・調査など、コードを書かないChore系タスクを作成してください"
+title: "Issue内容"
+labels: ["new"]
+type: "Task"
+
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: "背景・目的"
+      description: "タスクの背景や目的を記載してください。"
+      placeholder: "背景・目的"
+
+  - type: textarea
+    id: todo
+    attributes:
+      label: TODO（達成されるべき点）
+      description: 修正によって満たされるべき条件をチェックリストで書いてください。
+      placeholder: |
+        - [ ] ○○ができるようになる
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 補足情報 / Notes
+      description: その他チームと共有しておきたい情報があれば記入してください

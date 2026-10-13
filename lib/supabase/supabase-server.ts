@@ -1,48 +1,43 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createServerClient } from "@supabase/ssr";
-import { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 const getEnv = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase URL/Anon Key is missing. Check env.");
+  const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !supabasePublishableKey) {
+    throw new Error("Supabase URL/Publishable Key is missing. Check env.");
   }
-  return { supabaseUrl, supabaseAnonKey };
+  return { supabaseUrl, supabasePublishableKey };
 };
 
-export const createSupabaseServerReadonlyClient = async (): Promise<SupabaseClient<any>> => {
-  const { supabaseUrl, supabaseAnonKey } = getEnv();
+export const createSupabaseServerReadonlyClient = async (): Promise<SupabaseClient> => {
+  const { supabaseUrl, supabasePublishableKey } = getEnv();
   const cookieStore = await cookies();
-  return createServerClient<any>(supabaseUrl, supabaseAnonKey, {
+  return createServerClient(supabaseUrl, supabasePublishableKey, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll();
       },
     },
   });
 };
 
-export const createSupabaseServerActionClient = async (): Promise<SupabaseClient<any>> => {
-  const { supabaseUrl, supabaseAnonKey } = getEnv();
+export const createSupabaseServerActionClient = async (): Promise<SupabaseClient> => {
+  const { supabaseUrl, supabasePublishableKey } = getEnv();
   const cookieStore = await cookies();
-  return createServerClient<any>(supabaseUrl, supabaseAnonKey, {
+  return createServerClient(supabaseUrl, supabasePublishableKey, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll();
       },
-      set(name: string, value: string, options?: { path?: string }) {
-        cookieStore.set(name, value, { path: options?.path ?? "/" });
-      },
-      remove(name: string, options?: { path?: string }) {
-        cookieStore.set(name, "", { path: options?.path ?? "/", expires: new Date(0) });
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
       },
     },
   });
 };
 
 // Backward-compatible aliases
-export const createSupabaseServerClient = createSupabaseServerReadonlyClient;
 export const createSupabaseReadonlyClient = createSupabaseServerReadonlyClient;
 export const createSupabaseActionClient = createSupabaseServerActionClient;

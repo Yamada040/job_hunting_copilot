@@ -1,0 +1,240 @@
+"use client";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { useActionState, useMemo, useOptimistic, useReducer, useState, useTransition } from "react";
+
+import { calendarKeys, createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from "@/lib/api/calendar";
+import { TYPE_LABEL } from "./calendar/constants";
+import { DayEventDialog } from "./calendar/day-event-dialog";
+import { EventSummary } from "./calendar/event-summary";
+import { MonthGrid } from "./calendar/month-grid";
+import { emptyForm, modalReducer, ModalState, optimisticEventsReducer } from "./calendar/reducer";
+import { CalendarDayCell, CalendarEvent } from "./calendar/types";
+import { formatDateKey } from "./calendar/utils";
+
+type Props = {
+  events: CalendarEvent[];
+};
+
+export function InteractiveCalendar({ events }: Props) {
+  const queryClient = useQueryClient();
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  // 保存・削除を楽観的に即時反映し、API失敗時はeventsへ自動ロールバックする
+  const [optimisticEvents, applyOptimisticEvents] = useOptimistic(events, optimisticEventsReducer);
+  const [, startDeleteTransition] = useTransition();
+  const [modalState, dispatch] = useReducer(modalReducer, null, (): ModalState => ({
+    isModalOpen: false,
+    selectedDate: formatDateKey(new Date()),
+    editingId: null,
+    formState: { ...emptyForm },
+    deletingId: null,
+  }));
+  const { isModalOpen, selectedDate, editingId, formState, deletingId } = modalState;
+  const todayKey = formatDateKey(new Date());
+  const weekdayLabel = ["日", "月", "火", "水", "木", "金", "土"];
+
+  const monthDays = useMemo<CalendarDayCell[]>(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    const cells: { date: string; inCurrentMonth: boolean }[] = [];
+
+    for (let i = firstDayIndex - 1; i >= 0; i -= 1) {
+      const day = prevMonthDays - i;
+      const date = formatDateKey(new Date(year, month - 1, day));
+      cells.push({ date, inCurrentMonth: false });
+    }
+
+    for (let d = 1; d <= daysInMonth; d += 1) {
+      const date = formatDateKey(new Date(year, month, d));
+      cells.push({ date, inCurrentMonth: true });
+    }
+
+    const remainder = cells.length % 7;
+    if (remainder !== 0) {
+      const toAdd = 7 - remainder;
+      for (let i = 1; i <= toAdd; i += 1) {
+        const date = formatDateKey(new Date(year, month + 1, i));
+        cells.push({ date, inCurrentMonth: false });
+      }
+    }
+
+    return cells;
+  }, [currentMonth]);
+
+  const eventsByDate = useMemo(() => {
+    return optimisticEvents.reduce<Record<string, CalendarEvent[]>>((acc, evt) => {
+      const key = evt.date;
+      acc[key] = acc[key] ? [...acc[key], evt] : [evt];
+      return acc;
+    }, {});
+  }, [optimisticEvents]);
+
+  const todayEvents = useMemo(() => {
+    return (eventsByDate[todayKey] || []).slice().sort((a, b) => {
+      const ta = a.time || "99:99";
+      const tb = b.time || "99:99";
+      return ta.localeCompare(tb);
+    });
+  }, [eventsByDate, todayKey]);
+
+  const weekEvents = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(now);
+    endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    return optimisticEvents
+      .filter((evt) => {
+        if (!evt.date) return false;
+        const date = new Date(evt.date);
+        if (Number.isNaN(date.getTime())) return false;
+        date.setHours(0, 0, 0, 0);
+        return date >= now && date <= endOfWeek;
+      })
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return (a.time || "99:99").localeCompare(b.time || "99:99");
+      });
+  }, [optimisticEvents]);
+
+  const handlePrevMonth = () => {
+    setCurrentMonth((prev) => {
+      const base = prev instanceof Date ? prev : new Date();
+      return new Date(base.getFullYear(), base.getMonth() - 1, 1);
+    });
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth((prev) => {
+      const base = prev instanceof Date ? prev : new Date();
+      return new Date(base.getFullYear(), base.getMonth() + 1, 1);
+    });
+  };
+
+  const openModalForDate = (date: string) => {
+    dispatch({ type: "openModalForDate", date });
+  };
+
+  const [, submitAction, saving] = useActionState<null, FormData>(async () => {
+    // 一時ID（新規時）で即時反映し、API完了後に実データで置き換える
+    applyOptimisticEvents({
+      type: "save",
+      event: {
+        id: editingId ?? `optimistic-${Date.now()}`,
+        date: selectedDate,
+        title: formState.title || "予定",
+        company: formState.company?.name ?? null,
+        companyId: formState.company?.id ?? null,
+        type: formState.type,
+        time: formState.time || null,
+      },
+    });
+    try {
+      const title = formState.title || "予定";
+      const time = formState.time || null;
+      if (editingId) {
+        await updateCalendarEvent(editingId, {
+          date: selectedDate,
+          title,
+          type: formState.type,
+          time,
+          companyId: formState.company?.id ?? null,
+        });
+      } else {
+        await createCalendarEvent({
+          date: selectedDate,
+          title,
+          type: formState.type,
+          time: time ?? undefined,
+          companyId: formState.company?.id,
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
+      dispatch({ type: "saveSuccess" });
+    } catch (err) {
+      console.error(err);
+      alert("保存に失敗しました。再度お試しください。");
+    }
+    return null;
+  }, null);
+
+  const handleEditPrefill = (evt: CalendarEvent) => {
+    dispatch({ type: "editPrefill", event: evt });
+  };
+
+  const handleDeleteEvent = (evt: CalendarEvent) => {
+    if (evt.id.startsWith("es-") || evt.id.startsWith("optimistic-")) return;
+
+    startDeleteTransition(async () => {
+      // 楽観的に即時削除し、API失敗時はロールバックする
+      applyOptimisticEvents({ type: "delete", id: evt.id });
+      dispatch({ type: "deleteStart", id: evt.id });
+      try {
+        await deleteCalendarEvent(evt.id);
+        await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
+        dispatch({ type: "deleteSuccess", id: evt.id });
+      } catch (err) {
+        console.error(err);
+        alert("削除に失敗しました。再度お試しください。");
+      } finally {
+        dispatch({ type: "deleteEnd" });
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <MonthGrid
+        currentMonth={currentMonth}
+        monthDays={monthDays}
+        todayKey={todayKey}
+        onPrevMonth={handlePrevMonth}
+        onNextMonth={handleNextMonth}
+        onAddToday={() => openModalForDate(formatDateKey(new Date()))}
+        onSelectDate={openModalForDate}
+      />
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <EventSummary
+          title="今日の予定"
+          events={todayEvents}
+          emptyText="今日の予定はありません。"
+          describe={(evt) => `${TYPE_LABEL[evt.type]}${evt.time ? ` · ${evt.time}` : ""}`}
+          onSelect={handleEditPrefill}
+        />
+        <EventSummary
+          title="今週の予定"
+          events={weekEvents}
+          emptyText="今週の予定はありません。"
+          describe={(evt) => {
+            const d = new Date(evt.date);
+            const label = `${d.getMonth() + 1}/${d.getDate()}(${weekdayLabel[d.getDay()]})`;
+            return `${label} / ${TYPE_LABEL[evt.type]}${evt.time ? ` · ${evt.time}` : ""}`;
+          }}
+          onSelect={handleEditPrefill}
+        />
+      </div>
+
+      <DayEventDialog
+        open={isModalOpen}
+        selectedDate={selectedDate}
+        events={eventsByDate[selectedDate] ?? []}
+        formState={formState}
+        editingId={editingId}
+        deletingId={deletingId}
+        saving={saving}
+        dispatch={dispatch}
+        submitAction={submitAction}
+        onDelete={handleDeleteEvent}
+      />
+    </div>
+  );
+}

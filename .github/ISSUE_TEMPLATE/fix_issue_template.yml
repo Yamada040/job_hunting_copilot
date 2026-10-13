@@ -1,0 +1,37 @@
+name: "機能修正"
+description: "機能修正のIssueを作成してください。"
+title: "修正内容を簡潔に記載"
+labels: ["fix"]
+
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      placeholder: この問題が発生した経緯や状況
+
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 目的
+      placeholder: 修正によって達成したいこと
+
+  - type: textarea
+    id: current
+    attributes:
+      label: 現状の問題
+      placeholder: 再現手順や現状の挙動、期待との差分
+
+  - type: textarea
+    id: todo
+    attributes:
+      label: TODO（達成されるべき点）
+      description: 修正によって満たされるべき条件をチェックリストで書いてください。
+      placeholder: |
+        - [ ] ○○ができるようになる
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 補足
+      placeholder: スクリーンショット、動画、関連Issue/PRなど

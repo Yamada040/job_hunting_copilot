@@ -1,3 +1,2 @@
-export { AppLayout, DashboardLayout, ESLayout, CompanyLayout, ProfileLayout } from "./AppLayout";
-export { Sidebar } from "./Sidebar";
-export { Header, pageHeaders } from "./Header";
+export { AppLayout } from "./AppLayout";
+export { Header } from "./Header";

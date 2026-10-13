@@ -12,6 +12,11 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/e2e/.auth/
 
 # next.js
 /.next/
@@ -32,6 +37,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+# mise の手元だけの設定（Google の OAuth クライアントのシークレットなど）
+mise.local.toml
 
 # vercel
 .vercel

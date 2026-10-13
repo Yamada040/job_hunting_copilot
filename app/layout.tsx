@@ -1,21 +1,57 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { SITE_NAME, getSiteUrl } from "@/lib/constants/site";
 import "./globals.css";
-import { AppThemeProvider } from "./theme-provider";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { Providers } from "./_components/providers";
+import { AppHeader } from "./_components/layout/AppHeader";
+import { Dock } from "./_components/layout/Dock";
 
 export const metadata: Metadata = {
-  title: "就活AI Copilot | MVP",
-  description: "ES添削・企業管理・タスク進捗をAIで支援し、前向きに就活を進めるためのMVP版Webアプリ。",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: `${SITE_NAME} | 就活を整理して前進する`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description:
+    "自己分析・適性チェック・ES管理・企業管理・面接ログを1つにまとめ、就活で次にやるべき行動を明確にするWebアプリ。",
+  applicationName: SITE_NAME,
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "32x32" },
+    ],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "ja_JP",
+    url: "/",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} | 就活を整理して前進する`,
+    description:
+      "自己分析・適性チェック・ES管理・企業管理・面接ログを1つにまとめ、就活で次にやるべき行動を明確にするWebアプリ。",
+    images: [
+      {
+        url: "/og-image.svg",
+        width: 938,
+        height: 352,
+        alt: `${SITE_NAME} logo`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} | 就活を整理して前進する`,
+    description:
+      "自己分析・適性チェック・ES管理・企業管理・面接ログを1つにまとめ、就活で次にやるべき行動を明確にするWebアプリ。",
+    images: ["/og-image.svg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -25,8 +61,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AppThemeProvider>{children}</AppThemeProvider>
+      <body className="antialiased">
+        <Providers>
+          <AppHeader />
+          {children}
+          <Dock />
+        </Providers>
       </body>
     </html>
   );

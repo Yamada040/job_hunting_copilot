@@ -1,0 +1,9 @@
+.terraform/
+crash.log
+# state と変数の値。どちらも秘密の値が平文で入る（README.md 参照）。*.tfvars.example は対象外
+*.tfstate
+*.tfstate.*
+*.tfvars
+# plan の結果。変数の値（秘密を含む）が平文で入る
+tfplan
+*.tfplan

@@ -1,0 +1,11 @@
+# Supabase
+.branches
+.temp
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local
+
+# 手元・CI専用の JWT の署名鍵（秘密鍵）
+signing_keys.json

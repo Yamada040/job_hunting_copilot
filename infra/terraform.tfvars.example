@@ -1,0 +1,33 @@
+# cp terraform.tfvars.example terraform.tfvars して値を埋める（terraform.tfvars は git に入れない）
+# 値はパスワードマネージャーにも控えておく（GitHub の Secrets などは後から読めないため）
+
+vercel_api_token      = ""
+github_token          = "" # gh auth token の値でよい
+supabase_access_token = ""
+
+supabase_project_ref = ""
+supabase_pooler_host = "aws-0-ap-northeast-1.pooler.supabase.com"
+
+supabase_publishable_key        = ""
+supabase_db_password            = ""
+supabase_migration_access_token = ""
+
+ai_provider         = "gemini"
+ai_model            = ""
+ai_provider_api_key = ""
+tavily_api_key      = ""
+
+smtp = {
+  host = "smtp.gmail.com"
+  port = "465"
+  user = ""
+  pass = ""
+  to   = ""
+}
+
+dev_admin_user_ids = ""
+
+google_oauth = {
+  client_id     = ""
+  client_secret = ""
+}

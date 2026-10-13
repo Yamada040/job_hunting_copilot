@@ -1,94 +1,109 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
+import { useId } from "react";
 
-type Question = { id: string; prompt: string; answer_md: string };
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import type { EsQuestion } from "@/lib/api/es";
+import { countCharacters } from "@/lib/es/characters";
+import { cn } from "@/lib/utils";
 
 type Props = {
-  initialQuestions: Question[];
-  readOnly?: boolean;
+  questions: EsQuestion[];
+  onChange: (questions: EsQuestion[]) => void;
 };
 
-const createQuestion = (): Question => ({
-  id: crypto.randomUUID(),
-  prompt: "",
-  answer_md: "",
-});
-
-export function QuestionsEditor({ initialQuestions, readOnly = false }: Props) {
-  const [questions, setQuestions] = useState<Question[]>(() => (initialQuestions.length ? initialQuestions : [createQuestion()]));
-
-  const handleChange = (id: string, key: keyof Question, value: string) => {
-    if (readOnly) return;
-    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, [key]: value } : q)));
-  };
-
-  const handleAdd = () => {
-    if (readOnly) return;
-    setQuestions((prev) => [...prev, createQuestion()]);
-  };
-
-  const handleRemove = (id: string) => {
-    if (readOnly) return;
-    setQuestions((prev) => {
-      const next = prev.filter((q) => q.id !== id);
-      return next.length ? next : [createQuestion()];
-    });
-  };
-
-  const serialized = useMemo(() => JSON.stringify(questions), [questions]);
+// maxLength は backend/api/openapi.yaml の EsQuestion と同じ値
+export function QuestionsEditor({ questions, onChange }: Props) {
+  const idPrefix = useId();
+  const update = (index: number, patch: Partial<EsQuestion>) =>
+    onChange(questions.map((q, i) => (i === index ? { ...q, ...patch } : q)));
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-sm text-slate-700">
-        <span>質問カード（必要に応じて追加できます）</span>
-        {!readOnly && (
-          <button type="button" onClick={handleAdd} className="mvp-button mvp-button-secondary">
-            カードを追加
-          </button>
-        )}
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>必要に応じて、設問を追加できます</span>
+        <Button type="button" variant="outline" onClick={() => onChange([...questions, { prompt: "", answer: "" }])}>
+          設問を追加
+        </Button>
       </div>
 
-      <input type="hidden" name="questions_json" value={serialized} />
-
-      <div className="space-y-3">
-        {questions.map((q) => (
-          <div key={q.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-            <label className="block space-y-1 text-xs text-slate-600">
-              質問
-              <input
-                value={q.prompt}
-                onChange={(e) => handleChange(q.id, "prompt", e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-amber-300"
-                placeholder="例） 学生時代に力を入れたこと"
-                disabled={readOnly}
-              />
-            </label>
-            <label className="mt-2 block space-y-1 text-xs text-slate-600">
-              回答
-              <textarea
-                value={q.answer_md}
-                onChange={(e) => handleChange(q.id, "answer_md", e.target.value)}
-                rows={5}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-amber-300"
-                placeholder="回答を入力"
-                disabled={readOnly}
-              />
-            </label>
-            {!readOnly && (
-              <div className="mt-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleRemove(q.id)}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
-                >
-                  削除
-                </button>
-              </div>
-            )}
+      {questions.map((q, index) => (
+        <Card key={index} variant="muted" className="gap-2 px-4 py-3">
+          <div className="space-y-1">
+            <Label htmlFor={`${idPrefix}-prompt-${index}`} className="text-xs text-muted-foreground">
+              設問
+            </Label>
+            <Input
+              id={`${idPrefix}-prompt-${index}`}
+              value={q.prompt}
+              onChange={(e) => update(index, { prompt: e.target.value })}
+              maxLength={1000}
+              className="bg-card"
+              placeholder="例）学生時代に力を入れたこと"
+            />
           </div>
-        ))}
-      </div>
+          <div className="space-y-1">
+            <div className="flex items-end justify-between gap-3">
+              <Label htmlFor={`${idPrefix}-answer-${index}`} className="text-xs text-muted-foreground">
+                回答
+              </Label>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Label htmlFor={`${idPrefix}-limit-${index}`}>文字数の上限</Label>
+                <Input
+                  id={`${idPrefix}-limit-${index}`}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={4000}
+                  value={q.charLimit ?? ""}
+                  onChange={(e) => update(index, { charLimit: e.target.value ? Number(e.target.value) : undefined })}
+                  className="h-7 w-20 bg-card text-right text-xs"
+                  placeholder="なし"
+                />
+                <span>字</span>
+              </div>
+            </div>
+            <Textarea
+              id={`${idPrefix}-answer-${index}`}
+              value={q.answer}
+              onChange={(e) => update(index, { answer: e.target.value })}
+              maxLength={4000}
+              rows={5}
+              className="min-h-28 bg-card"
+              placeholder="回答を入力"
+            />
+            <CharacterCount text={q.answer} limit={q.charLimit} />
+          </div>
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="destructive"
+              className="text-xs"
+              onClick={() => onChange(questions.filter((_, i) => i !== index))}
+            >
+              削除
+            </Button>
+          </div>
+        </Card>
+      ))}
     </div>
+  );
+}
+
+/** 回答の文字数。上限を超えたら赤くするだけで、保存・提出は止めない。 */
+function CharacterCount({ text, limit }: { text: string; limit?: number }) {
+  const count = countCharacters(text);
+  return (
+    <span
+      className={cn("block text-right text-xs text-muted-foreground", {
+        "font-semibold text-destructive": limit !== undefined && count > limit,
+      })}
+    >
+      {limit === undefined ? `${count} 文字` : `${count} / ${limit} 文字`}
+    </span>
   );
 }

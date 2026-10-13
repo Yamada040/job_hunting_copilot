@@ -1,17 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AiPanel } from "@/app/_components/ai-panel";
+import { useId, useState } from "react";
 
-type Answers = {
-  strengths: string;
-  values: string;
-  motivation: string;
-  successes: string;
-  failures: string;
-  workStyle: string;
-  future: string;
-};
+import {
+  useAnalyzeSelf,
+  useSelfAnalysisResult,
+  useSubmitSelfAnalysis,
+  type SelfAnalysisAnswers,
+  type SelfAnalysisResult,
+} from "@/lib/api/assessments";
+import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
+import { ConfirmDialog } from "@/app/_components/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
+import { FormActions } from "@/app/_components/form/form-actions";
+import { LeaveGuard } from "@/app/_components/form/leave-guard";
+
+type Answers = SelfAnalysisAnswers;
 
 const defaultAnswers: Answers = {
   strengths: "",
@@ -23,70 +32,43 @@ const defaultAnswers: Answers = {
   future: "",
 };
 
-const buildPrompt = (a: Answers) =>
-  [
-    `強み: ${a.strengths || "未記入"}`,
-    `価値観: ${a.values || "未記入"}`,
-    `モチベーション源泉: ${a.motivation || "未記入"}`,
-    `成功体験: ${a.successes || "未記入"}`,
-    `失敗体験・学び: ${a.failures || "未記入"}`,
-    `働き方の好み: ${a.workStyle || "未記入"}`,
-    `将来像（3-5年）: ${a.future || "未記入"}`,
-  ].join("\n");
+export default function SelfAnalysisForm() {
+  const { data: result, error, isPending } = useSelfAnalysisResult();
 
-export default function SelfAnalysisForm({
-  initialAnswers,
-  initialSummary,
-  initialResultId,
-}: {
-  initialAnswers: Record<string, unknown> | null;
-  initialSummary: string | null;
-  initialResultId: string | null;
-}) {
-  const [answers, setAnswers] = useState<Answers>(() => {
-    if (initialAnswers) return { ...defaultAnswers, ...(initialAnswers as Partial<Answers>) };
-    return defaultAnswers;
-  });
-  const [resultId, setResultId] = useState<string | null>(initialResultId);
-  const prompt = useMemo(() => buildPrompt(answers), [answers]);
-  const [presetKey, setPresetKey] = useState<string | undefined>(undefined);
-  const [presetText, setPresetText] = useState<string>(() => buildPrompt(defaultAnswers));
-  const [saving, setSaving] = useState(false);
+  if (error) return <ApiErrorMessage error={error} />;
+  if (isPending) return <FormSkeleton />;
+  return <SelfAnalysisFormLoaded result={result} />;
+}
 
-  const handleRun = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/self-analysis/answers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json?.id) {
-        throw new Error(json?.error || "保存に失敗しました");
-      }
-      setResultId(json.id);
-      setPresetText(prompt);
-      setPresetKey(`${Date.now()}`);
-    } catch (err) {
-      alert("保存に失敗しました。もう一度お試しください。");
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
+function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null }) {
+  const [answers, setAnswers] = useState<Answers>(result?.answers ?? defaultAnswers);
+  const submit = useSubmitSelfAnalysis();
+  const analyze = useAnalyzeSelf();
+  // 回答は1人1回だけ。保存済みなら回答を表示するだけにする（docs/backend-design.md 3章）
+  const locked = result !== null;
+  // 回答を変えたか。保存すると result が届いて locked になるので、そのときは確かめない
+  const [touched, setTouched] = useState(false);
+  const dirty = touched && !locked;
+  const saving = submit.isPending;
 
   const handleChange = (key: keyof Answers, value: string) => {
+    if (locked) return;
+    setTouched(true);
     setAnswers((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
-      <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-6 shadow-md backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/80">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">自己分析 質問リスト</h2>
-        </div>
-        <div className="mt-4 space-y-3">
+    <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+      <Card className="overflow-visible">
+        <CardHeader>
+          <CardTitle>
+            <h2 className="text-lg font-semibold">質問リスト</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-primary">
+            ※ 現在は一回しかできません。
+          </Card>
           <TextArea label="強み・得意なこと" value={answers.strengths} onChange={(v) => handleChange("strengths", v)} />
           <TextArea
             label="価値観（仕事選びで譲れないこと）"
@@ -114,50 +96,45 @@ export default function SelfAnalysisForm({
             value={answers.future}
             onChange={(v) => handleChange("future", v)}
           />
-          <div className="flex flex-wrap gap-3">
-            <button onClick={handleRun} disabled={saving} className="mvp-button mvp-button-primary">
-              {saving ? "保存中..." : "保存する"}
-            </button>
-          </div>
-        </div>
-      </div>
+          <FormActions dirty={dirty} shortcut={false}>
+            <ConfirmDialog
+              trigger={
+                <Button type="button" variant="default" disabled={saving || locked}>
+                  {locked ? "実施済み" : saving ? "保存中..." : "保存する"}
+                </Button>
+              }
+              title="回答を保存しますか？"
+              description="回答は1回だけ保存できます。この内容で保存しますか？"
+              confirmLabel="保存する"
+              onConfirm={() => submit.mutate(answers)}
+            />
+          </FormActions>
+          <ApiErrorMessage error={submit.error} />
+          <LeaveGuard when={dirty && !saving} />
+        </CardContent>
+      </Card>
 
-      <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-5 shadow-md backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/80">
-        <AiPanel
-          kind="self_analysis"
-          defaultInput={prompt}
-          presetText={presetText}
-          presetKey={presetKey}
-          cacheKey={resultId ? `self-analysis-${resultId}` : undefined}
-          initialSummary={initialSummary ?? undefined}
-          saveUrl="/api/ai/self-analysis"
-          saveId={resultId ?? undefined}
-          title="AI自己分析サマリー"
-          hint="入力をもとに強み・価値観・モチベーションを整理します。保存すると再実行できません。"
-        />
-      </div>
+      <AiResultPanel
+        title="AI自己分析"
+        description="保存した回答をもとに、強み・価値観・モチベーションの源泉と自己PRの骨子をAIがまとめます。1回だけ実行できます。"
+        result={result?.aiResult ?? null}
+        runLabel="AI自己分析を行う"
+        onRun={() => analyze.mutate()}
+        pending={analyze.isPending}
+        error={analyze.error}
+        done={!!result?.aiResult}
+        blockedReason={locked ? undefined : "回答を保存すると実行できます"}
+      />
     </div>
   );
 }
 
-function TextArea({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const id = useId();
   return (
-    <label className="block space-y-2">
-      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</span>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={3}
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-amber-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-      />
-    </label>
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} rows={3} />
+    </div>
   );
 }

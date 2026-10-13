@@ -1,0 +1,46 @@
+# 手元の開発環境。`mise install` でツールを入れ、`mise run dev` で DB・バックエンド・画面をまとめて起動する。
+# 接続先は手元の Supabase（supabase start）だけにし、本番には向けない。
+
+[settings]
+# Node のバージョンは CI と同じ .nvmrc を正にし、ここに二重に書かない
+idiomatic_version_file_enable_tools = ["node"]
+
+[tools]
+go = "1.27.2" # backend/go.mod の go と合わせる
+golangci-lint = "2.14.0" # .github/workflows/ci.yml と合わせる
+supabase = "2.120.0" # .github/workflows/ci.yml・release.yml と合わせる
+
+[tasks.db]
+description = "手元の Supabase（DB と認証）を起動する。動いていれば何もしない"
+run = """
+npm run supabase:signing-key
+supabase status >/dev/null 2>&1 || supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,mailpit,postgres-meta
+"""
+
+[tasks."dev:api"]
+description = "バックエンドの API（localhost:8080）"
+depends = ["db"]
+dir = "backend"
+# 接続先は supabase status から読む。どれも手元専用の既定値で、秘密ではない
+run = """
+eval "$(supabase status -o env)"
+SUPABASE_URL="$API_URL" DATABASE_URL="$DB_URL" go run ./cmd/server
+"""
+
+[tasks."dev:web"]
+description = "Next.js（localhost:3000。/v1 は localhost:8080 のバックエンドに転送される）"
+depends = ["db"]
+# 環境変数は .env.local より優先されるので、.env.local に本番の値があっても手元の Supabase につながる
+# バックエンドは go run のビルドに数秒かかり、先に画面を開くとデータの取得が失敗したままになるので、応答するまで待つ。
+# dev:web だけを起動したときに止まらないよう、待つのは60秒まで
+# localhost の Cookie はポートを問わず共有され、別のアプリの Cookie も送られて Node.js の上限（16KB）を超え 431 になるので、上限を上げる
+run = """
+eval "$(supabase status -o env)"
+for _ in $(seq 60); do curl -sf http://localhost:8080/v1/health >/dev/null && break; sleep 1; done
+curl -sf http://localhost:8080/v1/health >/dev/null || echo "バックエンド（localhost:8080）が応答しません。データの取得は失敗します"
+NODE_OPTIONS="--max-http-header-size=65536" NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$PUBLISHABLE_KEY" ./node_modules/.bin/next dev
+"""
+
+[tasks.dev]
+description = "DB・バックエンド・画面をまとめて起動する"
+depends = ["dev:api", "dev:web"]
