@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatDateKey } from "./utils";
+import { formatDateKey, previewDayEvents } from "./utils";
 
 describe("formatDateKey", () => {
   it("formats a Date object with zero-padded month/day", () => {
@@ -33,5 +33,22 @@ describe("formatDateKey", () => {
       expect(formatDateKey(null)).toBe("2026-07-13");
       expect(formatDateKey(undefined)).toBe("2026-07-13");
     });
+  });
+});
+
+describe("previewDayEvents", () => {
+  it("時刻の早い順に上限まで出し、時刻の無い予定は最後に回して、残りは件数で返す", () => {
+    const events = [
+      { title: "ES締切", time: null },
+      { title: "面接", time: "15:00" },
+      { title: "説明会", time: "10:00" },
+    ];
+    const { shown, rest } = previewDayEvents(events, 2);
+    expect(shown.map((e) => e.title)).toEqual(["説明会", "面接"]);
+    expect(rest).toBe(1);
+  });
+
+  it("上限以下なら残りは0件", () => {
+    expect(previewDayEvents([{ time: null }], 2).rest).toBe(0);
   });
 });

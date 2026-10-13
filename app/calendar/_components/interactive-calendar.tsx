@@ -10,7 +10,7 @@ import { EventSummary } from "./calendar/event-summary";
 import { MonthGrid } from "./calendar/month-grid";
 import { emptyForm, modalReducer, ModalState, optimisticEventsReducer } from "./calendar/reducer";
 import { CalendarDayCell, CalendarEvent } from "./calendar/types";
-import { formatDateKey } from "./calendar/utils";
+import { formatDateKey, sortByTime } from "./calendar/utils";
 
 type Props = {
   events: CalendarEvent[];
@@ -77,11 +77,7 @@ export function InteractiveCalendar({ events }: Props) {
   }, [optimisticEvents]);
 
   const todayEvents = useMemo(() => {
-    return (eventsByDate[todayKey] || []).slice().sort((a, b) => {
-      const ta = a.time || "99:99";
-      const tb = b.time || "99:99";
-      return ta.localeCompare(tb);
-    });
+    return sortByTime(eventsByDate[todayKey] || []);
   }, [eventsByDate, todayKey]);
 
   const weekEvents = useMemo(() => {
@@ -196,6 +192,7 @@ export function InteractiveCalendar({ events }: Props) {
         currentMonth={currentMonth}
         monthDays={monthDays}
         todayKey={todayKey}
+        eventsByDate={eventsByDate}
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}
         onAddToday={() => openModalForDate(formatDateKey(new Date()))}
