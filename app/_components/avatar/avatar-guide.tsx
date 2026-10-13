@@ -13,7 +13,7 @@ const MESSAGE_INTERVAL = 6000;
 /**
  * 画面の見出しの横に立ち、その画面の状況や使い方を吹き出しで話すアバター。歩かずにその場で呼吸するだけにして、
  * 入力の邪魔にならないようにする。messages が複数あれば、間隔をあけて順に話す。
- * 吹き出しはアバターの上に出るので、親は上にその分の余白を持たせる。
+ * 広い画面では吹き出しがアバターの上に出るので、親は上にその分の余白を持たせる。
  */
 export function AvatarGuide({ messages }: { messages: string[] }) {
   const reduceMotion = useReducedMotion();
@@ -36,11 +36,11 @@ export function AvatarGuide({ messages }: { messages: string[] }) {
 
   // 吹き出しは数秒ごとに入れ替わり、読み上げると操作の邪魔になるので、読み上げには含めない（話す内容は補足にとどめる）
   return (
-    <div className="relative" aria-hidden>
+    <div className="relative flex items-center gap-3 sm:block" aria-hidden>
+      <AvatarSprite frame={IDLE_FRAMES[tick % IDLE_FRAMES.length]} scale={SCALE} facing={-1} />
       <AnimatePresence mode="wait">
         {message && <SpeechBubble key={message} message={message} align="end" />}
       </AnimatePresence>
-      <AvatarSprite frame={IDLE_FRAMES[tick % IDLE_FRAMES.length]} scale={SCALE} facing={-1} />
     </div>
   );
 }
