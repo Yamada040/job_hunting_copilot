@@ -1,0 +1,33 @@
+import { describe, expect, it } from "vitest";
+
+import { analysisPreview, pendingAnalyses, recentAnalyses } from "./analysis-summaries";
+
+const companies = [
+  { name: "A", aiResult: null },
+  { name: "B", aiResult: "分析B" },
+  { name: "C", aiResult: null },
+  { name: "D", aiResult: "分析D" },
+  { name: "E", aiResult: null },
+];
+
+describe("pendingAnalyses", () => {
+  it("分析していない企業だけを、一覧の順のまま返す", () => {
+    expect(pendingAnalyses(companies).map((c) => c.name)).toEqual(["A", "C", "E"]);
+  });
+});
+
+describe("recentAnalyses", () => {
+  it("分析した企業だけを、一覧の順のまま返す", () => {
+    expect(recentAnalyses(companies).map((c) => c.name)).toEqual(["B", "D"]);
+  });
+});
+
+describe("analysisPreview", () => {
+  it("見出しや箇条書きの記号と改行を除き、1続きの文にする", () => {
+    expect(analysisPreview("## 概要\n**自動車**の大手。\n- 強み", 50)).toBe("概要 自動車の大手。 ・強み");
+  });
+
+  it("長い文は上限の文字数で切り、続きがあることを示す", () => {
+    expect(analysisPreview("あいうえおかきくけこ", 5)).toBe("あいうえお…");
+  });
+});

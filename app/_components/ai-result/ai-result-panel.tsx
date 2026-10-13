@@ -10,6 +10,8 @@ import { sanitizeMarkdown } from "./sanitize";
 import { EmptyState } from "@/app/_components/empty-state";
 
 type Props = {
+  /** ほかの画面から、この欄を開いて見せるための目印（URLの # に付ける） */
+  id?: string;
   title: string;
   description: string;
   /** 保存済みのAIの結果。まだ無ければ null */
@@ -29,6 +31,7 @@ type Props = {
  * ここでは「実行する」操作と結果の表示だけを受け持つ（docs/backend-design.md 5章）。
  */
 export function AiResultPanel({
+  id,
   title,
   description,
   result,
@@ -58,7 +61,7 @@ export function AiResultPanel({
   );
 
   return (
-    <Card className="gap-4 py-6">
+    <Card id={id} className="scroll-mt-32 gap-4 py-6">
       <CardHeader className="px-6">
         <CardTitle>
           <h2 className="flex items-center gap-2 text-base font-semibold">
