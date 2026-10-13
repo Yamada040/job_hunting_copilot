@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { useReducedMotion } from "framer-motion";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AvatarWanderer } from "@/app/_components/avatar/avatar-wanderer";
 import { MenuBackdrop } from "./menu-backdrop";
 import { MenuCard } from "./menu-card";
+import { MenuControls } from "./menu-controls";
 import { coverflowLayout, offsetFrom } from "./menu-layout";
 
 export type CarouselItem = {
@@ -26,6 +26,8 @@ const DRAG_CARDS_PER_PIXEL = 1 / 260;
 // 離したときの速さ（px/ms）から、慣性で余分に回すカードの数への割合と上限
 const FLING_CARDS_PER_SPEED = 2.5;
 const MAX_FLING_CARDS = 3;
+// 正面のカードの幅（px）。アバターがこの幅では立ち止まらないようにする
+const CENTER_CARD_WIDTH = 260;
 // 入るとき、カルーセルが手前に迫る動きを見せてから画面を移す時間（ms）
 const LEAVE_DURATION = 450;
 
@@ -33,7 +35,7 @@ const LEAVE_DURATION = 450;
  * 横に送って選ぶ3Dのメニュー（カバーフロー）。←→キー・ドラッグ・ホイール・横のカードを押すことで送り、正面のカードを押すとその画面を開く。
  * 端まで送ると反対の端へ回り込む。本物の3D（three.js など）ではなく CSS の3D変形で作るのは、読み込む量を増やさないため。
  */
-export function MenuCarousel({ items }: { items: CarouselItem[] }) {
+export function MenuCarousel({ items, avatarMessages }: { items: CarouselItem[]; avatarMessages: string[] }) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   // 送った位置。何周しても近い向きに滑らかに送れるよう、カードの数で割らずに持つ
@@ -98,7 +100,7 @@ export function MenuCarousel({ items }: { items: CarouselItem[] }) {
     <div className="space-y-2">
       <div
         className={cn(
-          "relative h-[26rem] cursor-grab touch-pan-y select-none overflow-hidden rounded-3xl",
+          "relative h-[27rem] cursor-grab touch-pan-y select-none overflow-hidden rounded-3xl",
           dragging && "cursor-grabbing",
         )}
         onPointerDown={(e) => {
@@ -179,6 +181,16 @@ export function MenuCarousel({ items }: { items: CarouselItem[] }) {
             })}
           </div>
         </div>
+        {/* アバターはカルーセルの床（カードの手前）を歩く。開いた直後とカードを開くときは、カードと一緒に消す */}
+        <div
+          className={cn(
+            "absolute inset-x-[18%] bottom-0 h-24 transition-opacity duration-500",
+            (!arrived || leaving) && "opacity-0",
+          )}
+        >
+          {/* 吹き出しが正面のカードの「開く」を隠さないよう、正面のカードの幅では立ち止まらせない */}
+          <AvatarWanderer messages={avatarMessages} avoidCenter={CENTER_CARD_WIDTH} />
+        </div>
         {/* 入るときに、正面のカードへ飛び込んだように白く光らせる */}
         <div
           className={cn(
@@ -188,20 +200,7 @@ export function MenuCarousel({ items }: { items: CarouselItem[] }) {
         />
       </div>
 
-      <div className="flex items-center justify-center gap-4 text-sm font-bold">
-        <Button type="button" variant="outline" size="icon" onClick={() => rotateBy(-1)} aria-label="左へ回す">
-          <ChevronLeftIcon />
-        </Button>
-        <span aria-live="polite" className="min-w-28 text-center text-foreground">
-          {items[frontIndex].label}
-        </span>
-        <Button type="button" variant="outline" size="icon" onClick={() => rotateBy(1)} aria-label="右へ回す">
-          <ChevronRightIcon />
-        </Button>
-      </div>
-      <p className="text-center text-xs text-muted-foreground">
-        ←→キー・ドラッグ・ホイールで回し、正面のカードを押すとその画面を開きます
-      </p>
+      <MenuControls label={items[frontIndex].label} onPrev={() => rotateBy(-1)} onNext={() => rotateBy(1)} />
     </div>
   );
 }
