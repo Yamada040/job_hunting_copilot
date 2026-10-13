@@ -17,11 +17,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
-import { FormActions } from "@/app/_components/form/form-actions";
 import { LeaveGuard } from "@/app/_components/form/leave-guard";
 import { LoadError } from "@/app/_components/load-error";
+import { QuestionStepper } from "@/app/_components/form/question-stepper";
 
 type Answers = SelfAnalysisAnswers;
+
+// 質問と、書き出しに迷わないためのヒント
+const QUESTIONS: { key: keyof Answers; title: string; hint: string }[] = [
+  { key: "strengths", title: "強み・得意なこと", hint: "例：粘り強く続けられる。人の話を聞いてまとめるのが得意。" },
+  {
+    key: "values",
+    title: "価値観（仕事選びで譲れないこと）",
+    hint: "例：成長できる環境、人の役に立っている実感、安定。",
+  },
+  {
+    key: "motivation",
+    title: "モチベーションの源泉（燃える瞬間・冷める瞬間）",
+    hint: "どんなときにやる気が出て、どんなときに下がるかを書いてみましょう。",
+  },
+  {
+    key: "successes",
+    title: "成功体験（役割・結果・工夫）",
+    hint: "自分の役割、出した結果、そのための工夫の3つを書くとまとまります。",
+  },
+  {
+    key: "failures",
+    title: "失敗体験と学び",
+    hint: "失敗そのものより、そこから何を学び、次にどう活かしたかが大事です。",
+  },
+  { key: "workStyle", title: "働き方の好み", hint: "リモートか出社か、チームか個人か、裁量の大きさなど。" },
+  {
+    key: "future",
+    title: "将来像（3〜5年後の仮のゴール）",
+    hint: "仮で大丈夫です。どんな仕事をして、どうなっていたいか。",
+  },
+];
 
 const defaultAnswers: Answers = {
   strengths: "",
@@ -70,46 +101,44 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
           <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-primary">
             ※ 現在は一回しかできません。
           </Card>
-          <TextArea label="強み・得意なこと" value={answers.strengths} onChange={(v) => handleChange("strengths", v)} />
-          <TextArea
-            label="価値観（仕事選びで譲れないこと）"
-            value={answers.values}
-            onChange={(v) => handleChange("values", v)}
-          />
-          <TextArea
-            label="モチベーション源泉（燃える瞬間 / 冷める瞬間）"
-            value={answers.motivation}
-            onChange={(v) => handleChange("motivation", v)}
-          />
-          <TextArea
-            label="成功体験（役割・結果・工夫）"
-            value={answers.successes}
-            onChange={(v) => handleChange("successes", v)}
-          />
-          <TextArea label="失敗体験・学び" value={answers.failures} onChange={(v) => handleChange("failures", v)} />
-          <TextArea
-            label="働き方の好み（リモート/出社、チーム/個人、裁量など）"
-            value={answers.workStyle}
-            onChange={(v) => handleChange("workStyle", v)}
-          />
-          <TextArea
-            label="将来像（3-5年の仮のゴール）"
-            value={answers.future}
-            onChange={(v) => handleChange("future", v)}
-          />
-          <FormActions dirty={dirty} shortcut={false}>
-            <ConfirmDialog
-              trigger={
-                <Button type="button" variant="default" disabled={saving || locked}>
-                  {locked ? "実施済み" : saving ? "保存中..." : "保存する"}
-                </Button>
-              }
-              title="回答を保存しますか？"
-              description="回答は1回だけ保存できます。この内容で保存しますか？"
-              confirmLabel="保存する"
-              onConfirm={() => submit.mutate(answers)}
+          {locked ? (
+            // 答え終わったあとは、全部の答えを見返せるよう1つの画面に並べる
+            QUESTIONS.map((q) => (
+              <TextArea key={q.key} label={q.title} value={answers[q.key]} onChange={(v) => handleChange(q.key, v)} />
+            ))
+          ) : (
+            <QuestionStepper
+              dirty={dirty}
+              steps={QUESTIONS.map((q) => ({
+                key: q.key,
+                title: q.title,
+                hint: q.hint,
+                answered: answers[q.key].trim() !== "",
+                input: (
+                  <Textarea
+                    aria-label={q.title}
+                    value={answers[q.key]}
+                    onChange={(e) => handleChange(q.key, e.target.value)}
+                    rows={6}
+                    className="min-h-40 text-base"
+                  />
+                ),
+              }))}
+              submit={(unanswered) => (
+                <ConfirmDialog
+                  trigger={
+                    <Button type="button" variant="default" disabled={saving}>
+                      {saving ? "保存中..." : "保存する"}
+                    </Button>
+                  }
+                  title="回答を保存しますか？"
+                  description={`回答は1回だけ保存できます。${unanswered > 0 ? `まだ答えていない質問が${unanswered}問あります。` : ""}この内容で保存しますか？`}
+                  confirmLabel="保存する"
+                  onConfirm={() => submit.mutate(answers)}
+                />
+              )}
             />
-          </FormActions>
+          )}
           <ApiErrorMessage error={submit.error} />
           <LeaveGuard when={dirty && !saving} />
         </CardContent>
