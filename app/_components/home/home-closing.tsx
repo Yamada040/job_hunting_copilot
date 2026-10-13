@@ -1,44 +1,47 @@
 "use client";
 
 import Link from "next/link";
-import { ShieldCheckIcon } from "@heroicons/react/24/outline";
-import { motion } from "framer-motion";
+import { ArrowRightIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
-import { fadeInUp, homeCard, homeCardMuted, homeHeading } from "./theme";
+import { TiltCard, TiltLayer } from "../tilt-card";
+import { homeCardMuted, homeHeading } from "./theme";
 
 const securityPoints = [
-  { title: "暗号化通信", description: "全ての通信はSSLで保護" },
-  { title: "データ保護", description: "個人情報は厳格に管理" },
-  { title: "セキュア認証", description: "Google認証で安全ログイン" },
+  { title: "通信の暗号化", description: "通信はすべてHTTPSで暗号化しています" },
+  { title: "本人だけが見られる", description: "登録した内容は、本人以外は見られません" },
+  { title: "Googleでログイン", description: "新しいパスワードを作る必要はありません" },
 ];
-
-const MotionCard = motion.create(Card);
 
 export function HomeCallToAction() {
   return (
-    <MotionCard {...fadeInUp} className={cn("rounded-2xl p-10 text-center", homeCard)}>
-      <div className="mx-auto max-w-2xl space-y-6">
-        <h2 className={cn("text-3xl font-bold", homeHeading)}>今すぐ就活を効率化しませんか？</h2>
-        <p className="text-lg">無料で始められます。面倒な設定は不要で、登録後すぐに利用可能です。</p>
-        <div className="flex flex-wrap justify-center gap-4">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button asChild variant="default">
-              <Link href={ROUTES.LOGIN}>ログイン</Link>
-            </Button>
-          </motion.div>
-        </div>
-      </div>
-    </MotionCard>
+    <TiltCard maxTilt={4} className="items-center gap-6 rounded-3xl bg-foreground p-10 text-center text-background">
+      <TiltLayer depth={40}>
+        <h2 className="text-3xl leading-tight font-black tracking-tight sm:text-5xl">今日から、迷わない。</h2>
+      </TiltLayer>
+      <TiltLayer depth={25}>
+        <p className="text-base opacity-80">
+          無料で使えます。Googleアカウントでログインするだけで、すぐに始められます。
+        </p>
+      </TiltLayer>
+      <TiltLayer depth={35}>
+        <Button asChild variant="secondary" size="lg">
+          <Link href={ROUTES.LOGIN}>
+            ログインして始める
+            <ArrowRightIcon />
+          </Link>
+        </Button>
+      </TiltLayer>
+    </TiltCard>
   );
 }
 
 export function HomeSecurity() {
   return (
-    <MotionCard {...fadeInUp} className={cn("gap-4 rounded-2xl p-8", homeCardMuted)}>
+    <Card className={cn("gap-4 rounded-3xl p-6", homeCardMuted)}>
       <div className="flex items-center justify-center gap-3 text-slate-600">
         <ShieldCheckIcon className="h-6 w-6" />
         <p className="font-semibold">安全・安心なデータ管理</p>
@@ -52,6 +55,6 @@ export function HomeSecurity() {
           </div>
         ))}
       </div>
-    </MotionCard>
+    </Card>
   );
 }
