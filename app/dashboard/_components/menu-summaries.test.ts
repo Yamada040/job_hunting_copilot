@@ -44,6 +44,15 @@ describe("upcomingEvents", () => {
 
     expect(upcomingEvents(items, "2026-10-12")).toEqual([items[2], items[1], items[0]]);
   });
+  it("もう始まっている何日か続く予定は、最終日が今日以降なら今日の予定として先頭に並べる", () => {
+    const items = [
+      { date: "2026-10-13", time: "10:00" },
+      { date: "2026-10-10", endDate: "2026-10-14", time: null },
+      { date: "2026-10-08", endDate: "2026-10-11", time: null },
+    ];
+
+    expect(upcomingEvents(items, "2026-10-12")).toEqual([items[1], items[0]]);
+  });
 });
 
 describe("todayXp", () => {

@@ -462,6 +462,66 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/calendar-feed:
+    get:
+      operationId: getCalendarFeed
+      summary: カレンダーの購読用URLを作ってあるかを取得する
+      description: URLそのものは作ったときにしか返さない（トークンはハッシュだけを保存しているため）。
+      responses:
+        "200":
+          description: 購読用URLの状態
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarFeedStatus"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createCalendarFeed
+      summary: カレンダーの購読用URLを作る（作り直す）
+      description: 作り直すと、前に作ったURLは使えなくなる。返したトークンは二度と取得できない。
+      responses:
+        "201":
+          description: 作ったトークン。URLは /v1/calendar-feed/{token}
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarFeedCreated"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteCalendarFeed
+      summary: カレンダーの購読用URLを止める
+      responses:
+        "204":
+          description: 止めた（作っていなくても成功する）
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/calendar-feed/{token}:
+    get:
+      operationId: getCalendarFeedIcal
+      summary: 購読用URL。予定とESの締切を iCal 形式で返す
+      description: Googleカレンダーなどが、ログインせずに定期的に読みに来る。トークンが合わなければ 404 を返す。
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        "200":
+          description: iCal（RFC 5545）
+          content:
+            text/calendar:
+              schema:
+                type: string
+        default:
+          $ref: "#/components/responses/Problem"
+
   /v1/calendar-events/{calendarEventId}:
     parameters:
       - $ref: "#/components/parameters/CalendarEventId"
@@ -1427,10 +1487,34 @@ components:
       description: 予定の種類。日本語の表示名はフロントエンドが持つ
       enum: [es, interview, intern, other]
 
+    CalendarFeedStatus:
+      type: object
+      required: [enabled, createdAt]
+      properties:
+        enabled:
+          type: boolean
+          description: 購読用URLを作ってあるか
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: URLを作った日時。作っていなければ null
+
+    CalendarFeedCreated:
+      type: object
+      required: [token, createdAt]
+      properties:
+        token:
+          type: string
+          description: 購読用URLの秘密の部分。このときにしか返さない
+        createdAt:
+          type: string
+          format: date-time
+
     CalendarItem:
       type: object
       description: カレンダーの1件。source が event ならユーザーが登録した予定（id は予定のID）、es_deadline ならESの締切（id はESのID）
-      required: [id, source, title, type, date, time, company]
+      required: [id, source, title, type, date, endDate, time, company, url, note]
       properties:
         id:
           type: string
@@ -1445,6 +1529,11 @@ components:
         date:
           type: string
           format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: 何日か続く予定（インターンなど）の最終日。null なら1日だけ
         time:
           type: string
           nullable: true
@@ -1454,6 +1543,15 @@ components:
           allOf:
             - $ref: "#/components/schemas/CompanySummary"
           nullable: true
+        url:
+          type: string
+          nullable: true
+          description: リンク（オンライン面接のURLなど）
+        note:
+          type: string
+          nullable: true
+          maxLength: 2000
+          description: 備考
 
     CalendarEventCreate:
       type: object
@@ -1469,12 +1567,26 @@ components:
         date:
           type: string
           format: date
+        endDate:
+          type: string
+          format: date
+          description: 何日か続く予定の最終日（date 以降）。期間のある予定は終日として扱うので、time と一緒には送れない
         time:
           type: string
           pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
         companyId:
           type: string
           format: uuid
+        url:
+          type: string
+          maxLength: 500
+          # 画面でリンクとして開くので、javascript: などは受け付けない
+          pattern: "^https?://"
+          description: リンク（オンライン面接のURLなど）
+        note:
+          type: string
+          maxLength: 2000
+          description: 備考
 
     CalendarEventUpdate:
       type: object
@@ -1489,6 +1601,15 @@ components:
         date:
           type: string
           format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          # null で1日だけの予定に戻せるようにする
+          x-go-type: nullable.Nullable[string]
+          x-go-type-import:
+            path: github.com/oapi-codegen/nullable
+          x-go-type-skip-optional-pointer: true
         time:
           type: string
           nullable: true
@@ -1503,6 +1624,25 @@ components:
           format: uuid
           nullable: true
           # 時刻と同じく、null で企業とのひも付けを外せるようにする
+          x-go-type: nullable.Nullable[string]
+          x-go-type-import:
+            path: github.com/oapi-codegen/nullable
+          x-go-type-skip-optional-pointer: true
+        url:
+          type: string
+          nullable: true
+          maxLength: 500
+          pattern: "^https?://"
+          # 時刻と同じく、null でリンクを消せるようにする
+          x-go-type: nullable.Nullable[string]
+          x-go-type-import:
+            path: github.com/oapi-codegen/nullable
+          x-go-type-skip-optional-pointer: true
+        note:
+          type: string
+          nullable: true
+          maxLength: 2000
+          # null または空文字で備考を消せるようにする
           x-go-type: nullable.Nullable[string]
           x-go-type-import:
             path: github.com/oapi-codegen/nullable

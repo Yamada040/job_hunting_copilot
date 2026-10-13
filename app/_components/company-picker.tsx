@@ -10,13 +10,15 @@ import { ApiErrorMessage } from "./api-error-message";
 type Props = {
   value: CompanySummary | null;
   onChange: (company: CompanySummary | null) => void;
+  /** 何も選んでいないときの説明。任意の欄では「（任意）」と添える */
+  placeholder?: string;
 };
 
 /**
  * 企業を選ぶ欄。入力した名前で登録済みの企業を候補に出し、見つからなければその場で新しく登録できる
  * （どの画面から企業を登録しても、同じ「企業の登録」の操作としてXPのルールが適用される）。
  */
-export function CompanyPicker({ value, onChange }: Props) {
+export function CompanyPicker({ value, onChange, placeholder = "企業名を入力して選ぶ" }: Props) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const { data: candidates } = useCompanies(query.trim());
@@ -46,7 +48,7 @@ export function CompanyPicker({ value, onChange }: Props) {
         }}
         onFocus={() => setOpen(true)}
         maxLength={100}
-        placeholder="企業名を入力して選ぶ"
+        placeholder={placeholder}
         aria-label="企業"
       />
       {open && (

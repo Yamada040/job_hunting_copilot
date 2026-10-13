@@ -264,6 +264,15 @@ type CalendarEvent struct {
 	Time      pgtype.Time
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	Url       *string
+	EndDate   *time.Time
+	Note      *string
+}
+
+type CalendarFeed struct {
+	UserID    uuid.UUID
+	TokenHash []byte
+	CreatedAt time.Time
 }
 
 type Company struct {

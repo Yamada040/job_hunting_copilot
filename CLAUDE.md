@@ -145,7 +145,8 @@ backend/
 - `companies`: 企業（中心のエンティティ）。正規化した企業名（`normalized_name`）はユーザーごとに一意
 - `es_entries` / `interview_logs`: ES・面接ログ。`company_id` は必須
 - `es_reviews`: ESのAI添削の履歴（設問ごとの3観点の点数と修正版）。点数の推移を見せるため、上書きせず1回ずつ残す
-- `calendar_events`: ユーザーが登録した予定（`company_id` は任意）。カレンダーにはESの締切も混ぜて表示する（バックエンドが組み立てる）
+- `calendar_events`: ユーザーが登録した予定（`company_id` は任意。`url` はオンライン面接などのリンクで、画面でリンクとして開くので http(s) に限る）。カレンダーにはESの締切も混ぜて表示する（バックエンドが組み立てる）
+- `calendar_feeds`: カレンダーの購読用URL（iCal。Googleカレンダーなどが `GET /v1/calendar-feed/{token}` をログインせずに読む）。トークンはハッシュだけを保存し、URLは作ったときにだけ見せる
 - `xp_logs`: XPの獲得履歴。`(user_id, action, ref_id)` がユニークで、同じ対象への二重付与をDBが防ぐ
 - `aptitude_results` / `self_analysis_results`: 1人1件
 - `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録

@@ -5,12 +5,13 @@ import { useActionState, useMemo, useOptimistic, useReducer, useState, useTransi
 
 import { calendarKeys, createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from "@/lib/api/calendar";
 import { TYPE_LABEL } from "./calendar/constants";
-import { DayEventDialog } from "./calendar/day-event-dialog";
+import { EventDialog } from "./calendar/event-dialog";
+import { eventLink, eventTiming } from "./calendar/event-fields";
 import { EventSummary } from "./calendar/event-summary";
 import { MonthGrid } from "./calendar/month-grid";
 import { emptyForm, modalReducer, ModalState, optimisticEventsReducer } from "./calendar/reducer";
-import { CalendarDayCell, CalendarEvent } from "./calendar/types";
-import { formatDateKey } from "./calendar/utils";
+import { CalendarEvent } from "./calendar/types";
+import { formatDateKey, groupByDate, monthCells, overlaps, sortByTime } from "./calendar/utils";
 
 type Props = {
   events: CalendarEvent[];
@@ -26,84 +27,35 @@ export function InteractiveCalendar({ events }: Props) {
   const [optimisticEvents, applyOptimisticEvents] = useOptimistic(events, optimisticEventsReducer);
   const [, startDeleteTransition] = useTransition();
   const [modalState, dispatch] = useReducer(modalReducer, null, (): ModalState => ({
-    isModalOpen: false,
+    view: null,
     selectedDate: formatDateKey(new Date()),
-    editingId: null,
+    selectedEvent: null,
     formState: { ...emptyForm },
     deletingId: null,
+    error: null,
   }));
-  const { isModalOpen, selectedDate, editingId, formState, deletingId } = modalState;
+  const { selectedDate, formState } = modalState;
+  const editingId = modalState.view === "edit" ? (modalState.selectedEvent?.id ?? null) : null;
   const todayKey = formatDateKey(new Date());
   const weekdayLabel = ["日", "月", "火", "水", "木", "金", "土"];
 
-  const monthDays = useMemo<CalendarDayCell[]>(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDayIndex = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const prevMonthDays = new Date(year, month, 0).getDate();
+  const monthDays = useMemo(() => monthCells(currentMonth), [currentMonth]);
 
-    const cells: { date: string; inCurrentMonth: boolean }[] = [];
-
-    for (let i = firstDayIndex - 1; i >= 0; i -= 1) {
-      const day = prevMonthDays - i;
-      const date = formatDateKey(new Date(year, month - 1, day));
-      cells.push({ date, inCurrentMonth: false });
-    }
-
-    for (let d = 1; d <= daysInMonth; d += 1) {
-      const date = formatDateKey(new Date(year, month, d));
-      cells.push({ date, inCurrentMonth: true });
-    }
-
-    const remainder = cells.length % 7;
-    if (remainder !== 0) {
-      const toAdd = 7 - remainder;
-      for (let i = 1; i <= toAdd; i += 1) {
-        const date = formatDateKey(new Date(year, month + 1, i));
-        cells.push({ date, inCurrentMonth: false });
-      }
-    }
-
-    return cells;
-  }, [currentMonth]);
-
-  const eventsByDate = useMemo(() => {
-    return optimisticEvents.reduce<Record<string, CalendarEvent[]>>((acc, evt) => {
-      const key = evt.date;
-      acc[key] = acc[key] ? [...acc[key], evt] : [evt];
-      return acc;
-    }, {});
-  }, [optimisticEvents]);
+  const eventsByDate = useMemo(() => groupByDate(optimisticEvents), [optimisticEvents]);
 
   const todayEvents = useMemo(() => {
-    return (eventsByDate[todayKey] || []).slice().sort((a, b) => {
-      const ta = a.time || "99:99";
-      const tb = b.time || "99:99";
-      return ta.localeCompare(tb);
-    });
+    return sortByTime(eventsByDate[todayKey] || []);
   }, [eventsByDate, todayKey]);
 
+  // 今日から今週の土曜までに重なる予定。もう始まっている何日か続く予定は、今日の予定として並べる
   const weekEvents = useMemo(() => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const endOfWeek = new Date(now);
-    endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
-    endOfWeek.setHours(23, 59, 59, 999);
-
+    const endOfWeek = formatDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + (6 - now.getDay())));
+    const sortKey = (evt: CalendarEvent) => `${evt.date < todayKey ? todayKey : evt.date} ${evt.time || "99:99"}`;
     return optimisticEvents
-      .filter((evt) => {
-        if (!evt.date) return false;
-        const date = new Date(evt.date);
-        if (Number.isNaN(date.getTime())) return false;
-        date.setHours(0, 0, 0, 0);
-        return date >= now && date <= endOfWeek;
-      })
-      .sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-        return (a.time || "99:99").localeCompare(b.time || "99:99");
-      });
-  }, [optimisticEvents]);
+      .filter((evt) => overlaps(evt, todayKey, endOfWeek))
+      .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  }, [optimisticEvents, todayKey]);
 
   const handlePrevMonth = () => {
     setCurrentMonth((prev) => {
@@ -119,11 +71,9 @@ export function InteractiveCalendar({ events }: Props) {
     });
   };
 
-  const openModalForDate = (date: string) => {
-    dispatch({ type: "openModalForDate", date });
-  };
-
   const [, submitAction, saving] = useActionState<null, FormData>(async () => {
+    const url = eventLink(formState);
+    const { time, endDate } = eventTiming({ ...formState, date: selectedDate });
     // 一時ID（新規時）で即時反映し、API完了後に実データで置き換える
     applyOptimisticEvents({
       type: "save",
@@ -134,19 +84,24 @@ export function InteractiveCalendar({ events }: Props) {
         company: formState.company?.name ?? null,
         companyId: formState.company?.id ?? null,
         type: formState.type,
-        time: formState.time || null,
+        time,
+        endDate,
+        url,
+        note: formState.note || null,
       },
     });
     try {
       const title = formState.title || "予定";
-      const time = formState.time || null;
       if (editingId) {
         await updateCalendarEvent(editingId, {
           date: selectedDate,
           title,
           type: formState.type,
           time,
+          endDate,
           companyId: formState.company?.id ?? null,
+          url,
+          note: formState.note || null,
         });
       } else {
         await createCalendarEvent({
@@ -154,21 +109,22 @@ export function InteractiveCalendar({ events }: Props) {
           title,
           type: formState.type,
           time: time ?? undefined,
+          endDate: endDate ?? undefined,
           companyId: formState.company?.id,
+          url: url ?? undefined,
+          note: formState.note || undefined,
         });
       }
       await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
       dispatch({ type: "saveSuccess" });
     } catch (err) {
       console.error(err);
-      alert("保存に失敗しました。再度お試しください。");
+      dispatch({ type: "saveFailed", message: "保存に失敗しました。時間をおいてもう一度お試しください。" });
     }
     return null;
   }, null);
 
-  const handleEditPrefill = (evt: CalendarEvent) => {
-    dispatch({ type: "editPrefill", event: evt });
-  };
+  const openDetail = (evt: CalendarEvent) => dispatch({ type: "openDetail", event: evt });
 
   const handleDeleteEvent = (evt: CalendarEvent) => {
     if (evt.id.startsWith("es-") || evt.id.startsWith("optimistic-")) return;
@@ -180,12 +136,10 @@ export function InteractiveCalendar({ events }: Props) {
       try {
         await deleteCalendarEvent(evt.id);
         await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
-        dispatch({ type: "deleteSuccess", id: evt.id });
+        dispatch({ type: "deleteSuccess" });
       } catch (err) {
         console.error(err);
-        alert("削除に失敗しました。再度お試しください。");
-      } finally {
-        dispatch({ type: "deleteEnd" });
+        dispatch({ type: "deleteFailed", message: "削除に失敗しました。時間をおいてもう一度お試しください。" });
       }
     });
   };
@@ -196,10 +150,13 @@ export function InteractiveCalendar({ events }: Props) {
         currentMonth={currentMonth}
         monthDays={monthDays}
         todayKey={todayKey}
+        eventsByDate={eventsByDate}
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}
-        onAddToday={() => openModalForDate(formatDateKey(new Date()))}
-        onSelectDate={openModalForDate}
+        onAddToday={() => dispatch({ type: "openCreate", date: formatDateKey(new Date()) })}
+        onCreate={(date) => dispatch({ type: "openCreate", date })}
+        onOpenDay={(date) => dispatch({ type: "openDay", date })}
+        onOpenEvent={openDetail}
       />
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -208,7 +165,7 @@ export function InteractiveCalendar({ events }: Props) {
           events={todayEvents}
           emptyText="今日の予定はありません。"
           describe={(evt) => `${TYPE_LABEL[evt.type]}${evt.time ? ` · ${evt.time}` : ""}`}
-          onSelect={handleEditPrefill}
+          onSelect={openDetail}
         />
         <EventSummary
           title="今週の予定"
@@ -219,17 +176,13 @@ export function InteractiveCalendar({ events }: Props) {
             const label = `${d.getMonth() + 1}/${d.getDate()}(${weekdayLabel[d.getDay()]})`;
             return `${label} / ${TYPE_LABEL[evt.type]}${evt.time ? ` · ${evt.time}` : ""}`;
           }}
-          onSelect={handleEditPrefill}
+          onSelect={openDetail}
         />
       </div>
 
-      <DayEventDialog
-        open={isModalOpen}
-        selectedDate={selectedDate}
-        events={eventsByDate[selectedDate] ?? []}
-        formState={formState}
-        editingId={editingId}
-        deletingId={deletingId}
+      <EventDialog
+        state={modalState}
+        dayEvents={eventsByDate[selectedDate] ?? []}
         saving={saving}
         dispatch={dispatch}
         submitAction={submitAction}
