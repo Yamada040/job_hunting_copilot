@@ -52,3 +52,12 @@ func TestBuildICalEscapesTextAndFoldsLongLines(t *testing.T) {
 		t.Errorf("記号を書き換えていません: %q", unfold(got))
 	}
 }
+
+func TestBuildICalWritesMultiDayEventAsAllDay(t *testing.T) {
+	item := Item{ID: uuid.New(), Source: SourceEvent, Title: "夏インターン", Type: db.CalendarEventTypeIntern, Date: *day("2026-10-30"), EndDate: day("2026-11-02")}
+	got := unfold(BuildICal([]Item{item}, time.Now()))
+	// 終日の終わりは最終日の翌日
+	if want := "DTSTART;VALUE=DATE:20261030\r\nDTEND;VALUE=DATE:20261103\r\n"; !strings.Contains(got, want) {
+		t.Errorf("iCal に %q がありません\n%s", want, got)
+	}
+}

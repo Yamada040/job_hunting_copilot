@@ -6,7 +6,12 @@ import { useCreateCalendarEvent } from "@/lib/api/calendar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
-import { EventFields, eventLink, type EventFieldValues } from "@/app/calendar/_components/calendar/event-fields";
+import {
+  EventFields,
+  eventLink,
+  eventTiming,
+  type EventFieldValues,
+} from "@/app/calendar/_components/calendar/event-fields";
 import { formatDateKey } from "@/app/calendar/_components/calendar/utils";
 
 /** 画面を移らずに、その場で予定を追加するダイアログ。入れる項目と見た目はカレンダーの画面と同じ。 */
@@ -31,7 +36,10 @@ function QuickEventForm({ onDone }: { onDone: () => void }) {
     title: "",
     type: "interview",
     date: formatDateKey(new Date()),
+    // カレンダーの画面と同じく終日から始める（時刻を必ず入れさせると、すぐに足しにくくなるため）
+    allDay: true,
     time: "",
+    endDate: "",
     company: null,
     url: "",
   }));
@@ -41,12 +49,14 @@ function QuickEventForm({ onDone }: { onDone: () => void }) {
       className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
+        const { time, endDate } = eventTiming(values);
         createEvent.mutate(
           {
             title: values.title,
             type: values.type,
             date: values.date,
-            time: values.time || undefined,
+            time: time ?? undefined,
+            endDate: endDate ?? undefined,
             companyId: values.company?.id,
             url: eventLink(values) ?? undefined,
           },

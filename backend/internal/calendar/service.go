@@ -28,11 +28,13 @@ const (
 
 // Item は、カレンダーの1件。Source が SourceEvent なら ID は予定のID、SourceESDeadline なら ESのID。
 type Item struct {
-	ID          uuid.UUID
-	Source      Source
-	Title       string
-	Type        db.CalendarEventType
-	Date        time.Time
+	ID     uuid.UUID
+	Source Source
+	Title  string
+	Type   db.CalendarEventType
+	Date   time.Time
+	// EndDate は、何日か続く予定の最終日。nil なら1日だけ
+	EndDate     *time.Time
 	Time        *string // HH:MM
 	CompanyID   *uuid.UUID
 	CompanyName *string
@@ -45,6 +47,9 @@ type Fields struct {
 	Title *string
 	Type  *db.CalendarEventType
 	Date  *time.Time
+	// SetEndDate が true のときだけ EndDate を書き換える（登録では EndDate をそのまま使う）。EndDate が nil なら1日だけの予定にする
+	SetEndDate bool
+	EndDate    *time.Time
 	// SetTime が true のときだけ Time を書き換える。Time が nil なら時刻を消す
 	SetTime bool
 	Time    *string
@@ -107,6 +112,10 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (Item,
 	if f.Type != nil {
 		eventType = *f.Type
 	}
+	endDate, err := checkSpan(*f.Date, f.EndDate, f.Time)
+	if err != nil {
+		return Item{}, err
+	}
 	t, err := toPgTime(f.Time)
 	if err != nil {
 		return Item{}, err
@@ -121,7 +130,7 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (Item,
 			}
 		}
 		id, err := q.CreateCalendarEvent(ctx, db.CreateCalendarEventParams{
-			UserID: userID, CompanyID: f.CompanyID, Title: *f.Title, Type: eventType, Date: *f.Date, Time: t,
+			UserID: userID, CompanyID: f.CompanyID, Title: *f.Title, Type: eventType, Date: *f.Date, EndDate: endDate, Time: t,
 			Url: platform.EmptyToNil(platform.TrimPtr(f.URL)),
 		})
 		if err != nil {
@@ -146,6 +155,28 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, f Fields) (I
 	var item Item
 	err = platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
+		// 期間と時刻の決まりは、変えない項目も含めた更新後の値で確かめる（日付だけを変えて最終日より後にする、など）
+		if f.Date != nil || f.SetEndDate || f.SetTime {
+			current, err := get(ctx, q, userID, id)
+			if err != nil {
+				return err
+			}
+			date, end, at := current.Date, current.EndDate, current.Time
+			if f.Date != nil {
+				date = *f.Date
+			}
+			if f.SetEndDate {
+				end = f.EndDate
+			}
+			if f.SetTime {
+				at = f.Time
+			}
+			end, err = checkSpan(date, end, at)
+			if err != nil {
+				return err
+			}
+			f.SetEndDate, f.EndDate = true, end
+		}
 		if f.SetCompanyID && f.CompanyID != nil {
 			if err := company.EnsureOwned(ctx, q, userID, *f.CompanyID); err != nil {
 				return err
@@ -157,6 +188,7 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, f Fields) (I
 			SetTitle: f.Title != nil, Title: f.Title,
 			SetType: f.Type != nil, Type: f.Type,
 			SetDate: f.Date != nil, Date: f.Date,
+			SetEndDate: f.SetEndDate, EndDate: f.EndDate,
 			SetTime: f.SetTime, Time: t,
 			SetUrl: f.SetURL, Url: platform.EmptyToNil(platform.TrimPtr(f.URL)),
 		}
@@ -197,9 +229,32 @@ func get(ctx context.Context, q *db.Queries, userID, id uuid.UUID) (Item, error)
 
 func fromEvent(e db.CalendarEvent, companyName *string) Item {
 	return Item{
-		ID: e.ID, Source: SourceEvent, Title: e.Title, Type: e.Type, Date: e.Date,
+		ID: e.ID, Source: SourceEvent, Title: e.Title, Type: e.Type, Date: e.Date, EndDate: e.EndDate,
 		Time: fromPgTime(e.Time), CompanyID: e.CompanyID, CompanyName: companyName, URL: e.Url,
 	}
+}
+
+// checkSpan は、予定の期間を確かめ、保存する最終日を返す。最終日が初日と同じなら1日だけの予定として nil にする。
+// 期間のある予定（インターンなど）は終日として扱うので、時刻とは一緒にできない。
+func checkSpan(date time.Time, end *time.Time, at *string) (*time.Time, error) {
+	if end == nil || end.Equal(date) {
+		return nil, nil
+	}
+	if end.Before(date) {
+		return nil, &platform.Error{
+			Kind:    platform.KindInvalid,
+			Message: "入力内容に誤りがあります",
+			Fields:  []platform.FieldError{{Field: "endDate", Message: "最終日は初日以降にしてください"}},
+		}
+	}
+	if at != nil {
+		return nil, &platform.Error{
+			Kind:    platform.KindInvalid,
+			Message: "入力内容に誤りがあります",
+			Fields:  []platform.FieldError{{Field: "time", Message: "期間のある予定は終日になるので、時刻は入れられません"}},
+		}
+	}
+	return end, nil
 }
 
 // toPgTime は、HH:MM の文字列をDBの time 型にする。形式は OpenAPI の pattern で検証済み。

@@ -43,7 +43,11 @@ func BuildICal(items []Item, now time.Time) string {
 		write("BEGIN:VEVENT")
 		write(fmt.Sprintf("UID:%s-%s@shukatsu-copilot", item.Source, item.ID))
 		write("DTSTAMP:" + stamp)
-		if start, ok := startTime(item); ok {
+		if item.EndDate != nil {
+			// 何日か続く予定は終日。iCal の終日の終わりは「最終日の翌日」を書く
+			write("DTSTART;VALUE=DATE:" + item.Date.Format("20060102"))
+			write("DTEND;VALUE=DATE:" + item.EndDate.AddDate(0, 0, 1).Format("20060102"))
+		} else if start, ok := startTime(item); ok {
 			write("DTSTART:" + start.UTC().Format("20060102T150405Z"))
 			write("DTEND:" + start.Add(eventDuration).UTC().Format("20060102T150405Z"))
 		} else {

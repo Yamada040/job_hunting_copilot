@@ -25,18 +25,19 @@ export function unreviewedInterviews(logs: Pick<InterviewLog, "aiResult">[]) {
   return logs.filter((log) => log.aiResult === null);
 }
 
-/** 今日から withinDays 日以内の予定（ESの締切を含む）を、日付の早い順に並べる。 */
-export function upcomingEvents<T extends Pick<CalendarItem, "date" | "time">>(
+/**
+ * 今日から withinDays 日以内の予定（ESの締切を含む）を、日付の早い順に並べる。
+ * 何日か続く予定（インターンなど）は、もう始まっていても最終日が今日以降なら含め、今日の予定として並べる。
+ */
+export function upcomingEvents<T extends Pick<CalendarItem, "date" | "time"> & { endDate?: string | null }>(
   items: T[],
   today: string,
   withinDays = 7,
 ) {
+  const sortKey = (item: T) => `${item.date < today ? today : item.date} ${item.time ?? ""}`;
   return items
-    .filter((item) => {
-      const days = daysFrom(today, item.date);
-      return days >= 0 && days <= withinDays;
-    })
-    .sort((a, b) => `${a.date} ${a.time ?? ""}`.localeCompare(`${b.date} ${b.time ?? ""}`));
+    .filter((item) => daysFrom(today, item.date) <= withinDays && daysFrom(today, item.endDate ?? item.date) >= 0)
+    .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 }
 
 /** 今日（端末の日付）に獲得したXPの合計。 */
@@ -47,7 +48,8 @@ export function todayXp(logs: Pick<XpLog, "xp" | "createdAt">[], today: string) 
 /** 予定の日が今日から見ていつか。今日・明日、それ以降は「○日後」。 */
 export function relativeDay(today: string, date: string): string {
   const days = daysFrom(today, date);
-  if (days === 0) return "今日";
+  // もう始まっている何日か続く予定も、今日の予定として言う
+  if (days <= 0) return "今日";
   if (days === 1) return "明日";
   return `${days}日後`;
 }

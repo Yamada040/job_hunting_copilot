@@ -43,6 +43,7 @@ func (h Handler) CreateCalendarEvent(ctx context.Context, req openapi.CreateCale
 		Title:     &b.Title,
 		Type:      (*db.CalendarEventType)(b.Type),
 		Date:      &b.Date.Time,
+		EndDate:   dateOrNil(b.EndDate),
 		Time:      b.Time,
 		CompanyID: b.CompanyId,
 		URL:       b.Url,
@@ -66,6 +67,18 @@ func (h Handler) UpdateCalendarEvent(ctx context.Context, req openapi.UpdateCale
 		SetTime:      b.Time.IsSpecified(),
 		SetCompanyID: b.CompanyId.IsSpecified(),
 		SetURL:       b.Url.IsSpecified(),
+		SetEndDate:   b.EndDate.IsSpecified(),
+	}
+	if b.EndDate.IsSpecified() && !b.EndDate.IsNull() {
+		d, err := time.Parse(time.DateOnly, b.EndDate.MustGet())
+		if err != nil {
+			return nil, &platform.Error{
+				Kind:    platform.KindInvalid,
+				Message: "入力内容に誤りがあります",
+				Fields:  []platform.FieldError{{Field: "endDate", Message: "日付の形式が正しくありません"}},
+			}
+		}
+		f.EndDate = &d
 	}
 	if b.Url.IsSpecified() && !b.Url.IsNull() {
 		u := b.Url.MustGet()
@@ -122,8 +135,16 @@ func toAPI(item Item) openapi.CalendarItem {
 		Title:   item.Title,
 		Type:    openapi.CalendarEventType(item.Type),
 		Date:    openapi_types.Date{Time: item.Date},
+		EndDate: dateOrNilAPI(item.EndDate),
 		Time:    item.Time,
 		Company: company,
 		Url:     item.URL,
 	}
+}
+
+func dateOrNilAPI(d *time.Time) *openapi_types.Date {
+	if d == nil {
+		return nil
+	}
+	return &openapi_types.Date{Time: *d}
 }

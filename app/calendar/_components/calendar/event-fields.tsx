@@ -13,10 +13,23 @@ export type EventFieldValues = {
   title: string;
   type: CalendarEvent["type"];
   date: string;
+  allDay: boolean;
   time: string;
+  endDate: string;
   company: CompanySummary | null;
   url: string;
 };
+
+/**
+ * 保存する時刻と最終日。終日なら時刻を入れない。期間（最終日）はインターンの終日の予定だけで、
+ * 初日と同じか前なら1日だけの予定にする。
+ */
+export function eventTiming(values: Pick<EventFieldValues, "type" | "date" | "allDay" | "time" | "endDate">) {
+  const time = values.allDay ? null : values.time || null;
+  const endDate =
+    values.allDay && values.type === "intern" && values.endDate && values.endDate > values.date ? values.endDate : null;
+  return { time, endDate };
+}
 
 /** 保存するリンク。リンクの欄は面接のときだけ出すので、ほかの種類では入っていても保存しない。 */
 export function eventLink(values: Pick<EventFieldValues, "type" | "url">): string | null {
@@ -79,27 +92,54 @@ export function EventFields({
 
       <div className="flex items-start gap-3">
         <ClockIcon className="mt-2.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
-        <div className="grid flex-1 gap-1">
-          <div className="flex flex-wrap gap-2">
+        <div className="grid flex-1 gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               id={`${idPrefix}-date`}
-              aria-label="日付"
+              aria-label={value.allDay && value.type === "intern" ? "初日" : "日付"}
               type="date"
               value={value.date}
               onChange={(e) => onChange({ date: e.target.value })}
               required
               className="h-10 w-auto"
             />
-            <Input
-              id={`${idPrefix}-time`}
-              aria-label="時刻"
-              type="time"
-              value={value.time}
-              onChange={(e) => onChange({ time: e.target.value })}
-              className="h-10 w-auto"
-            />
+            {/* 期間は、何日か続くことが多いインターンの終日の予定だけで選べる */}
+            {value.allDay && value.type === "intern" && (
+              <>
+                <span className="text-muted-foreground">〜</span>
+                <Input
+                  id={`${idPrefix}-end-date`}
+                  aria-label="最終日"
+                  type="date"
+                  value={value.endDate}
+                  min={value.date}
+                  onChange={(e) => onChange({ endDate: e.target.value })}
+                  className="h-10 w-auto"
+                />
+              </>
+            )}
+            {!value.allDay && (
+              <Input
+                id={`${idPrefix}-time`}
+                aria-label="時刻"
+                type="time"
+                value={value.time}
+                onChange={(e) => onChange({ time: e.target.value })}
+                required
+                className="h-10 w-auto"
+              />
+            )}
           </div>
-          <p className="text-xs text-muted-foreground">時刻を空にすると終日の予定になります</p>
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={value.allDay}
+              // 終日にしたら時刻を、時刻を入れるなら期間を消す（期間のある予定は終日として扱うため）
+              onChange={(e) => onChange(e.target.checked ? { allDay: true, time: "" } : { allDay: false, endDate: "" })}
+              className="h-4 w-4 accent-primary"
+            />
+            終日
+          </label>
         </div>
       </div>
 

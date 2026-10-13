@@ -154,3 +154,39 @@ func TestEventLinkCanBeSetAndCleared(t *testing.T) {
 		t.Fatalf("URL = %v, want リンクを消した状態", *updated.URL)
 	}
 }
+
+func TestEventSpanRules(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	s := NewService(pool)
+	intern := db.CalendarEventTypeIntern
+
+	item, err := s.Create(t.Context(), userID, Fields{Title: ptr("夏インターン"), Type: &intern, Date: day("2026-10-30"), EndDate: day("2026-11-02")})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if item.EndDate == nil || item.EndDate.Format(time.DateOnly) != "2026-11-02" {
+		t.Fatalf("EndDate = %v, want 2026-11-02", item.EndDate)
+	}
+
+	// 期間に少しでも重なれば、絞り込んだ一覧に入る
+	items, err := s.List(t.Context(), userID, day("2026-11-01"), day("2026-11-30"))
+	if err != nil || len(items) != 1 {
+		t.Fatalf("List = %v, %v, want 期間の重なる1件", items, err)
+	}
+
+	_, err = s.Create(t.Context(), userID, Fields{Title: ptr("逆"), Date: day("2026-11-05"), EndDate: day("2026-11-01")})
+	assertKind(t, err, platform.KindInvalid)
+	_, err = s.Create(t.Context(), userID, Fields{Title: ptr("時刻つき"), Date: day("2026-11-05"), EndDate: day("2026-11-06"), Time: ptr("10:00")})
+	assertKind(t, err, platform.KindInvalid)
+
+	// 更新後の値で確かめる: 初日だけを最終日より後にはできない
+	_, err = s.Update(t.Context(), userID, item.ID, Fields{Date: day("2026-11-10")})
+	assertKind(t, err, platform.KindInvalid)
+
+	// 最終日を初日と同じにすると、1日だけの予定になる
+	oneDay, err := s.Update(t.Context(), userID, item.ID, Fields{SetEndDate: true, EndDate: day("2026-10-30")})
+	if err != nil || oneDay.EndDate != nil {
+		t.Fatalf("Update = %+v, %v, want 1日だけの予定", oneDay, err)
+	}
+}

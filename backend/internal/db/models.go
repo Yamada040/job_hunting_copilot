@@ -265,6 +265,7 @@ type CalendarEvent struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Url       *string
+	EndDate   *time.Time
 }
 
 type CalendarFeed struct {

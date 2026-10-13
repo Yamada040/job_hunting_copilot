@@ -51,3 +51,21 @@ export function monthCells(month: Date): CalendarDayCell[] {
   }
   return cells;
 }
+
+/** 予定を日付ごとに分ける。何日か続く予定（インターンなど）は、初日から最終日までの毎日に入れる。 */
+export function groupByDate<T extends { date: string; endDate?: string | null }>(events: T[]) {
+  const byDate: Record<string, T[]> = {};
+  for (const event of events) {
+    const [year, month, day] = event.date.split("-").map(Number);
+    const last = event.endDate && event.endDate > event.date ? event.endDate : event.date;
+    for (let d = new Date(year, month - 1, day); formatDateKey(d) <= last; d.setDate(d.getDate() + 1)) {
+      (byDate[formatDateKey(d)] ??= []).push(event);
+    }
+  }
+  return byDate;
+}
+
+/** 予定が from 〜 to（どちらも含む）に少しでも重なるか。 */
+export function overlaps(event: { date: string; endDate?: string | null }, from: string, to: string) {
+  return (event.endDate ?? event.date) >= from && event.date <= to;
+}

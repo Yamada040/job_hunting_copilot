@@ -4,7 +4,10 @@ export const emptyForm: CalendarFormState = {
   title: "",
   company: null,
   type: "interview" as CalendarEvent["type"],
+  // Googleカレンダーの月の表示と同じく、日付を押して作る予定は終日から始める
+  allDay: true,
   time: "",
+  endDate: "",
   url: "",
 };
 
@@ -68,7 +71,9 @@ export function modalReducer(state: ModalState, action: ModalAction): ModalState
               ? { id: action.event.companyId, name: action.event.company }
               : null,
           type: action.event.type,
+          allDay: !action.event.time,
           time: action.event.time || "",
+          endDate: action.event.endDate || "",
           url: action.event.url || "",
         },
         error: null,

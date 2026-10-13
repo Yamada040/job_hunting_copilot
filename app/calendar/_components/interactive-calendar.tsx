@@ -6,12 +6,12 @@ import { useActionState, useMemo, useOptimistic, useReducer, useState, useTransi
 import { calendarKeys, createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from "@/lib/api/calendar";
 import { TYPE_LABEL } from "./calendar/constants";
 import { EventDialog } from "./calendar/event-dialog";
-import { eventLink } from "./calendar/event-fields";
+import { eventLink, eventTiming } from "./calendar/event-fields";
 import { EventSummary } from "./calendar/event-summary";
 import { MonthGrid } from "./calendar/month-grid";
 import { emptyForm, modalReducer, ModalState, optimisticEventsReducer } from "./calendar/reducer";
 import { CalendarEvent } from "./calendar/types";
-import { formatDateKey, monthCells, sortByTime } from "./calendar/utils";
+import { formatDateKey, groupByDate, monthCells, overlaps, sortByTime } from "./calendar/utils";
 
 type Props = {
   events: CalendarEvent[];
@@ -41,38 +41,21 @@ export function InteractiveCalendar({ events }: Props) {
 
   const monthDays = useMemo(() => monthCells(currentMonth), [currentMonth]);
 
-  const eventsByDate = useMemo(() => {
-    return optimisticEvents.reduce<Record<string, CalendarEvent[]>>((acc, evt) => {
-      const key = evt.date;
-      acc[key] = acc[key] ? [...acc[key], evt] : [evt];
-      return acc;
-    }, {});
-  }, [optimisticEvents]);
+  const eventsByDate = useMemo(() => groupByDate(optimisticEvents), [optimisticEvents]);
 
   const todayEvents = useMemo(() => {
     return sortByTime(eventsByDate[todayKey] || []);
   }, [eventsByDate, todayKey]);
 
+  // 今日から今週の土曜までに重なる予定。もう始まっている何日か続く予定は、今日の予定として並べる
   const weekEvents = useMemo(() => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const endOfWeek = new Date(now);
-    endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
-    endOfWeek.setHours(23, 59, 59, 999);
-
+    const endOfWeek = formatDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + (6 - now.getDay())));
+    const sortKey = (evt: CalendarEvent) => `${evt.date < todayKey ? todayKey : evt.date} ${evt.time || "99:99"}`;
     return optimisticEvents
-      .filter((evt) => {
-        if (!evt.date) return false;
-        const date = new Date(evt.date);
-        if (Number.isNaN(date.getTime())) return false;
-        date.setHours(0, 0, 0, 0);
-        return date >= now && date <= endOfWeek;
-      })
-      .sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-        return (a.time || "99:99").localeCompare(b.time || "99:99");
-      });
-  }, [optimisticEvents]);
+      .filter((evt) => overlaps(evt, todayKey, endOfWeek))
+      .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  }, [optimisticEvents, todayKey]);
 
   const handlePrevMonth = () => {
     setCurrentMonth((prev) => {
@@ -90,6 +73,7 @@ export function InteractiveCalendar({ events }: Props) {
 
   const [, submitAction, saving] = useActionState<null, FormData>(async () => {
     const url = eventLink(formState);
+    const { time, endDate } = eventTiming({ ...formState, date: selectedDate });
     // 一時ID（新規時）で即時反映し、API完了後に実データで置き換える
     applyOptimisticEvents({
       type: "save",
@@ -100,19 +84,20 @@ export function InteractiveCalendar({ events }: Props) {
         company: formState.company?.name ?? null,
         companyId: formState.company?.id ?? null,
         type: formState.type,
-        time: formState.time || null,
+        time,
+        endDate,
         url,
       },
     });
     try {
       const title = formState.title || "予定";
-      const time = formState.time || null;
       if (editingId) {
         await updateCalendarEvent(editingId, {
           date: selectedDate,
           title,
           type: formState.type,
           time,
+          endDate,
           companyId: formState.company?.id ?? null,
           url,
         });
@@ -122,6 +107,7 @@ export function InteractiveCalendar({ events }: Props) {
           title,
           type: formState.type,
           time: time ?? undefined,
+          endDate: endDate ?? undefined,
           companyId: formState.company?.id,
           url: url ?? undefined,
         });

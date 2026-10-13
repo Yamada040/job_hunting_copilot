@@ -47,7 +47,9 @@ describe("modalReducer", () => {
     expect(edit.formState).toEqual({
       title: "一次面接",
       type: "interview",
+      allDay: false,
       time: "15:00",
+      endDate: "",
       url: "",
       company: { id: "c1", name: "サンプル" },
     });

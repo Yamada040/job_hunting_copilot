@@ -885,6 +885,11 @@ export interface components {
       type: components["schemas"]["CalendarEventType"];
       /** Format: date */
       date: string;
+      /**
+       * Format: date
+       * @description 何日か続く予定（インターンなど）の最終日。null なら1日だけ
+       */
+      endDate: string | null;
       /** @description 時刻（HH:MM） */
       time: string | null;
       company: components["schemas"]["CompanySummary"] | null;
@@ -896,6 +901,11 @@ export interface components {
       type?: components["schemas"]["CalendarEventType"];
       /** Format: date */
       date: string;
+      /**
+       * Format: date
+       * @description 何日か続く予定の最終日（date 以降）。期間のある予定は終日として扱うので、time と一緒には送れない
+       */
+      endDate?: string;
       time?: string;
       /** Format: uuid */
       companyId?: string;
@@ -907,6 +917,8 @@ export interface components {
       type?: components["schemas"]["CalendarEventType"];
       /** Format: date */
       date?: string;
+      /** Format: date */
+      endDate?: string | null;
       time?: string | null;
       /** Format: uuid */
       companyId?: string | null;

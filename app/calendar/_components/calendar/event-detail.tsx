@@ -65,6 +65,7 @@ export function EventDetail({
         <ClockIcon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
         <span>
           {formatDayLabel(event.date)}
+          {event.endDate && ` 〜 ${formatDayLabel(event.endDate)}`}
           {event.time ? ` ${event.time}` : "・終日"}
         </span>
       </div>

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatDateKey, formatDayLabel, monthCells, previewDayEvents } from "./utils";
+import { formatDateKey, formatDayLabel, groupByDate, monthCells, overlaps, previewDayEvents } from "./utils";
 
 describe("formatDateKey", () => {
   it("formats a Date object with zero-padded month/day", () => {
@@ -67,5 +67,23 @@ describe("monthCells", () => {
     expect(cells.find((c) => c.inCurrentMonth)?.date).toBe("2026-10-01");
     expect(cells.at(-1)).toEqual({ date: "2026-10-31", inCurrentMonth: true });
     expect(cells.length % 7).toBe(0);
+  });
+});
+
+describe("groupByDate", () => {
+  it("何日か続く予定は、月をまたいでも初日から最終日までの毎日に入れる", () => {
+    const intern = { date: "2026-10-30", endDate: "2026-11-02" };
+    const oneDay = { date: "2026-10-31" };
+    const byDate = groupByDate([intern, oneDay]);
+    expect(Object.keys(byDate).sort()).toEqual(["2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02"]);
+    expect(byDate["2026-10-31"]).toEqual([intern, oneDay]);
+  });
+});
+
+describe("overlaps", () => {
+  it("期間に少しでも重なれば重なるとみなす", () => {
+    expect(overlaps({ date: "2026-10-10", endDate: "2026-10-14" }, "2026-10-12", "2026-10-18")).toBe(true);
+    expect(overlaps({ date: "2026-10-08", endDate: "2026-10-11" }, "2026-10-12", "2026-10-18")).toBe(false);
+    expect(overlaps({ date: "2026-10-19" }, "2026-10-12", "2026-10-18")).toBe(false);
   });
 });

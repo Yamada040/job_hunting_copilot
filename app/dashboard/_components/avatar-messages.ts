@@ -22,7 +22,7 @@ export function avatarMessages(s: AvatarSituation): string[] {
   const next = s.upcoming[0];
   if (next) {
     const days = daysFrom(s.today, next.date);
-    if (days === 0) messages.push(`今日は「${next.title}」があるよ！`);
+    if (days <= 0) messages.push(`今日は「${next.title}」があるよ！`);
     else if (days === 1) messages.push(`明日は「${next.title}」。準備しておこう`);
   }
   if (s.urgentDrafts > 0) messages.push(`締切が近いESが${s.urgentDrafts}件あるよ`);
