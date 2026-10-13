@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
 
 // backend/api/openapi.yaml の ProfileUpdate の maxLength と同じ値（超えた入力はバックエンドが400で拒否する）
 const MAX_LENGTH = 100;
@@ -35,7 +36,7 @@ export function ProfileForm({ email }: { email: string }) {
   const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!data) return <Card className="px-8 text-sm">読み込み中…</Card>;
+  if (!data) return <FormSkeleton fields={4} />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return (
     <ProfileFormFields key={JSON.stringify(data)} me={data} email={email} saved={saved} onSavedChange={setSaved} />

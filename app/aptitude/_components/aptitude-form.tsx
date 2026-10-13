@@ -11,12 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Answers } from "../types";
 import { defaultAnswers, interestOptions, mbtiOptions, strengthOptions, valueOptions } from "./aptitude-constants";
 import { CheckboxGroup, SelectBox, TextArea } from "./aptitude-fields";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
 
 export default function AptitudeForm() {
   const { data: result, error, isPending } = useAptitudeResult();
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (isPending) return <Card className="px-6 text-sm">読み込み中…</Card>;
+  if (isPending) return <FormSkeleton />;
   return <AptitudeFormLoaded result={result} />;
 }
 

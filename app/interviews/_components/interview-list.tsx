@@ -10,12 +10,13 @@ import { ROUTES } from "@/lib/constants/routes";
 import { INTERVIEW_FORMAT_LABELS } from "@/lib/interviews/labels";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { EmptyState } from "@/app/_components/empty-state";
+import { CardListSkeleton } from "@/app/_components/loading-skeletons";
 
 export function InterviewList() {
   const { data: logs, error, isPending } = useInterviewLogs();
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (isPending) return <Card className="p-6 text-sm">読み込み中…</Card>;
+  if (isPending) return <CardListSkeleton className="md:grid-cols-2 xl:grid-cols-3" />;
   if (logs.length === 0) {
     return (
       <EmptyState

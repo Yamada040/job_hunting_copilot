@@ -6,13 +6,13 @@ import { ArrowTopRightOnSquareIcon, StarIcon, TrashIcon } from "@heroicons/react
 
 import { useAnalyzeCompany, useCompany, useDeleteCompany, useUpdateCompany, type Company } from "@/lib/api/companies";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { CompanyForm } from "./company-form";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
 
 export function CompanyDetail({ id }: { id: string }) {
   const { data: company, error } = useCompany(id);
@@ -20,7 +20,7 @@ export function CompanyDetail({ id }: { id: string }) {
   const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!company) return <Card className="p-8 text-sm">読み込み中…</Card>;
+  if (!company) return <FormSkeleton />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return <CompanyDetailLoaded key={company.updatedAt} company={company} saved={saved} onSavedChange={setSaved} />;
 }

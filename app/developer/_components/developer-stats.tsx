@@ -9,6 +9,7 @@ import { api, ApiError, unwrap } from "@/lib/api/client";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { AiUsageTable } from "./ai-usage-table";
+import { CardListSkeleton } from "@/app/_components/loading-skeletons";
 
 const nf = new Intl.NumberFormat("ja-JP");
 
@@ -30,7 +31,7 @@ export function DeveloperStats() {
   }, [forbidden, router]);
 
   if (error) return forbidden ? null : <ApiErrorMessage error={error} />;
-  if (!summary) return <Card className="p-6 text-sm">読み込み中…</Card>;
+  if (!summary) return <CardListSkeleton />;
 
   const activeRate = summary.totalUsers > 0 ? Math.round((summary.activeUsers7d / summary.totalUsers) * 100) : 0;
   const contentTotal = summary.totalEs + summary.totalCompanies + summary.totalInterviews;

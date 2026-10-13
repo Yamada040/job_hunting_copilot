@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
 
 type Answers = SelfAnalysisAnswers;
 
@@ -33,7 +34,7 @@ export default function SelfAnalysisForm() {
   const { data: result, error, isPending } = useSelfAnalysisResult();
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (isPending) return <Card className="px-6 text-sm">読み込み中…</Card>;
+  if (isPending) return <FormSkeleton />;
   return <SelfAnalysisFormLoaded result={result} />;
 }
 

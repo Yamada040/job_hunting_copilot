@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { TYPE_LABEL } from "@/app/calendar/_components/calendar/constants";
 import { relativeDay, upcomingEvents } from "./menu-summaries";
+import { LinesSkeleton } from "@/app/_components/loading-skeletons";
 
 // ホームに並べる予定の数。これより多いときはカレンダーで見てもらう
 const MAX_ITEMS = 5;
@@ -36,7 +37,7 @@ export function UpcomingEvents({ today }: { today: string }) {
       </CardHeader>
       <CardContent className="px-6">
         <ApiErrorMessage error={error} />
-        {!data && !error && <p className="py-3 text-sm text-muted-foreground">読み込み中…</p>}
+        {!data && !error && <LinesSkeleton />}
         {data && events.length === 0 && (
           <p className="py-3 text-sm text-muted-foreground">7日以内の予定はありません。</p>
         )}

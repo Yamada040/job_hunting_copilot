@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { sanitizeMarkdown } from "./sanitize";
+import { EmptyState } from "@/app/_components/empty-state";
 
 type Props = {
   title: string;
@@ -71,10 +72,9 @@ export function AiResultPanel({
         {text ? (
           !done && runAction
         ) : (
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-secondary/60 px-4 py-6 text-center">
-            <p className="text-sm text-muted-foreground">まだ結果はありません。実行すると、ここに表示されます。</p>
+          <EmptyState title="まだ結果はありません" description="実行すると、ここに表示されます。">
             {runAction}
-          </div>
+          </EmptyState>
         )}
         <ApiErrorMessage error={error} />
 

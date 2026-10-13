@@ -6,12 +6,12 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 
 import { useDeleteEsEntry, useEsEntry, useSubmitEsEntry, useUpdateEsEntry, type EsEntry } from "@/lib/api/es";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { EsForm } from "./es-form";
 import { EsReviewPanel } from "./es-review-panel";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
 
 export function EsDetail({ id }: { id: string }) {
   const { data: entry, error } = useEsEntry(id);
@@ -19,7 +19,7 @@ export function EsDetail({ id }: { id: string }) {
   const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!entry) return <Card className="p-8 text-sm">読み込み中…</Card>;
+  if (!entry) return <FormSkeleton />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return <EsDetailLoaded key={entry.updatedAt} entry={entry} saved={saved} onSavedChange={setSaved} />;
 }

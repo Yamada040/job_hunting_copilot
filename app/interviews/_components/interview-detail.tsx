@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   useDeleteInterviewLog,
   useInterviewLog,
@@ -17,6 +16,7 @@ import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { InterviewForm } from "./interview-form";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
 
 export function InterviewDetail({ id }: { id: string }) {
   const { data: log, error } = useInterviewLog(id);
@@ -24,7 +24,7 @@ export function InterviewDetail({ id }: { id: string }) {
   const [saved, setSaved] = useState(false);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!log) return <Card className="p-8 text-sm">読み込み中…</Card>;
+  if (!log) return <FormSkeleton />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
   return <InterviewDetailLoaded key={log.updatedAt} log={log} saved={saved} onSavedChange={setSaved} />;
 }

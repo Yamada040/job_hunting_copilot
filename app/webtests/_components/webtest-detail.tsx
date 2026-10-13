@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { useAnswerWebtestQuestion, useWebtestQuestion } from "@/lib/api/webtests";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
 
 export function WebtestDetail({ id }: { id: string }) {
   const { data: question, error } = useWebtestQuestion(id);
@@ -17,7 +18,7 @@ export function WebtestDetail({ id }: { id: string }) {
   const [status, setStatus] = useState<"correct" | "incorrect" | null>(null);
 
   if (error) return <ApiErrorMessage error={error} />;
-  if (!question) return <Card className="p-6 text-sm">読み込み中…</Card>;
+  if (!question) return <FormSkeleton fields={4} />;
   const attempts = question.attempts.slice(0, 5);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
