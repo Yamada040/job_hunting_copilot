@@ -3,13 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
 
-// スプライトシート（public/avatars/walker.svg）。16x16 のコマが横に6つ: 待機1, 待機2, 歩き1〜4。右向きに描く
-const SPRITE = "/avatars/walker.svg";
-const FRAME = 16;
+import { AvatarSprite, IDLE_FRAMES, SpeechBubble, WALK_FRAMES } from "./avatar-sprite";
+
 const SCALE = 6;
-const SIZE = FRAME * SCALE;
-const IDLE_FRAMES = [0, 1];
-const WALK_FRAMES = [2, 3, 4, 5];
+const SIZE = 16 * SCALE;
 // 歩く速さ（px/秒）と、コマを切り替える速さ（コマ/秒）
 const WALK_SPEED = 70;
 const WALK_FPS = 8;
@@ -83,34 +80,8 @@ export function AvatarWanderer({ messages = [], avoidCenter = 0 }: { messages?: 
   return (
     <div ref={area} className="pointer-events-none absolute inset-0" aria-hidden>
       <motion.div className="absolute bottom-0" style={{ x, width: SIZE, height: SIZE }}>
-        <AnimatePresence>
-          {message && (
-            <motion.span
-              key={message}
-              className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 rounded-xl border bg-card px-3 py-1.5 text-xs font-bold whitespace-nowrap text-foreground shadow-window"
-              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6, y: 6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ type: "spring", stiffness: 420, damping: 22 }}
-              style={{ originY: 1 }}
-            >
-              {message}
-              {/* 吹き出しのしっぽ */}
-              <span className="absolute top-full left-1/2 -mt-[5px] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-r border-b bg-card" />
-            </motion.span>
-          )}
-        </AnimatePresence>
-        <span className="absolute bottom-0 left-1/2 h-3 w-14 -translate-x-1/2 rounded-[50%] bg-foreground/15" />
-        <span
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url(${SPRITE})`,
-            backgroundSize: `${SIZE * 6}px ${SIZE}px`,
-            backgroundPosition: `-${frame * SIZE}px 0`,
-            imageRendering: "pixelated",
-            transform: `scaleX(${facing})`,
-          }}
-        />
+        <AnimatePresence>{message && <SpeechBubble key={message} message={message} />}</AnimatePresence>
+        <AvatarSprite frame={frame} scale={SCALE} facing={facing} />
       </motion.div>
     </div>
   );

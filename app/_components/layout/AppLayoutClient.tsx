@@ -9,10 +9,21 @@ export interface AppLayoutProps {
   children: React.ReactNode;
   headerTitle?: string;
   headerDescription?: string;
+  /** 見出しの下に置く、その画面の主な操作（「ESを作成」など） */
+  headerActions?: React.ReactNode;
+  /** 見出しの横に立つアバター（AvatarGuide）。その画面の状況や使い方を話す */
+  avatar?: React.ReactNode;
   className?: string;
 }
 
-export function AppLayoutClient({ children, headerTitle, headerDescription, className }: AppLayoutProps) {
+export function AppLayoutClient({
+  children,
+  headerTitle,
+  headerDescription,
+  headerActions,
+  avatar,
+  className,
+}: AppLayoutProps) {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
 
@@ -33,10 +44,17 @@ export function AppLayoutClient({ children, headerTitle, headerDescription, clas
         style={{ transformPerspective: 1200, transformOrigin: "50% 0%" }}
       >
         <Breadcrumbs />
-        {(headerTitle || headerDescription) && (
-          <div className="mt-4">
-            {headerTitle && <h1 className="text-lg font-semibold">{headerTitle}</h1>}
-            {headerDescription && <p className="mt-1 text-sm text-muted-foreground">{headerDescription}</p>}
+        {(headerTitle || headerDescription || avatar) && (
+          <div className="mt-4 mb-8 flex items-end justify-between gap-4">
+            <div className="min-w-0 space-y-2">
+              {headerTitle && (
+                <h1 className="text-3xl leading-tight font-black tracking-tight sm:text-4xl">{headerTitle}</h1>
+              )}
+              {headerDescription && <p className="text-sm text-muted-foreground">{headerDescription}</p>}
+              {headerActions && <div className="flex flex-wrap gap-2 pt-2">{headerActions}</div>}
+            </div>
+            {/* 吹き出しがアバターの上に出るので、その分だけ上を空ける */}
+            {avatar && <div className="shrink-0 pt-16">{avatar}</div>}
           </div>
         )}
         {children}

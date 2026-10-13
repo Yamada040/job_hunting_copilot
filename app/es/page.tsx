@@ -1,10 +1,25 @@
+import Link from "next/link";
+
 import { AppLayout } from "@/app/_components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EsListClient } from "./_components/es-list-client";
+import { EsListGuide } from "./_components/es-list-guide";
+import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/constants/routes";
 
 export default function EsListPage() {
   return (
-    <AppLayout headerTitle="ES管理" headerDescription="下書きと提出済みを分けて管理できます" className="space-y-4">
+    <AppLayout
+      avatar={<EsListGuide />}
+      headerActions={
+        <Button asChild>
+          <Link href={ROUTES.ES_NEW}>ESを作成する</Link>
+        </Button>
+      }
+      headerTitle="ES管理"
+      headerDescription="下書きと提出済みを分けて管理できます"
+      className="space-y-4"
+    >
       <Card className="py-6">
         <CardHeader className="px-6">
           <CardTitle>
