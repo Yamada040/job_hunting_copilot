@@ -14,8 +14,8 @@ import (
 )
 
 const createCalendarEvent = `-- name: CreateCalendarEvent :one
-insert into calendar_events (user_id, company_id, title, type, date, time)
-values ($1, $2, $3, $4, $5, $6)
+insert into calendar_events (user_id, company_id, title, type, date, time, url)
+values ($1, $2, $3, $4, $5, $6, $7)
 returning id
 `
 
@@ -26,6 +26,7 @@ type CreateCalendarEventParams struct {
 	Type      CalendarEventType
 	Date      time.Time
 	Time      pgtype.Time
+	Url       *string
 }
 
 func (q *Queries) CreateCalendarEvent(ctx context.Context, arg CreateCalendarEventParams) (uuid.UUID, error) {
@@ -36,6 +37,7 @@ func (q *Queries) CreateCalendarEvent(ctx context.Context, arg CreateCalendarEve
 		arg.Type,
 		arg.Date,
 		arg.Time,
+		arg.Url,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -60,7 +62,7 @@ func (q *Queries) DeleteCalendarEvent(ctx context.Context, arg DeleteCalendarEve
 }
 
 const getCalendarEvent = `-- name: GetCalendarEvent :one
-select calendar_events.id, calendar_events.user_id, calendar_events.company_id, calendar_events.title, calendar_events.type, calendar_events.date, calendar_events.time, calendar_events.created_at, calendar_events.updated_at, companies.name as company_name
+select calendar_events.id, calendar_events.user_id, calendar_events.company_id, calendar_events.title, calendar_events.type, calendar_events.date, calendar_events.time, calendar_events.created_at, calendar_events.updated_at, calendar_events.url, companies.name as company_name
 from calendar_events
 left join companies on companies.id = calendar_events.company_id
 where calendar_events.id = $1 and calendar_events.user_id = $2
@@ -89,13 +91,14 @@ func (q *Queries) GetCalendarEvent(ctx context.Context, arg GetCalendarEventPara
 		&i.CalendarEvent.Time,
 		&i.CalendarEvent.CreatedAt,
 		&i.CalendarEvent.UpdatedAt,
+		&i.CalendarEvent.Url,
 		&i.CompanyName,
 	)
 	return i, err
 }
 
 const listCalendarEvents = `-- name: ListCalendarEvents :many
-select calendar_events.id, calendar_events.user_id, calendar_events.company_id, calendar_events.title, calendar_events.type, calendar_events.date, calendar_events.time, calendar_events.created_at, calendar_events.updated_at, companies.name as company_name
+select calendar_events.id, calendar_events.user_id, calendar_events.company_id, calendar_events.title, calendar_events.type, calendar_events.date, calendar_events.time, calendar_events.created_at, calendar_events.updated_at, calendar_events.url, companies.name as company_name
 from calendar_events
 left join companies on companies.id = calendar_events.company_id
 where calendar_events.user_id = $1
@@ -135,6 +138,7 @@ func (q *Queries) ListCalendarEvents(ctx context.Context, arg ListCalendarEvents
 			&i.CalendarEvent.Time,
 			&i.CalendarEvent.CreatedAt,
 			&i.CalendarEvent.UpdatedAt,
+			&i.CalendarEvent.Url,
 			&i.CompanyName,
 		); err != nil {
 			return nil, err
@@ -205,8 +209,9 @@ update calendar_events set
   title      = case when $3::boolean      then $4::text                   else title end,
   type       = case when $5::boolean       then $6::calendar_event_type     else type end,
   date       = case when $7::boolean       then $8::date                    else date end,
-  time       = case when $9::boolean       then $10::time                    else time end
-where id = $11 and user_id = $12
+  time       = case when $9::boolean       then $10::time                    else time end,
+  url        = case when $11::boolean        then $12::text                     else url end
+where id = $13 and user_id = $14
 `
 
 type UpdateCalendarEventParams struct {
@@ -220,6 +225,8 @@ type UpdateCalendarEventParams struct {
 	Date         *time.Time
 	SetTime      bool
 	Time         pgtype.Time
+	SetUrl       bool
+	Url          *string
 	ID           uuid.UUID
 	UserID       uuid.UUID
 }
@@ -237,6 +244,8 @@ func (q *Queries) UpdateCalendarEvent(ctx context.Context, arg UpdateCalendarEve
 		arg.Date,
 		arg.SetTime,
 		arg.Time,
+		arg.SetUrl,
+		arg.Url,
 		arg.ID,
 		arg.UserID,
 	)

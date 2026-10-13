@@ -26,8 +26,8 @@ left join companies on companies.id = calendar_events.company_id
 where calendar_events.id = @id and calendar_events.user_id = @user_id;
 
 -- name: CreateCalendarEvent :one
-insert into calendar_events (user_id, company_id, title, type, date, time)
-values (@user_id, @company_id, @title, @type, @date, @time)
+insert into calendar_events (user_id, company_id, title, type, date, time, url)
+values (@user_id, @company_id, @title, @type, @date, @time, @url)
 returning id;
 
 -- name: UpdateCalendarEvent :execrows
@@ -37,7 +37,8 @@ update calendar_events set
   title      = case when @set_title::boolean      then sqlc.narg(title)::text                   else title end,
   type       = case when @set_type::boolean       then sqlc.narg(type)::calendar_event_type     else type end,
   date       = case when @set_date::boolean       then sqlc.narg(date)::date                    else date end,
-  time       = case when @set_time::boolean       then sqlc.narg(time)::time                    else time end
+  time       = case when @set_time::boolean       then sqlc.narg(time)::time                    else time end,
+  url        = case when @set_url::boolean        then sqlc.narg(url)::text                     else url end
 where id = @id and user_id = @user_id;
 
 -- name: DeleteCalendarEvent :execrows

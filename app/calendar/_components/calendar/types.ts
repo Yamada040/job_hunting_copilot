@@ -10,6 +10,8 @@ export type CalendarEvent = {
   companyId?: string | null;
   type: CalendarItem["type"];
   time?: string | null; // HH:MM
+  /** リンク（オンライン面接のURLなど） */
+  url?: string | null;
 };
 
 export type CalendarFormState = {
@@ -17,6 +19,7 @@ export type CalendarFormState = {
   company: CompanySummary | null;
   type: CalendarEvent["type"];
   time: string;
+  url: string;
 };
 
 /** バックエンドが返すカレンダーの1件を、画面で扱う形にする。 */
@@ -29,6 +32,7 @@ export function toCalendarEvent(item: CalendarItem): CalendarEvent {
     companyId: item.company?.id ?? null,
     type: item.type,
     time: item.time,
+    url: item.url,
   };
 }
 

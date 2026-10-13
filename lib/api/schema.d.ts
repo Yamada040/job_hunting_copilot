@@ -888,6 +888,8 @@ export interface components {
       /** @description 時刻（HH:MM） */
       time: string | null;
       company: components["schemas"]["CompanySummary"] | null;
+      /** @description リンク（オンライン面接のURLなど） */
+      url: string | null;
     };
     CalendarEventCreate: {
       title: string;
@@ -897,6 +899,8 @@ export interface components {
       time?: string;
       /** Format: uuid */
       companyId?: string;
+      /** @description リンク（オンライン面接のURLなど） */
+      url?: string;
     };
     CalendarEventUpdate: {
       title?: string;
@@ -906,6 +910,7 @@ export interface components {
       time?: string | null;
       /** Format: uuid */
       companyId?: string | null;
+      url?: string | null;
     };
     /**
      * @description XPが付いた操作。日本語の表示名はフロントエンドが持つ

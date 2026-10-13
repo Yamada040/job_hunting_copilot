@@ -62,8 +62,18 @@ test("カレンダーに予定を追加する", async ({ page }) => {
   await page.goto("/calendar");
   await page.getByRole("button", { name: "今日に追加" }).click();
   await page.getByLabel("タイトル").fill(`説明会-${stamp}`);
+  // 種類の初めの値は面接なので、オンライン面接のリンクを入れられる
+  await page.getByLabel("リンク").fill("https://meet.example.com/abc");
   await page.getByRole("dialog").getByRole("button", { name: "保存", exact: true }).click();
-  await expect(page.getByText(`説明会-${stamp}`).first()).toBeVisible();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page
+    .getByRole("button", { name: new RegExp(`説明会-${stamp}`) })
+    .first()
+    .click();
+  await expect(page.getByRole("link", { name: "リンクを開く" })).toHaveAttribute(
+    "href",
+    "https://meet.example.com/abc",
+  );
 });
 
 test("プロフィールを保存する", async ({ page }) => {

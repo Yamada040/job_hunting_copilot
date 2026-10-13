@@ -5,6 +5,7 @@ export const emptyForm: CalendarFormState = {
   company: null,
   type: "interview" as CalendarEvent["type"],
   time: "",
+  url: "",
 };
 
 /**
@@ -68,6 +69,7 @@ export function modalReducer(state: ModalState, action: ModalAction): ModalState
               : null,
           type: action.event.type,
           time: action.event.time || "",
+          url: action.event.url || "",
         },
         error: null,
       };

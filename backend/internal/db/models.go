@@ -264,6 +264,7 @@ type CalendarEvent struct {
 	Time      pgtype.Time
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	Url       *string
 }
 
 type CalendarFeed struct {

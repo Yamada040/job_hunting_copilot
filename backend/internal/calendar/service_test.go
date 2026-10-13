@@ -132,3 +132,25 @@ func TestOtherUsersEventIsNotFound(t *testing.T) {
 		t.Errorf("bob sees %d items, want none", len(items))
 	}
 }
+
+func TestEventLinkCanBeSetAndCleared(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	s := NewService(pool)
+
+	item, err := s.Create(t.Context(), userID, Fields{Title: ptr("一次面接"), Date: day("2026-11-01"), URL: ptr(" https://meet.example.com/abc ")})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if item.URL == nil || *item.URL != "https://meet.example.com/abc" {
+		t.Fatalf("URL = %v, want 前後の空白を除いたリンク", item.URL)
+	}
+
+	updated, err := s.Update(t.Context(), userID, item.ID, Fields{SetURL: true, URL: nil})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if updated.URL != nil {
+		t.Fatalf("URL = %v, want リンクを消した状態", *updated.URL)
+	}
+}

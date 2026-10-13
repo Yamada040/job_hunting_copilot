@@ -6,6 +6,7 @@ import { useActionState, useMemo, useOptimistic, useReducer, useState, useTransi
 import { calendarKeys, createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from "@/lib/api/calendar";
 import { TYPE_LABEL } from "./calendar/constants";
 import { EventDialog } from "./calendar/event-dialog";
+import { eventLink } from "./calendar/event-fields";
 import { EventSummary } from "./calendar/event-summary";
 import { MonthGrid } from "./calendar/month-grid";
 import { emptyForm, modalReducer, ModalState, optimisticEventsReducer } from "./calendar/reducer";
@@ -88,6 +89,7 @@ export function InteractiveCalendar({ events }: Props) {
   };
 
   const [, submitAction, saving] = useActionState<null, FormData>(async () => {
+    const url = eventLink(formState);
     // 一時ID（新規時）で即時反映し、API完了後に実データで置き換える
     applyOptimisticEvents({
       type: "save",
@@ -99,6 +101,7 @@ export function InteractiveCalendar({ events }: Props) {
         companyId: formState.company?.id ?? null,
         type: formState.type,
         time: formState.time || null,
+        url,
       },
     });
     try {
@@ -111,6 +114,7 @@ export function InteractiveCalendar({ events }: Props) {
           type: formState.type,
           time,
           companyId: formState.company?.id ?? null,
+          url,
         });
       } else {
         await createCalendarEvent({
@@ -119,6 +123,7 @@ export function InteractiveCalendar({ events }: Props) {
           type: formState.type,
           time: time ?? undefined,
           companyId: formState.company?.id,
+          url: url ?? undefined,
         });
       }
       await queryClient.invalidateQueries({ queryKey: calendarKeys.all });

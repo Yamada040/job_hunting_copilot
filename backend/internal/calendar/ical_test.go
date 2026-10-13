@@ -16,7 +16,7 @@ func TestBuildICalWritesAllDayAndTimedEvents(t *testing.T) {
 	id := uuid.MustParse("11111111-1111-1111-1111-111111111111")
 	items := []Item{
 		{ID: id, Source: SourceESDeadline, Title: "本選考ES", Type: db.CalendarEventTypeEs, Date: *day("2026-11-05"), CompanyName: ptr("サンプル")},
-		{ID: id, Source: SourceEvent, Title: "一次面接", Type: db.CalendarEventTypeInterview, Date: *day("2026-11-10"), Time: ptr("15:00")},
+		{ID: id, Source: SourceEvent, Title: "一次面接", Type: db.CalendarEventTypeInterview, Date: *day("2026-11-10"), Time: ptr("15:00"), URL: ptr("https://meet.example.com/abc")},
 	}
 
 	got := unfold(BuildICal(items, time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)))
@@ -29,6 +29,8 @@ func TestBuildICalWritesAllDayAndTimedEvents(t *testing.T) {
 		"SUMMARY:【ES締切】本選考ES\r\nDESCRIPTION:企業: サンプル\r\n",
 		// 日本時間の15:00は UTC の6:00。長さは1時間
 		"DTSTART:20261110T060000Z\r\nDTEND:20261110T070000Z\r\n",
+		// リンクは URL の項目と、説明の両方に書く
+		"URL:https://meet.example.com/abc\r\nDESCRIPTION:リンク: https://meet.example.com/abc\r\n",
 		"END:VCALENDAR\r\n",
 	} {
 		if !strings.Contains(got, want) {

@@ -6,14 +6,14 @@ import { useCreateCalendarEvent } from "@/lib/api/calendar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
-import { EventFields, type EventFieldValues } from "@/app/calendar/_components/calendar/event-fields";
+import { EventFields, eventLink, type EventFieldValues } from "@/app/calendar/_components/calendar/event-fields";
 import { formatDateKey } from "@/app/calendar/_components/calendar/utils";
 
 /** 画面を移らずに、その場で予定を追加するダイアログ。入れる項目と見た目はカレンダーの画面と同じ。 */
 export function QuickEventDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-6 sm:max-w-md">
+      <DialogContent className="p-8 sm:max-w-xl">
         <DialogTitle className="sr-only">予定を追加</DialogTitle>
         <DialogDescription className="sr-only">
           追加した予定は、カレンダーとホームの直近の予定に出ます。
@@ -33,6 +33,7 @@ function QuickEventForm({ onDone }: { onDone: () => void }) {
     date: formatDateKey(new Date()),
     time: "",
     company: null,
+    url: "",
   }));
 
   return (
@@ -47,6 +48,7 @@ function QuickEventForm({ onDone }: { onDone: () => void }) {
             date: values.date,
             time: values.time || undefined,
             companyId: values.company?.id,
+            url: eventLink(values) ?? undefined,
           },
           { onSuccess: onDone },
         );

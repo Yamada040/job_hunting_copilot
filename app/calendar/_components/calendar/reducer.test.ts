@@ -48,6 +48,7 @@ describe("modalReducer", () => {
       title: "一次面接",
       type: "interview",
       time: "15:00",
+      url: "",
       company: { id: "c1", name: "サンプル" },
     });
   });

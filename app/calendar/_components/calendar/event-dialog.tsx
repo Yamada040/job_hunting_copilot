@@ -22,7 +22,7 @@ export function EventDialog({ state, dayEvents, saving, dispatch, submitAction, 
   const { view, selectedDate, selectedEvent, formState, deletingId, error } = state;
   return (
     <Dialog open={view !== null} onOpenChange={(open) => !open && dispatch({ type: "closeModal" })}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto p-6 sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto p-8 sm:max-w-xl">
         <DialogDescription className="sr-only">カレンダーの予定</DialogDescription>
         {(view === "create" || view === "edit") && (
           <EventEditor

@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { AUTH_STORAGE_STATE_A } from "./global-setup";
+import { AUTH_STORAGE_STATE_B } from "./global-setup";
 
-test.use({ storageState: AUTH_STORAGE_STATE_A });
+// ユーザーAは主な操作のテストが今日の予定を足すので、ホームの直近の予定（5件まで）からあふれないようBで行う
+test.use({ storageState: AUTH_STORAGE_STATE_B });
 
 test("購読用のURLを作ると、ログインしなくても予定をiCalで読め、作り直すと古いURLは使えなくなる", async ({
   page,

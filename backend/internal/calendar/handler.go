@@ -45,6 +45,7 @@ func (h Handler) CreateCalendarEvent(ctx context.Context, req openapi.CreateCale
 		Date:      &b.Date.Time,
 		Time:      b.Time,
 		CompanyID: b.CompanyId,
+		URL:       b.Url,
 	})
 	if err != nil {
 		return nil, err
@@ -64,6 +65,11 @@ func (h Handler) UpdateCalendarEvent(ctx context.Context, req openapi.UpdateCale
 		Date:         dateOrNil(b.Date),
 		SetTime:      b.Time.IsSpecified(),
 		SetCompanyID: b.CompanyId.IsSpecified(),
+		SetURL:       b.Url.IsSpecified(),
+	}
+	if b.Url.IsSpecified() && !b.Url.IsNull() {
+		u := b.Url.MustGet()
+		f.URL = &u
 	}
 	if b.Time.IsSpecified() && !b.Time.IsNull() {
 		t := b.Time.MustGet()
@@ -118,5 +124,6 @@ func toAPI(item Item) openapi.CalendarItem {
 		Date:    openapi_types.Date{Time: item.Date},
 		Time:    item.Time,
 		Company: company,
+		Url:     item.URL,
 	}
 }

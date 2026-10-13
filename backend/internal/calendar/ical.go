@@ -51,8 +51,17 @@ func BuildICal(items []Item, now time.Time) string {
 			write("DTEND;VALUE=DATE:" + item.Date.AddDate(0, 0, 1).Format("20060102"))
 		}
 		write("SUMMARY:" + escapeText(fmt.Sprintf("【%s】%s", typeLabel[item.Type], item.Title)))
+		var description []string
 		if item.CompanyName != nil && *item.CompanyName != "" {
-			write("DESCRIPTION:" + escapeText("企業: "+*item.CompanyName))
+			description = append(description, "企業: "+*item.CompanyName)
+		}
+		if item.URL != nil {
+			// URL の項目を表示しないカレンダーもあるので、説明にも書いておく
+			write("URL:" + *item.URL)
+			description = append(description, "リンク: "+*item.URL)
+		}
+		if len(description) > 0 {
+			write("DESCRIPTION:" + escapeText(strings.Join(description, "\n")))
 		}
 		write("END:VEVENT")
 	}

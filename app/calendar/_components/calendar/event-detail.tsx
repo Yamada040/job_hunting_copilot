@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BuildingOffice2Icon, ClockIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { BuildingOffice2Icon, ClockIcon, PencilIcon, TrashIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
 import { DialogTitle } from "@/components/ui/dialog";
@@ -56,18 +56,31 @@ export function EventDetail({
       <div className="flex items-start gap-3">
         <span className={cn("mt-2 h-3.5 w-3.5 shrink-0 rounded", TYPE_COLOR[event.type].dot)} aria-hidden />
         <div className="space-y-1">
-          <DialogTitle className="text-xl leading-snug font-semibold">{event.title}</DialogTitle>
+          <DialogTitle className="text-2xl leading-snug font-semibold">{event.title}</DialogTitle>
           <p className="text-xs font-semibold text-muted-foreground">{TYPE_LABEL[event.type]}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 text-sm">
+      <div className="flex items-center gap-3 text-base">
         <ClockIcon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
         <span>
           {formatDayLabel(event.date)}
           {event.time ? ` ${event.time}` : "・終日"}
         </span>
       </div>
+      {event.url && (
+        <div className="flex items-center gap-3 text-sm">
+          <VideoCameraIcon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+          <div className="min-w-0 space-y-1">
+            <Button asChild size="sm">
+              <a href={event.url} target="_blank" rel="noopener noreferrer">
+                リンクを開く
+              </a>
+            </Button>
+            <p className="truncate text-xs text-muted-foreground">{event.url}</p>
+          </div>
+        </div>
+      )}
       {event.company && (
         <div className="flex items-center gap-3 text-sm">
           <BuildingOffice2Icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />

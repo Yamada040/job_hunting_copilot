@@ -36,6 +36,8 @@ type Item struct {
 	Time        *string // HH:MM
 	CompanyID   *uuid.UUID
 	CompanyName *string
+	// URL は、予定のリンク（オンライン面接のURLなど）。ESの締切には無い
+	URL *string
 }
 
 // Fields は、予定の登録・更新で受け取る項目。nil の項目は、登録では未入力、更新では変更しないことを表す。
@@ -49,6 +51,9 @@ type Fields struct {
 	// SetCompanyID が true のときだけ CompanyID を書き換える。CompanyID が nil なら企業とのひも付けを外す
 	SetCompanyID bool
 	CompanyID    *uuid.UUID
+	// SetURL が true のときだけ URL を書き換える（登録では URL をそのまま使う）。URL が nil ならリンクを消す
+	SetURL bool
+	URL    *string
 }
 
 type Service struct {
@@ -117,6 +122,7 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (Item,
 		}
 		id, err := q.CreateCalendarEvent(ctx, db.CreateCalendarEventParams{
 			UserID: userID, CompanyID: f.CompanyID, Title: *f.Title, Type: eventType, Date: *f.Date, Time: t,
+			Url: platform.EmptyToNil(platform.TrimPtr(f.URL)),
 		})
 		if err != nil {
 			return fmt.Errorf("create calendar event: %w", err)
@@ -152,6 +158,7 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, f Fields) (I
 			SetType: f.Type != nil, Type: f.Type,
 			SetDate: f.Date != nil, Date: f.Date,
 			SetTime: f.SetTime, Time: t,
+			SetUrl: f.SetURL, Url: platform.EmptyToNil(platform.TrimPtr(f.URL)),
 		}
 		n, err := q.UpdateCalendarEvent(ctx, params)
 		if err != nil {
@@ -191,7 +198,7 @@ func get(ctx context.Context, q *db.Queries, userID, id uuid.UUID) (Item, error)
 func fromEvent(e db.CalendarEvent, companyName *string) Item {
 	return Item{
 		ID: e.ID, Source: SourceEvent, Title: e.Title, Type: e.Type, Date: e.Date,
-		Time: fromPgTime(e.Time), CompanyID: e.CompanyID, CompanyName: companyName,
+		Time: fromPgTime(e.Time), CompanyID: e.CompanyID, CompanyName: companyName, URL: e.Url,
 	}
 }
 
