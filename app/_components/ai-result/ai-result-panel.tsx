@@ -61,7 +61,7 @@ export function AiResultPanel({
       <CardHeader className="px-6">
         <CardTitle>
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            <SparklesIcon className="h-5 w-5 text-sky-500" />
+            <SparklesIcon className="h-5 w-5 text-primary" />
             {title}
           </h2>
         </CardTitle>

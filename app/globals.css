@@ -30,6 +30,15 @@
   --input: #bae6fd;
   --ring: #38bdf8;
   --radius: 0.75rem;
+  /* 保存できた・結果があるなど、うまくいったことを示す色 */
+  --success: #059669;
+  /* カレンダーの日曜・土曜の文字 */
+  --sunday: #f43f5e;
+  --saturday: #0284c7;
+  /* 予定の種類の色（ES・面接・インターン）。種類を見分けるためだけに使う */
+  --category-es: #e11d48;
+  --category-interview: #4f46e5;
+  --category-intern: #059669;
 }
 
 /* ホームのカードの中で、浮いた小物のようにゆっくり上下させる動き */
@@ -68,6 +77,12 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-sunday: var(--sunday);
+  --color-saturday: var(--saturday);
+  --color-category-es: var(--category-es);
+  --color-category-interview: var(--category-interview);
+  --color-category-intern: var(--category-intern);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);

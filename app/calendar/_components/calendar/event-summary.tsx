@@ -16,7 +16,7 @@ export function EventSummary({ title, events, emptyText, describe, onSelect }: P
     <Card size="sm">
       <CardHeader>
         <CardTitle>
-          <h3 className="text-sm font-bold text-sky-600">{title}</h3>
+          <h3 className="text-sm font-bold text-primary">{title}</h3>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">

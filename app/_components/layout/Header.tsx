@@ -80,7 +80,7 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
 
 export function Header({ title, description, leftContent, rightContent, showBrand }: HeaderProps) {
   return (
-    <header className="fixed left-0 top-0 z-50 w-full border-b border-sky-300/45 bg-white/94 px-6 py-4 backdrop-blur">
+    <header className="fixed left-0 top-0 z-50 w-full border-b border-ring/45 bg-white/94 px-6 py-4 backdrop-blur">
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-3">
@@ -115,7 +115,7 @@ export function Breadcrumbs({ breadcrumbs }: { breadcrumbs?: BreadcrumbItem[] })
             <span className="text-foreground">{item.label}</span>
           ) : (
             <>
-              <Link href={item.href} className="transition-colors hover:text-sky-500">
+              <Link href={item.href} className="transition-colors hover:text-primary">
                 {item.label}
               </Link>
               <ChevronRightIcon className="h-4 w-4 opacity-60" />

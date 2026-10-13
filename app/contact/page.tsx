@@ -14,7 +14,7 @@ export default async function ContactPage() {
     <AppLayout headerTitle="お問い合わせ" headerDescription="不具合やご要望を運営に送信できます" className="space-y-6">
       <Card className="py-6">
         <CardHeader className="px-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Contact</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Contact</p>
           <CardTitle>
             <h2 className="text-lg font-semibold">お問い合わせフォーム</h2>
           </CardTitle>

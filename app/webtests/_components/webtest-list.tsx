@@ -75,7 +75,7 @@ export function WebtestList() {
                 <TableCell>
                   <Link
                     href={ROUTES.WEBTEST_DETAIL(q.id)}
-                    className="font-semibold text-primary hover:text-sky-500 hover:underline"
+                    className="font-semibold text-primary hover:text-primary hover:underline"
                   >
                     {q.title}
                   </Link>

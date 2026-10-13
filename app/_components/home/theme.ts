@@ -1,8 +1,8 @@
 /** ホームのカードの配色。白い面と、淡い空色の面の2種類 */
-export const homeCard = "text-slate-600";
-export const homeCardMuted = "bg-sky-50 text-slate-600";
-export const homeHeading = "text-slate-900";
-export const homeAccent = "text-sky-600";
+export const homeCard = "text-muted-foreground";
+export const homeCardMuted = "bg-secondary text-muted-foreground";
+export const homeHeading = "text-foreground";
+export const homeAccent = "text-primary";
 
 export const fadeInUp = {
   initial: { opacity: 0, y: 20 },

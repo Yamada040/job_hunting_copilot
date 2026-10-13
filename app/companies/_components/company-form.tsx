@@ -124,7 +124,7 @@ export function CompanyForm({ initial, submitLabel, pending, error, onSubmit }: 
               type="checkbox"
               name="favorite"
               defaultChecked={initial?.favorite ?? false}
-              className="h-4 w-4 accent-sky-500"
+              className="h-4 w-4 accent-primary"
             />
             お気に入り
           </Label>

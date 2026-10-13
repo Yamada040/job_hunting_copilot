@@ -59,7 +59,7 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-sky-700">
+          <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-primary">
             ※ 現在は一回しかできません。
           </Card>
           <TextArea label="強み・得意なこと" value={answers.strengths} onChange={(v) => handleChange("strengths", v)} />

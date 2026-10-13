@@ -35,7 +35,7 @@ export function WebtestDetail({ id }: { id: string }) {
     <>
       <h2 className="text-lg font-semibold">{question.title}</h2>
       {status === "correct" ? (
-        <Card variant="muted" className="px-4 py-3 text-sm text-emerald-600">
+        <Card variant="muted" className="px-4 py-3 text-sm text-success">
           正解です！
         </Card>
       ) : status === "incorrect" ? (
@@ -121,7 +121,7 @@ export function WebtestDetail({ id }: { id: string }) {
             ) : (
               attempts.map((a) => (
                 <Card key={a.id} variant="muted" className="flex-row items-center justify-between px-3 py-2">
-                  <span className={a.isCorrect ? "text-emerald-600" : "text-destructive"}>
+                  <span className={a.isCorrect ? "text-success" : "text-destructive"}>
                     {a.isCorrect ? "正解" : "不正解"}
                   </span>
                   <span className="text-muted-foreground">

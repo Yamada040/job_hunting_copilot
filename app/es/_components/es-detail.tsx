@@ -56,7 +56,7 @@ function EsDetailLoaded({
           });
         }}
       />
-      {saved && <p className="text-sm text-emerald-600">保存しました</p>}
+      {saved && <p className="text-sm text-success">保存しました</p>}
 
       <EsReviewPanel entryId={entry.id} companyId={entry.company.id} />
 

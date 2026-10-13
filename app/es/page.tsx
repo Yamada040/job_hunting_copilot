@@ -8,7 +8,7 @@ export default function EsListPage() {
       <Card className="py-6">
         <CardHeader className="px-6">
           <CardTitle>
-            <h2 className="text-sm font-semibold text-sky-600">ES一覧</h2>
+            <h2 className="text-sm font-semibold text-primary">ES一覧</h2>
           </CardTitle>
           <CardDescription>下書きと提出済みをタブレス表示。</CardDescription>
         </CardHeader>

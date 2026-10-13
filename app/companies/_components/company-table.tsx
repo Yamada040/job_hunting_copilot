@@ -76,7 +76,7 @@ export function CompanyTable() {
             type="checkbox"
             checked={favoriteOnly}
             onChange={(e) => setFavoriteOnly(e.target.checked)}
-            className="h-4 w-4 accent-sky-500"
+            className="h-4 w-4 accent-primary"
           />
           お気に入りのみ
         </label>
@@ -106,11 +106,11 @@ export function CompanyTable() {
                   <Td>
                     <Link
                       href={ROUTES.COMPANY_DETAIL(c.id)}
-                      className="flex items-center gap-1 truncate font-semibold text-sky-600 hover:underline"
+                      className="flex items-center gap-1 truncate font-semibold text-primary hover:underline"
                       title={c.name}
                     >
                       {c.favorite && (
-                        <StarIcon className="h-4 w-4 shrink-0 fill-sky-400 text-sky-500" aria-label="お気に入り" />
+                        <StarIcon className="h-4 w-4 shrink-0 fill-ring text-primary" aria-label="お気に入り" />
                       )}
                       <span className="truncate">{c.name}</span>
                     </Link>
@@ -126,7 +126,7 @@ export function CompanyTable() {
                         href={c.mypageUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sky-600 hover:underline"
+                        className="inline-flex items-center gap-1 text-primary hover:underline"
                       >
                         開く
                         <ArrowTopRightOnSquareIcon className="h-3 w-3" />

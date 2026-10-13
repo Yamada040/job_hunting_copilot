@@ -22,7 +22,7 @@ export function CheckboxGroup({ label, options, selected, onToggle }: CheckboxGr
           <Label
             key={option}
             htmlFor={`${id}-${index}`}
-            className="cursor-pointer rounded-lg border bg-secondary/60 px-3 py-2 font-normal transition hover:text-sky-500"
+            className="cursor-pointer rounded-lg border bg-secondary/60 px-3 py-2 font-normal transition hover:text-primary"
           >
             <Checkbox
               id={`${id}-${index}`}

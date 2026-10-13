@@ -117,7 +117,7 @@ function ProfileFormFields({
                 <Label
                   key={option.id || "none"}
                   htmlFor={`avatar-${option.id || "none"}`}
-                  className="cursor-pointer gap-3 rounded-xl border bg-secondary/60 px-4 py-4 font-normal transition-colors hover:text-sky-500 has-data-[state=checked]:border-sky-400 has-data-[state=checked]:bg-accent"
+                  className="cursor-pointer gap-3 rounded-xl border bg-secondary/60 px-4 py-4 font-normal transition-colors hover:text-primary has-data-[state=checked]:border-ring has-data-[state=checked]:bg-accent"
                 >
                   <RadioGroupItem id={`avatar-${option.id || "none"}`} value={option.id} />
                   {option.src ? (
@@ -143,7 +143,7 @@ function ProfileFormFields({
             error={updateMe.error}
             labels={Object.fromEntries(textFields.map((f) => [f.name, f.label]))}
           />
-          {saved && <p className="text-sm text-emerald-600">保存しました</p>}
+          {saved && <p className="text-sm text-success">保存しました</p>}
 
           <Button type="submit" variant="default" disabled={updateMe.isPending}>
             <UserCircleIcon className="h-4 w-4" />

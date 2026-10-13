@@ -40,9 +40,7 @@ export function InterviewList() {
             </div>
             <div className="text-base font-semibold">{log.company.name}</div>
             <div className="text-xs">{log.format ? INTERVIEW_FORMAT_LABELS[log.format] : "面接形式未設定"}</div>
-            {log.aiResult && (
-              <Badge className="mt-1 bg-emerald-50 text-[11px] text-emerald-700">振り返り結果あり</Badge>
-            )}
+            {log.aiResult && <Badge className="mt-1 bg-success/10 text-[11px] text-success">振り返り結果あり</Badge>}
             <div className="truncate text-xs text-muted-foreground">{log.improvement ?? "振り返りは未入力です"}</div>
           </Card>
         </Link>

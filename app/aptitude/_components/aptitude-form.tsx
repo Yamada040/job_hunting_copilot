@@ -57,7 +57,7 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-sky-700">
+          <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-primary">
             ※ 現在は一回しかできません。
           </Card>
           <CheckboxGroup

@@ -94,7 +94,7 @@ export function EsListClient() {
               <Badge variant="outline">{STATUS_LABEL_MAP[es.status]}</Badge>
               {es.tags.length ? (
                 es.tags.map((tag) => (
-                  <Badge key={tag} className="bg-sky-100 text-sky-700">
+                  <Badge key={tag} className="bg-accent text-primary">
                     {tag}
                   </Badge>
                 ))

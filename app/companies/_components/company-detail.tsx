@@ -48,7 +48,7 @@ function CompanyDetailLoaded({
           onClick={() => updateCompany.mutate({ favorite: !company.favorite })}
           aria-pressed={company.favorite}
         >
-          <StarIcon className={cn("h-4 w-4", company.favorite && "fill-sky-400 text-sky-500")} />
+          <StarIcon className={cn("h-4 w-4", company.favorite && "fill-ring text-primary")} />
           {company.favorite ? "お気に入りから外す" : "お気に入りにする"}
         </Button>
         {company.mypageUrl && (
@@ -71,7 +71,7 @@ function CompanyDetailLoaded({
           updateCompany.mutate(values, { onSuccess: () => setSaved(true) });
         }}
       />
-      {saved && <p className="text-sm text-emerald-600">保存しました</p>}
+      {saved && <p className="text-sm text-success">保存しました</p>}
 
       <AiResultPanel
         title="AI企業分析"

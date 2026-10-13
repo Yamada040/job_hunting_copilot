@@ -46,12 +46,12 @@ export function DeveloperStats() {
         </Card>
         <Card className="gap-0 p-4">
           <p className="text-xs text-muted-foreground">7日アクティブユーザー</p>
-          <p className="mt-2 text-3xl font-black text-emerald-600">{nf.format(summary.activeUsers7d)}</p>
+          <p className="mt-2 text-3xl font-black text-success">{nf.format(summary.activeUsers7d)}</p>
           <p className="mt-1 text-xs text-muted-foreground">稼働率 {activeRate}%</p>
         </Card>
         <Card className="gap-0 p-4">
           <p className="text-xs text-muted-foreground">7日新規ユーザー</p>
-          <p className="mt-2 text-3xl font-black text-sky-600">{nf.format(summary.newUsers7d)}</p>
+          <p className="mt-2 text-3xl font-black text-primary">{nf.format(summary.newUsers7d)}</p>
         </Card>
         <Card className="gap-0 p-4">
           <p className="text-xs text-muted-foreground">登録コンテンツ総数</p>
@@ -69,9 +69,9 @@ export function DeveloperStats() {
           <CardContent className="px-6">
             <div className="space-y-4 text-sm">
               {[
-                { label: "ES", value: summary.esCreated7d, tone: "bg-sky-400" },
-                { label: "企業", value: summary.companiesCreated7d, tone: "bg-emerald-400" },
-                { label: "面接ログ", value: summary.interviewsCreated7d, tone: "bg-indigo-400" },
+                { label: "ES", value: summary.esCreated7d, tone: "bg-category-es" },
+                { label: "企業", value: summary.companiesCreated7d, tone: "bg-ring" },
+                { label: "面接ログ", value: summary.interviewsCreated7d, tone: "bg-category-interview" },
               ].map((item) => (
                 <div key={item.label} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">

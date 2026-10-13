@@ -19,7 +19,7 @@ export default async function LoginPage() {
 
         <Card>
           <CardHeader>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-sky-600">Sign in</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">Sign in</p>
             <CardTitle>
               <h1 className="text-2xl font-semibold">ログイン</h1>
             </CardTitle>

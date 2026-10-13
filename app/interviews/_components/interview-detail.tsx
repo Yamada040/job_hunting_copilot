@@ -59,7 +59,7 @@ function InterviewDetailLoaded({
           updateLog.mutate(values, { onSuccess: () => setSaved(true) });
         }}
       />
-      {saved && <p className="text-sm text-emerald-600">保存しました</p>}
+      {saved && <p className="text-sm text-success">保存しました</p>}
 
       <AiResultPanel
         title="AI振り返り"

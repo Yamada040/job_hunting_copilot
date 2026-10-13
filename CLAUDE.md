@@ -166,7 +166,7 @@ backend/
 
 - 推奨クラスを使う（`bg-linear-to-r`, `text-balance`, `text-wrap` など）
 - v3の非推奨構文は警告を避けるため使わない
-- 色: `app/globals.css` の shadcn の変数（白い面・空色の枠・濃い紺の文字）を使い、`text-foreground` / `text-muted-foreground` / `bg-card` / `border` などのトークンで書く。`text-white` や `bg-[#111111]` のような色の直書きはしない。ダークモードは用意していない
+- 色: `app/globals.css` の shadcn の変数（白い面・空色の枠・濃い紺の文字）を使い、`text-foreground` / `text-muted-foreground` / `bg-card` / `border` などのトークンで書く。うまくいったことは `success`、カレンダーの曜日は `sunday` / `saturday`、予定の種類は `category-es` / `category-interview` / `category-intern` を使う。`text-white` や `bg-[#111111]` のような色の直書きはしない。ダークモードは用意していない
 
 **shadcn/ui**:
 
