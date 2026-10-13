@@ -266,6 +266,12 @@ type CalendarEvent struct {
 	UpdatedAt time.Time
 }
 
+type CalendarFeed struct {
+	UserID    uuid.UUID
+	TokenHash []byte
+	CreatedAt time.Time
+}
+
 type Company struct {
 	ID             uuid.UUID
 	UserID         uuid.UUID

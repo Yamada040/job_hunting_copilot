@@ -462,6 +462,66 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/calendar-feed:
+    get:
+      operationId: getCalendarFeed
+      summary: カレンダーの購読用URLを作ってあるかを取得する
+      description: URLそのものは作ったときにしか返さない（トークンはハッシュだけを保存しているため）。
+      responses:
+        "200":
+          description: 購読用URLの状態
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarFeedStatus"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createCalendarFeed
+      summary: カレンダーの購読用URLを作る（作り直す）
+      description: 作り直すと、前に作ったURLは使えなくなる。返したトークンは二度と取得できない。
+      responses:
+        "201":
+          description: 作ったトークン。URLは /v1/calendar-feed/{token}
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarFeedCreated"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteCalendarFeed
+      summary: カレンダーの購読用URLを止める
+      responses:
+        "204":
+          description: 止めた（作っていなくても成功する）
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/calendar-feed/{token}:
+    get:
+      operationId: getCalendarFeedIcal
+      summary: 購読用URL。予定とESの締切を iCal 形式で返す
+      description: Googleカレンダーなどが、ログインせずに定期的に読みに来る。トークンが合わなければ 404 を返す。
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        "200":
+          description: iCal（RFC 5545）
+          content:
+            text/calendar:
+              schema:
+                type: string
+        default:
+          $ref: "#/components/responses/Problem"
+
   /v1/calendar-events/{calendarEventId}:
     parameters:
       - $ref: "#/components/parameters/CalendarEventId"
@@ -1426,6 +1486,30 @@ components:
       type: string
       description: 予定の種類。日本語の表示名はフロントエンドが持つ
       enum: [es, interview, intern, other]
+
+    CalendarFeedStatus:
+      type: object
+      required: [enabled, createdAt]
+      properties:
+        enabled:
+          type: boolean
+          description: 購読用URLを作ってあるか
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: URLを作った日時。作っていなければ null
+
+    CalendarFeedCreated:
+      type: object
+      required: [token, createdAt]
+      properties:
+        token:
+          type: string
+          description: 購読用URLの秘密の部分。このときにしか返さない
+        createdAt:
+          type: string
+          format: date-time
 
     CalendarItem:
       type: object

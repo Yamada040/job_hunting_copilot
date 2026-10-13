@@ -65,7 +65,7 @@ export function calendarMessages(items: Pick<CalendarItem, "title" | "date" | "t
   const messages = next
     ? [`${relativeDay(today, next.date)}は「${next.title}」があるよ`]
     : ["1週間の予定は空いているよ"];
-  return [...messages, "日付を押すと、予定を追加できるよ"];
+  return [...messages, "日付を押すと、予定を追加できるよ", "Googleカレンダーにも出せるよ"];
 }
 
 /** Webテスト一覧で話す一言。 */
