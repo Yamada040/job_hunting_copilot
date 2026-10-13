@@ -2,6 +2,7 @@ import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "@heroicons/react/24
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/app/_components/list/use-media-query";
 import { TYPE_COLOR, TYPE_LABEL } from "./constants";
 import { CalendarDayCell, CalendarEvent } from "./types";
 import { previewDayEvents } from "./utils";
@@ -20,7 +21,12 @@ type Props = {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onAddToday: () => void;
-  onSelectDate: (date: string) => void;
+  /** 日付の空いたところを押したとき（その日の予定を作る） */
+  onCreate: (date: string) => void;
+  /** 「+N件」や、狭い画面で予定のある日を押したとき（その日の一覧を出す） */
+  onOpenDay: (date: string) => void;
+  /** 予定を押したとき（詳細を出す） */
+  onOpenEvent: (event: CalendarEvent) => void;
 };
 
 export function MonthGrid({
@@ -31,8 +37,12 @@ export function MonthGrid({
   onPrevMonth,
   onNextMonth,
   onAddToday,
-  onSelectDate,
+  onCreate,
+  onOpenDay,
+  onOpenEvent,
 }: Props) {
+  // 狭い画面では予定の名前を出せず点だけなので、予定のある日を押したらその日の一覧を出す
+  const wide = useMediaQuery("(min-width: 640px)");
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-4 shadow-sm">
@@ -90,21 +100,28 @@ export function MonthGrid({
           const events = eventsByDate[date] ?? [];
           const chips = previewDayEvents(events, MAX_CHIPS);
           const dots = previewDayEvents(events, MAX_DOTS);
+          const dayLabel = `${jsDate.getMonth() + 1}月${jsDate.getDate()}日`;
+          const openDay = !wide && events.length > 0;
           return (
-            <button
+            // Googleカレンダーと同じく、日の空いたところを押すと予定を作り、予定の帯を押すとその予定を開く。
+            // ボタンの中にボタンは置けないので、日全体のボタンを下に敷き、帯のボタンをその上に重ねる
+            <div
               key={date}
-              type="button"
-              onClick={() => onSelectDate(date)}
-              aria-label={`${jsDate.getMonth() + 1}月${jsDate.getDate()}日${events.length > 0 ? `、予定${events.length}件` : ""}`}
               className={cn(
-                "flex min-h-16 flex-col items-stretch gap-1 rounded-lg border bg-card p-1 text-left shadow-sm transition hover:bg-accent sm:min-h-24 sm:p-1.5",
+                "relative flex min-h-16 flex-col gap-1 rounded-lg border bg-card p-1 shadow-sm transition hover:bg-accent sm:min-h-24 sm:p-1.5",
                 !inCurrentMonth && "border-dashed opacity-60",
                 date === todayKey && "border-2 border-ring ring-1 ring-ring/70",
               )}
             >
+              <button
+                type="button"
+                onClick={() => (openDay ? onOpenDay(date) : onCreate(date))}
+                aria-label={openDay ? `${dayLabel}の予定（${events.length}件）を見る` : `${dayLabel}に予定を追加`}
+                className="absolute inset-0 rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              />
               <span
                 className={cn(
-                  "text-center text-xs font-bold sm:text-left sm:text-sm",
+                  "pointer-events-none relative text-center text-xs font-bold sm:text-left sm:text-sm",
                   !inCurrentMonth && "text-muted-foreground",
                   weekday === 0 && "text-sunday",
                   weekday === 6 && "text-saturday",
@@ -112,32 +129,43 @@ export function MonthGrid({
               >
                 {jsDate.getDate()}
               </span>
-              {/* 広い画面: 予定の名前を種類の色の帯で出す */}
-              <span className="hidden flex-col gap-0.5 sm:flex">
-                {chips.shown.map((event) => (
-                  <span
-                    key={event.id}
-                    className={cn(
-                      "truncate rounded border-l-2 px-1 py-0.5 text-[11px] leading-tight font-semibold text-foreground",
-                      TYPE_COLOR[event.type].chip,
-                    )}
-                  >
-                    {event.time && <span className="mr-1 tabular-nums">{event.time}</span>}
-                    {event.title}
-                  </span>
-                ))}
-                {chips.rest > 0 && <span className="px-1 text-[11px] text-muted-foreground">+{chips.rest}件</span>}
-              </span>
-              {/* 狭い画面: 名前は入らないので、種類の色の点だけを出す */}
-              {events.length > 0 && (
-                <span className="flex flex-wrap justify-center gap-0.5 sm:hidden">
-                  {dots.shown.map((event) => (
-                    <span key={event.id} className={cn("h-1.5 w-1.5 rounded-full", TYPE_COLOR[event.type].dot)} />
+              {wide ? (
+                <span className="relative flex flex-col gap-0.5">
+                  {chips.shown.map((event) => (
+                    <button
+                      key={event.id}
+                      type="button"
+                      onClick={() => onOpenEvent(event)}
+                      className={cn(
+                        "truncate rounded border-l-2 px-1 py-0.5 text-left text-[11px] leading-tight font-semibold text-foreground transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+                        TYPE_COLOR[event.type].chip,
+                      )}
+                    >
+                      {event.time && <span className="mr-1 tabular-nums">{event.time}</span>}
+                      {event.title}
+                    </button>
                   ))}
-                  {dots.rest > 0 && <span className="text-[9px] leading-none text-muted-foreground">+</span>}
+                  {chips.rest > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenDay(date)}
+                      className="self-start rounded px-1 text-[11px] font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    >
+                      +{chips.rest}件
+                    </button>
+                  )}
                 </span>
+              ) : (
+                events.length > 0 && (
+                  <span className="pointer-events-none relative flex flex-wrap justify-center gap-0.5" aria-hidden>
+                    {dots.shown.map((event) => (
+                      <span key={event.id} className={cn("h-1.5 w-1.5 rounded-full", TYPE_COLOR[event.type].dot)} />
+                    ))}
+                    {dots.rest > 0 && <span className="text-[9px] leading-none text-muted-foreground">+</span>}
+                  </span>
+                )
               )}
-            </button>
+            </div>
           );
         })}
       </div>

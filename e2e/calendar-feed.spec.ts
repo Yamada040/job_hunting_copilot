@@ -11,8 +11,7 @@ test("購読用のURLを作ると、ログインしなくても予定をiCalで�
   await page.goto("/calendar");
   await page.getByRole("button", { name: "今日に追加" }).click();
   await page.getByLabel("タイトル").fill(title);
-  await page.getByRole("button", { name: "予定を保存" }).click();
-  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByText(title).first()).toBeVisible();
 
   // 前のテストで作ってあれば作り直す。状態を読み込み終えて、どちらかのボタンが出るまで待ってから見分ける

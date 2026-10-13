@@ -1,3 +1,5 @@
+import type { CalendarDayCell } from "./types";
+
 function toSafeDate(value: unknown): Date {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
   if (typeof value === "string" || typeof value === "number") {
@@ -24,4 +26,28 @@ export function sortByTime<T extends { time?: string | null }>(events: T[]): T[]
 export function previewDayEvents<T extends { time?: string | null }>(events: T[], max: number) {
   const sorted = sortByTime(events);
   return { shown: sorted.slice(0, max), rest: Math.max(0, sorted.length - max) };
+}
+
+const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
+
+/** 日付（YYYY-MM-DD）を「10月13日（火）」の形にする。 */
+export function formatDayLabel(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const weekday = new Date(year, month - 1, day).getDay();
+  return `${month}月${day}日（${WEEKDAY_LABELS[weekday]}）`;
+}
+
+/** 月の表に並べる日付。月の1日がある週の日曜から、月末がある週の土曜まで（前後の月の日も含める）。 */
+export function monthCells(month: Date): CalendarDayCell[] {
+  const year = month.getFullYear();
+  const index = month.getMonth();
+  const first = new Date(year, index, 1);
+  const last = new Date(year, index + 1, 0);
+  const start = new Date(year, index, 1 - first.getDay());
+  const end = new Date(year, index, last.getDate() + (6 - last.getDay()));
+  const cells: CalendarDayCell[] = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    cells.push({ date: formatDateKey(d), inCurrentMonth: d.getMonth() === index });
+  }
+  return cells;
 }

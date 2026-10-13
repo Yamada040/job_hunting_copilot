@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatDateKey, previewDayEvents } from "./utils";
+import { formatDateKey, formatDayLabel, monthCells, previewDayEvents } from "./utils";
 
 describe("formatDateKey", () => {
   it("formats a Date object with zero-padded month/day", () => {
@@ -50,5 +50,22 @@ describe("previewDayEvents", () => {
 
   it("上限以下なら残りは0件", () => {
     expect(previewDayEvents([{ time: null }], 2).rest).toBe(0);
+  });
+});
+
+describe("formatDayLabel", () => {
+  it("月日と曜日の形にする", () => {
+    expect(formatDayLabel("2026-10-13")).toBe("10月13日（火）");
+  });
+});
+
+describe("monthCells", () => {
+  it("1日のある週の日曜から、月末のある週の土曜までを並べる", () => {
+    // 2026年10月は木曜に始まり、土曜に終わる
+    const cells = monthCells(new Date(2026, 9, 1));
+    expect(cells[0]).toEqual({ date: "2026-09-27", inCurrentMonth: false });
+    expect(cells.find((c) => c.inCurrentMonth)?.date).toBe("2026-10-01");
+    expect(cells.at(-1)).toEqual({ date: "2026-10-31", inCurrentMonth: true });
+    expect(cells.length % 7).toBe(0);
   });
 });
