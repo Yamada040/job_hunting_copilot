@@ -5,6 +5,10 @@
 /* ダークモードは用意していない。shadcn の部品に含まれる dark: を OS の設定で効かせないよう、.dark クラスに限定する */
 @custom-variant dark (&:is(.dark *));
 
+/* ホームの、スクロールで奥からセクションが迫る見せ方を使う画面。セクションを1画面に収められる大きさに限り、
+   狭い画面と「視差効果を減らす」設定では縦に並べたままにする */
+@custom-variant depth (@media (min-width: 64rem) and (min-height: 45rem) and (prefers-reduced-motion: no-preference));
+
 /* 白い面・空色の枠・濃い紺の文字を、shadcn の色の変数で表す */
 :root {
   --background: #f8fbff;
@@ -26,6 +30,20 @@
   --input: #bae6fd;
   --ring: #38bdf8;
   --radius: 0.75rem;
+}
+
+/* ホームのカードの中で、浮いた小物のようにゆっくり上下させる動き */
+@theme {
+  --animate-float: float 4s ease-in-out infinite;
+  @keyframes float {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -6px;
+    }
+  }
 }
 
 @theme inline {
