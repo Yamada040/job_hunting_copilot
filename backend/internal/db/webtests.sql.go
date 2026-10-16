@@ -215,3 +215,68 @@ func (q *Queries) ListWebtestQuestions(ctx context.Context, arg ListWebtestQuest
 	}
 	return items, nil
 }
+
+const updateWebtestQuestion = `-- name: UpdateWebtestQuestion :one
+update webtest_questions
+set title = $1,
+    body = $2,
+    test_type = $3,
+    choices = $4,
+    answer = $5,
+    explanation = $6,
+    category = $7,
+    format = $8,
+    difficulty = $9,
+    time_limit = $10
+where id = $11 and user_id = $12
+returning id, user_id, title, body, test_type, choices, answer, explanation, category, format, difficulty, time_limit, created_at
+`
+
+type UpdateWebtestQuestionParams struct {
+	Title       string
+	Body        string
+	TestType    *string
+	Choices     json.RawMessage
+	Answer      string
+	Explanation *string
+	Category    *string
+	Format      *string
+	Difficulty  *string
+	TimeLimit   *int32
+	ID          uuid.UUID
+	UserID      uuid.UUID
+}
+
+func (q *Queries) UpdateWebtestQuestion(ctx context.Context, arg UpdateWebtestQuestionParams) (WebtestQuestion, error) {
+	row := q.db.QueryRow(ctx, updateWebtestQuestion,
+		arg.Title,
+		arg.Body,
+		arg.TestType,
+		arg.Choices,
+		arg.Answer,
+		arg.Explanation,
+		arg.Category,
+		arg.Format,
+		arg.Difficulty,
+		arg.TimeLimit,
+		arg.ID,
+		arg.UserID,
+	)
+	var i WebtestQuestion
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Body,
+		&i.TestType,
+		&i.Choices,
+		&i.Answer,
+		&i.Explanation,
+		&i.Category,
+		&i.Format,
+		&i.Difficulty,
+		&i.TimeLimit,
+		&i.CreatedAt,
+	)
+	return i, err
+}

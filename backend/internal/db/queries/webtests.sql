@@ -12,6 +12,21 @@ insert into webtest_questions (user_id, title, body, test_type, choices, answer,
 values (@user_id, @title, @body, @test_type, @choices, @answer, @explanation, @category, @format, @difficulty, @time_limit)
 returning *;
 
+-- name: UpdateWebtestQuestion :one
+update webtest_questions
+set title = @title,
+    body = @body,
+    test_type = @test_type,
+    choices = @choices,
+    answer = @answer,
+    explanation = @explanation,
+    category = @category,
+    format = @format,
+    difficulty = @difficulty,
+    time_limit = @time_limit
+where id = @id and user_id = @user_id
+returning *;
+
 -- name: ListWebtestAttempts :many
 select * from webtest_attempts where question_id = @question_id and user_id = @user_id order by created_at desc;
 

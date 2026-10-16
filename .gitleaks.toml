@@ -1,0 +1,4 @@
+# OpenAPI の原本は backend/api/openapi.yaml で検査する。生成コードに埋め込まれる圧縮済み仕様は
+# 高エントロピー文字列として誤検知するため、生成物だけを除外する。
+[allowlist]
+paths = ['''backend/internal/openapi/openapi\.gen\.go''']

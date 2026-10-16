@@ -59,39 +59,16 @@ func (s *Service) Get(ctx context.Context, userID, id uuid.UUID) (Question, erro
 
 // Create は、問題を作り、XPを付与する（1日3回まで）。
 func (s *Service) Create(ctx context.Context, userID uuid.UUID, n NewQuestion) (Question, xp.Result, error) {
-	n.Title, n.Body, n.Answer = strings.TrimSpace(n.Title), strings.TrimSpace(n.Body), strings.TrimSpace(n.Answer)
-	switch {
-	case n.Title == "":
-		return Question{}, xp.Result{}, platform.Required("title", "タイトル")
-	case n.Body == "":
-		return Question{}, xp.Result{}, platform.Required("body", "問題文")
-	case n.Answer == "":
-		return Question{}, xp.Result{}, platform.Required("answer", "正解")
-	}
-	choices := []string{}
-	for _, c := range n.Choices {
-		if c = strings.TrimSpace(c); c != "" {
-			choices = append(choices, c)
-		}
-	}
-	var rawChoices []byte
-	if len(choices) > 0 {
-		var err error
-		if rawChoices, err = json.Marshal(choices); err != nil {
-			return Question{}, xp.Result{}, fmt.Errorf("encode choices: %w", err)
-		}
-	}
-	var timeLimit *int32
-	if n.TimeLimit != nil {
-		v := int32(*n.TimeLimit)
-		timeLimit = &v
+	n, choices, rawChoices, timeLimit, err := prepare(n)
+	if err != nil {
+		return Question{}, xp.Result{}, err
 	}
 
 	var (
 		question Question
 		reward   xp.Result
 	)
-	err := platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
 		row, err := q.CreateWebtestQuestion(ctx, db.CreateWebtestQuestionParams{
 			UserID: userID, Title: n.Title, Body: n.Body, Answer: n.Answer, Choices: rawChoices,
@@ -112,6 +89,67 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, n NewQuestion) (
 		return nil
 	})
 	return question, reward, err
+}
+
+// Update は問題の内容を置き換える。解答履歴は、その時点の正誤記録として残す。
+func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, n NewQuestion) (Question, error) {
+	n, _, rawChoices, timeLimit, err := prepare(n)
+	if err != nil {
+		return Question{}, err
+	}
+
+	var question Question
+	err = platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+		q := db.New(tx)
+		if _, err := q.UpdateWebtestQuestion(ctx, db.UpdateWebtestQuestionParams{
+			ID: id, UserID: userID, Title: n.Title, Body: n.Body, Answer: n.Answer, Choices: rawChoices,
+			Explanation: platform.EmptyToNil(platform.TrimPtr(n.Explanation)),
+			TestType:    platform.EmptyToNil(platform.TrimPtr(n.TestType)),
+			Category:    platform.EmptyToNil(platform.TrimPtr(n.Category)),
+			Format:      platform.EmptyToNil(platform.TrimPtr(n.Format)),
+			Difficulty:  platform.EmptyToNil(platform.TrimPtr(n.Difficulty)),
+			TimeLimit:   timeLimit,
+		}); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return notFound()
+			}
+			return fmt.Errorf("update webtest question: %w", err)
+		}
+		question, err = get(ctx, q, userID, id)
+		return err
+	})
+	return question, err
+}
+
+func prepare(n NewQuestion) (NewQuestion, []string, []byte, *int32, error) {
+	n.Title, n.Body, n.Answer = strings.TrimSpace(n.Title), strings.TrimSpace(n.Body), strings.TrimSpace(n.Answer)
+	switch {
+	case n.Title == "":
+		return NewQuestion{}, nil, nil, nil, platform.Required("title", "タイトル")
+	case n.Body == "":
+		return NewQuestion{}, nil, nil, nil, platform.Required("body", "問題文")
+	case n.Answer == "":
+		return NewQuestion{}, nil, nil, nil, platform.Required("answer", "正解")
+	}
+	choices := []string{}
+	for _, c := range n.Choices {
+		if c = strings.TrimSpace(c); c != "" {
+			choices = append(choices, c)
+		}
+	}
+	var rawChoices []byte
+	if len(choices) > 0 {
+		var err error
+		if rawChoices, err = json.Marshal(choices); err != nil {
+			return NewQuestion{}, nil, nil, nil, fmt.Errorf("encode choices: %w", err)
+		}
+	}
+	var timeLimit *int32
+	if n.TimeLimit != nil {
+		v := int32(*n.TimeLimit)
+		timeLimit = &v
+	}
+	return n, choices, rawChoices, timeLimit, nil
 }
 
 // Answer は、解答の正誤を判定して記録し、XPを付与する（1日2回まで）。

@@ -518,7 +518,11 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Webテストの問題を更新する
+     * @description 問題文・正解・解説などを置き換える。過去の解答履歴は、その時点の記録として残る。
+     */
+    patch: operations["updateWebtestQuestion"];
     trace?: never;
   };
   "/v1/webtest-questions/{webtestQuestionId}/attempts": {
@@ -1054,6 +1058,18 @@ export interface components {
     WebtestQuestionCreated: {
       question: components["schemas"]["WebtestQuestionDetail"];
       xp: components["schemas"]["XpResult"];
+    };
+    WebtestQuestionUpdate: {
+      title: string;
+      body: string;
+      answer: string;
+      choices: string[];
+      explanation?: string;
+      testType?: string;
+      category?: string;
+      format?: string;
+      difficulty?: string;
+      timeLimit?: number;
     };
     WebtestAttempt: {
       /** Format: uuid */
@@ -2107,6 +2123,33 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description 問題と解答の記録 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestQuestionDetail"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  updateWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WebtestQuestionUpdate"];
+      };
+    };
+    responses: {
+      /** @description 更新後の問題 */
       200: {
         headers: {
           [name: string]: unknown;
