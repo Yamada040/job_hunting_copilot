@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SITE_NAME, getSiteUrl } from "@/lib/constants/site";
 import "./globals.css";
+import { DevServiceWorkerReset } from "./_components/dev-service-worker-reset";
 import { Providers } from "./_components/providers";
 import { AvatarNotice } from "./_components/avatar/avatar-notice";
 import { AppHeader } from "./_components/layout/AppHeader";
@@ -63,6 +64,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className="antialiased">
+        <DevServiceWorkerReset />
         <Providers>
           <AppHeader />
           {children}

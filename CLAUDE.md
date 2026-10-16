@@ -97,6 +97,7 @@ flowchart LR
 - 画面だけの状態は props と hooks で扱い、Redux・Zustand などの汎用の状態管理ライブラリは使わない
 - **ブラウザに保存してよい値**: 業務データはバックエンドのDBを正とし、`localStorage` / `sessionStorage` に保存しない。ブラウザに残すのは、Supabase Auth のCookie（ログインセッション）だけ。端末ごとの表示設定が必要になったら、まず `profiles` の設定としてバックエンドに置けないか考える
 - **ローカル開発**: `next dev` は `/v1` を `API_ORIGIN`（既定 `http://localhost:8080`）のバックエンドに転送する
+- **ほかのアプリの Service Worker**: localhost:3000 はほかのアプリも使うので、そのアプリの Service Worker（Firebase の認証用など）が残っていると API の Authorization を書き換えられ、401 でログアウトされ続ける。開発環境でだけ `DevServiceWorkerReset`（`app/_components/dev-service-worker-reset.tsx`）が開いた時点ですべて解除して読み込み直す。このアプリは Service Worker を使わない
 
 ### バックエンド（Go）の構成
 
