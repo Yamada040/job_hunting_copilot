@@ -14,10 +14,11 @@ import { LinesSkeleton } from "@/app/_components/loading-skeletons";
 import { useStartCompanyAnalysis } from "@/app/companies/_components/use-start-company-analysis";
 import { AnalysisPanel, Pager } from "./analysis-panel";
 import { PAGE_SIZE, pageOf, pendingAnalyses } from "./analysis-summaries";
+import { LoadError } from "@/app/_components/load-error";
 
 /** まだAI企業分析をしていない企業。押すとその場で分析を始め、終わると右の「最近のAI分析」へ移る。 */
 export function PendingAnalyses({ className }: { className?: string }) {
-  const { data: companies } = useCompanies();
+  const { data: companies, error } = useCompanies();
   const startAnalysis = useStartCompanyAnalysis();
   const pending = companies ? pendingAnalyses(companies) : null;
   const [page, setPage] = useState(0);
@@ -31,7 +32,9 @@ export function PendingAnalyses({ className }: { className?: string }) {
       count={pending?.length}
       className={className}
     >
-      {pending === null ? (
+      {error ? (
+        <LoadError error={error} />
+      ) : pending === null ? (
         <LinesSkeleton lines={PAGE_SIZE} />
       ) : pending.length === 0 ? (
         <p className="text-xs text-muted-foreground">

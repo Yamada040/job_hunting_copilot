@@ -36,20 +36,25 @@ const loading = (
     <Skeleton className="mx-auto h-3 w-28" />
   </span>
 );
+const loadError = (
+  <span role="alert" className="text-sm font-semibold text-destructive">
+    読み込めませんでした。時間をおいて再度お試しください。
+  </span>
+);
 
 /**
  * カルーセルのカード。回しながら「どこに手をつけるべきか」が分かるよう、各機能の今の状況（件数・急ぎのもの）を添える。
  * 専用のAPIは作らず、各画面と同じ一覧のAPIを使う（キャッシュを共有でき、画面を移っても取り直さずに済む）。
  */
 export function useMenuItems(today: string): CarouselItem[] {
-  const { data: es } = useEsEntries();
-  const { data: companies } = useCompanies();
-  const { data: interviews } = useInterviewLogs();
-  const { data: calendar } = useCalendarItems();
-  const { data: webtests } = useWebtestQuestions();
-  const { data: selfAnalysis } = useSelfAnalysisResult();
-  const { data: aptitude } = useAptitudeResult();
-  const { data: me } = useMe();
+  const { data: es, error: esError } = useEsEntries();
+  const { data: companies, error: companiesError } = useCompanies();
+  const { data: interviews, error: interviewsError } = useInterviewLogs();
+  const { data: calendar, error: calendarError } = useCalendarItems();
+  const { data: webtests, error: webtestsError } = useWebtestQuestions();
+  const { data: selfAnalysis, error: selfAnalysisError } = useSelfAnalysisResult();
+  const { data: aptitude, error: aptitudeError } = useAptitudeResult();
+  const { data: me, error: meError } = useMe();
 
   const drafts = es?.filter((e) => e.status === "draft") ?? [];
   const urgent = es ? urgentDrafts(es, today) : [];
@@ -73,6 +78,8 @@ export function useMenuItems(today: string): CarouselItem[] {
           <br />
           {urgent.length > 0 ? <Hot>締切まで3日以内 {urgent.length}件</Hot> : "急ぎの締切はありません"}
         </>
+      ) : esError ? (
+        loadError
       ) : (
         loading
       ),
@@ -88,6 +95,8 @@ export function useMenuItems(today: string): CarouselItem[] {
           <br />
           面接中 <Count>{companies.filter((c) => c.stage === "interviewing").length}</Count>社
         </>
+      ) : companiesError ? (
+        loadError
       ) : (
         loading
       ),
@@ -103,6 +112,8 @@ export function useMenuItems(today: string): CarouselItem[] {
           <br />
           {unreviewed.length > 0 ? <Hot>振り返り待ち {unreviewed.length}件</Hot> : "振り返りは済んでいます"}
         </>
+      ) : interviewsError ? (
+        loadError
       ) : (
         loading
       ),
@@ -124,6 +135,8 @@ export function useMenuItems(today: string): CarouselItem[] {
             "直近の予定はありません"
           )}
         </>
+      ) : calendarError ? (
+        loadError
       ) : (
         loading
       ),
@@ -139,6 +152,8 @@ export function useMenuItems(today: string): CarouselItem[] {
           <br />
           解くとXPが付きます
         </>
+      ) : webtestsError ? (
+        loadError
       ) : (
         loading
       ),
@@ -150,7 +165,11 @@ export function useMenuItems(today: string): CarouselItem[] {
       alerts: selfAnalysisPending ? 1 : 0,
       summary:
         selfAnalysis === undefined ? (
-          loading
+          selfAnalysisError ? (
+            loadError
+          ) : (
+            loading
+          )
         ) : selfAnalysis === null ? (
           <Hot>まだ回答していません</Hot>
         ) : selfAnalysis.aiResult === null ? (
@@ -166,7 +185,11 @@ export function useMenuItems(today: string): CarouselItem[] {
       alerts: aptitudePending ? 1 : 0,
       summary:
         aptitude === undefined ? (
-          loading
+          aptitudeError ? (
+            loadError
+          ) : (
+            loading
+          )
         ) : aptitude === null ? (
           <Hot>まだ回答していません</Hot>
         ) : aptitude.aiResult === null ? (
@@ -180,7 +203,9 @@ export function useMenuItems(today: string): CarouselItem[] {
       href: ROUTES.PROFILE,
       icon: UserIcon,
       alerts: 0,
-      summary: me?.goalState ? (
+      summary: meError ? (
+        loadError
+      ) : me?.goalState ? (
         <span className="line-clamp-3">目標：{me.goalState}</span>
       ) : (
         "目標と就活の軸を設定できます"
