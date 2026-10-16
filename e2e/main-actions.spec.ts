@@ -116,5 +116,6 @@ test("企業を削除する", async ({ page }) => {
   await page.getByRole("button", { name: /削除/ }).first().click();
   await page.getByRole("alertdialog").getByRole("button", { name: "削除する" }).click();
   await expect(page).toHaveURL(/\/companies$/);
-  await expect(page.getByText(company)).toHaveCount(0);
+  // 削除したことをアバターが企業名入りで話すので、画面全体ではなく一覧のリンクが消えたことを確かめる
+  await expect(page.getByRole("link", { name: company })).toHaveCount(0);
 });
