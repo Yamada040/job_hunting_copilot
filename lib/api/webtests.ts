@@ -48,7 +48,9 @@ export function useUpdateWebtestQuestion(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: WebtestQuestionUpdate) =>
-      unwrap(api.PATCH("/v1/webtest-questions/{webtestQuestionId}", { params: { path: { webtestQuestionId: id } }, body })),
+      unwrap(
+        api.PATCH("/v1/webtest-questions/{webtestQuestionId}", { params: { path: { webtestQuestionId: id } }, body }),
+      ),
     onSuccess: (question) => {
       queryClient.setQueryData(webtestKeys.detail(id), question);
       void queryClient.invalidateQueries({ queryKey: ["webtest-questions", "list"] });

@@ -61,7 +61,12 @@ export function WebtestEditForm({ question, onCancel }: { question: WebtestQuest
           <Field name="testType" label="テスト形式" defaultValue={question.testType ?? ""} />
           <Field name="format" label="形式" defaultValue={question.format ?? ""} />
           <Field name="difficulty" label="難易度" defaultValue={question.difficulty ?? ""} />
-          <Field name="timeLimit" label="制限時間（秒）" defaultValue={question.timeLimit?.toString() ?? ""} type="number" />
+          <Field
+            name="timeLimit"
+            label="制限時間（秒）"
+            defaultValue={question.timeLimit?.toString() ?? ""}
+            type="number"
+          />
         </div>
         <FieldArea name="body" label="問題文" defaultValue={question.body} rows={6} required />
         <div className="grid gap-4 md:grid-cols-2">
