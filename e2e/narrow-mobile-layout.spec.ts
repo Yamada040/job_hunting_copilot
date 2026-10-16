@@ -11,7 +11,10 @@ test.describe("狭いスマホ幅のレイアウト", () => {
   });
 
   test("下部メニューは横にはみ出さない", async ({ browser }) => {
-    const context = await browser.newContext({ storageState: AUTH_STORAGE_STATE_A, viewport: { width: 360, height: 800 } });
+    const context = await browser.newContext({
+      storageState: AUTH_STORAGE_STATE_A,
+      viewport: { width: 360, height: 800 },
+    });
     const page = await context.newPage();
     await page.goto("/dashboard");
 
