@@ -30,7 +30,7 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
   const [answers, setAnswers] = useState<Answers>(result?.answers ?? defaultAnswers);
   const submit = useSubmitAptitude();
   const diagnose = useDiagnoseAptitude();
-  // 回答は1人1回だけ。保存済みなら回答を表示するだけにする（docs/backend-design.md 3章）
+  // 保存済みなら、変更できない回答の一覧を表示する（docs/backend-design.md 3章）
   const locked = result !== null;
   // 回答を変えたか。保存すると result が届いて locked になるので、そのときは確かめない
   const [touched, setTouched] = useState(false);
@@ -98,11 +98,10 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
 
         <CardContent className="space-y-4">
           <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-primary">
-            ※ 現在は一回しかできません。
+            回答は保存後に変更できません。
           </Card>
           {locked ? (
-            // 答え終わったあとは、全部の答えを見返せるよう1つの画面に並べる
-            QUESTIONS.map((q) => <div key={q.key}>{renderField(q, false)}</div>)
+            <AnswerSummary answers={answers} />
           ) : (
             <QuestionStepper
               dirty={dirty}
@@ -121,7 +120,7 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
                     </Button>
                   }
                   title="回答を保存しますか？"
-                  description={`回答は1回だけ保存できます。${unanswered > 0 ? `まだ答えていない質問が${unanswered}問あります。` : ""}この内容で保存しますか？`}
+                  description={`保存後は回答を変更できません。${unanswered > 0 ? `まだ答えていない質問が${unanswered}問あります。` : ""}この内容で保存しますか？`}
                   confirmLabel="保存する"
                   onConfirm={() => submit.mutate(answers, { onSuccess: () => showSuccessNotice("回答を保存しました") })}
                 />
@@ -135,7 +134,7 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
 
       <AiResultPanel
         title="AI適性診断"
-        description="保存した回答をもとに、向いている業界・職種をAIが診断します。1回だけ実行できます。"
+        description="保存した回答をもとに、向いている業界・職種をAIが診断します。保存後に1回実行できます。"
         result={result?.aiResult ?? null}
         runLabel="AI適性診断を行う"
         onRun={() =>
@@ -150,5 +149,21 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
         blockedReason={locked ? undefined : "回答を保存すると実行できます"}
       />
     </div>
+  );
+}
+
+function AnswerSummary({ answers }: { answers: Answers }) {
+  return (
+    <dl className="space-y-3">
+      {QUESTIONS.map((question) => {
+        const answer = question.kind === "multi" ? answers[question.key].join("、") : answers[question.key];
+        return (
+          <div key={question.key} className="space-y-1 rounded-lg border bg-secondary/40 px-3 py-2">
+            <dt className="text-sm font-semibold">{question.title}</dt>
+            <dd className="whitespace-pre-line text-sm text-muted-foreground">{answer || "未回答"}</dd>
+          </div>
+        );
+      })}
+    </dl>
   );
 }
