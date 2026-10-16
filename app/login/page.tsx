@@ -14,8 +14,17 @@ const LOGIN_ERRORS: Record<string, string> = {
   logout: "ほかの端末からのログアウトに失敗しました。この端末からはログアウトしています。",
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
+const safeNextPath = (next: string | undefined) => {
+  if (!next?.startsWith("/") || next.startsWith("//")) return undefined;
+  return next;
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; next?: string }>;
+}) {
+  const { error, next } = await searchParams;
   const errorMessage = error ? LOGIN_ERRORS[error] : undefined;
 
   return (
@@ -42,7 +51,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>
             )}
-            <LoginClient />
+            <LoginClient nextPath={safeNextPath(next)} />
           </CardContent>
           {/* ログインしていないとダッシュボードは開けない（ログイン画面へ戻される）ので、そこへのボタンは置かない */}
           <CardFooter>

@@ -86,3 +86,18 @@ func (i *Issuer) SignWithEmail(t *testing.T, claims jwt.RegisteredClaims, email 
 	}
 	return signed
 }
+
+// SignWithClientID は、OAuth 2.1でクライアントに発行されたトークンを模したJWTを返す。
+func (i *Issuer) SignWithClientID(t *testing.T, claims jwt.RegisteredClaims, clientID string) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, struct {
+		jwt.RegisteredClaims
+		ClientID string `json:"client_id"`
+	}{claims, clientID})
+	token.Header["kid"] = keyID
+	signed, err := token.SignedString(i.key)
+	if err != nil {
+		t.Fatalf("sign token: %v", err)
+	}
+	return signed
+}

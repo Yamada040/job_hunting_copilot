@@ -24,6 +24,18 @@
       }
     },
     {
+      "source": "/mcp",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/mcp",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
       "source": "/(.*)",
       "destination": {
         "service": "web"

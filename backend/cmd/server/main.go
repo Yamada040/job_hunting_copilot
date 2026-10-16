@@ -18,9 +18,11 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/calendar"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/companyoverview"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/contact"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/es"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/interview"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/mcpserver"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
@@ -31,6 +33,7 @@ import (
 type config struct {
 	port        string
 	supabaseURL string
+	siteURL     string
 	databaseURL string
 	developers  []uuid.UUID
 	ai          ai.Config
@@ -42,6 +45,7 @@ func loadConfig() (config, error) {
 	cfg := config{
 		port:        os.Getenv("PORT"),
 		supabaseURL: os.Getenv("SUPABASE_URL"),
+		siteURL:     os.Getenv("NEXT_PUBLIC_SITE_URL"),
 		databaseURL: os.Getenv("DATABASE_URL"),
 		// AIのキーは任意。無ければAI機能だけが 503 を返し、他の機能は動く（docs/backend-design.md 6章）
 		ai: ai.Config{
@@ -69,6 +73,9 @@ func loadConfig() (config, error) {
 	}
 	if cfg.databaseURL == "" {
 		return config{}, errors.New("DATABASE_URL is required")
+	}
+	if cfg.siteURL == "" {
+		return config{}, errors.New("NEXT_PUBLIC_SITE_URL is required for MCP OAuth")
 	}
 	developers, err := parseUserIDs(os.Getenv("DEV_ADMIN_USER_IDS"))
 	if err != nil {
@@ -123,13 +130,21 @@ func run() error {
 	aiClient := ai.NewClient(cfg.ai, &http.Client{Timeout: 90 * time.Second})
 	limiter := ratelimit.NewLimiter()
 	profiles := profile.NewService(profile.NewRepository(db), cfg.developers)
-	handler, err := newHandler(verifier, deps{
+	companyService := company.NewService(db, xpService, aiClient, limiter)
+	esService := es.NewService(db, xpService, aiClient, limiter)
+	calendarService := calendar.NewService(db)
+	mcpOAuth, err := mcpserver.NewOAuthConfig(cfg.siteURL, cfg.supabaseURL)
+	if err != nil {
+		return fmt.Errorf("MCP OAuth configuration: %w", err)
+	}
+	handler, err := newHandler(verifier, mcpOAuth, deps{
 		db:        db,
 		profile:   profiles,
-		company:   company.NewService(db, xpService, aiClient, limiter),
-		es:        es.NewService(db, xpService, aiClient, limiter),
+		company:   companyService,
+		es:        esService,
 		interview: interview.NewService(db, xpService, aiClient, limiter),
-		calendar:  calendar.NewService(db),
+		calendar:  calendarService,
+		overview:  companyoverview.NewService(companyService, esService, calendarService),
 		xpLogs:    xp.Handler{Pool: db},
 		assessment: assessment.Handler{
 			Aptitude:     assessment.NewAptitudeService(db, xpService, aiClient, limiter),

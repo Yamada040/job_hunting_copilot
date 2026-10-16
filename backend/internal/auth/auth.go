@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -42,13 +43,16 @@ func NewVerifier(ctx context.Context, supabaseURL string) (*Verifier, error) {
 // claims は、Supabase Auth のトークンのうち、バックエンドが使う項目。
 type claims struct {
 	jwt.RegisteredClaims
-	Email string `json:"email"`
+	Email    string `json:"email"`
+	ClientID string `json:"client_id"`
 }
 
 // User は、トークンから分かるログイン中のユーザー。
 type User struct {
-	ID    uuid.UUID
-	Email string
+	ID        uuid.UUID
+	Email     string
+	ClientID  string
+	ExpiresAt time.Time
 }
 
 // UserID は、トークンを検証してユーザーID（sub）を返す。
@@ -73,7 +77,7 @@ func (v *Verifier) User(token string) (User, error) {
 	if err != nil {
 		return User{}, fmt.Errorf("token subject is not a user id: %w", err)
 	}
-	return User{ID: id, Email: c.Email}, nil
+	return User{ID: id, Email: c.Email, ClientID: c.ClientID, ExpiresAt: c.ExpiresAt.Time}, nil
 }
 
 type userKey struct{}
