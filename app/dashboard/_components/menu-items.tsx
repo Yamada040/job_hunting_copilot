@@ -164,10 +164,12 @@ export function useMenuItems(today: string): CarouselItem[] {
       icon: ClipboardDocumentCheckIcon,
       alerts: selfAnalysisPending ? 1 : 0,
       summary:
-        selfAnalysis === undefined ? selfAnalysisError ? (
-          loadError
-        ) : (
-          loading
+        selfAnalysis === undefined ? (
+          selfAnalysisError ? (
+            loadError
+          ) : (
+            loading
+          )
         ) : selfAnalysis === null ? (
           <Hot>まだ回答していません</Hot>
         ) : selfAnalysis.aiResult === null ? (
@@ -182,10 +184,12 @@ export function useMenuItems(today: string): CarouselItem[] {
       icon: LightBulbIcon,
       alerts: aptitudePending ? 1 : 0,
       summary:
-        aptitude === undefined ? aptitudeError ? (
-          loadError
-        ) : (
-          loading
+        aptitude === undefined ? (
+          aptitudeError ? (
+            loadError
+          ) : (
+            loading
+          )
         ) : aptitude === null ? (
           <Hot>まだ回答していません</Hot>
         ) : aptitude.aiResult === null ? (
