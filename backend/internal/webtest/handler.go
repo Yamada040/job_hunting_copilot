@@ -64,6 +64,23 @@ func (h Handler) GetWebtestQuestion(ctx context.Context, req openapi.GetWebtestQ
 	return openapi.GetWebtestQuestion200JSONResponse(toAPI(q)), nil
 }
 
+func (h Handler) UpdateWebtestQuestion(ctx context.Context, req openapi.UpdateWebtestQuestionRequestObject) (openapi.UpdateWebtestQuestionResponseObject, error) {
+	userID, err := auth.RequireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	b := req.Body
+	n := NewQuestion{
+		Title: b.Title, Body: b.Body, Answer: b.Answer, Choices: b.Choices, Explanation: b.Explanation,
+		TestType: b.TestType, Category: b.Category, Format: b.Format, Difficulty: b.Difficulty, TimeLimit: b.TimeLimit,
+	}
+	q, err := h.Service.Update(ctx, userID, req.WebtestQuestionId, n)
+	if err != nil {
+		return nil, err
+	}
+	return openapi.UpdateWebtestQuestion200JSONResponse(toAPI(q)), nil
+}
+
 func (h Handler) AnswerWebtestQuestion(ctx context.Context, req openapi.AnswerWebtestQuestionRequestObject) (openapi.AnswerWebtestQuestionResponseObject, error) {
 	userID, err := auth.RequireUserID(ctx)
 	if err != nil {

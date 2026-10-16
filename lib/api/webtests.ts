@@ -7,6 +7,7 @@ import { applyXpResult } from "./xp";
 export type WebtestQuestionSummary = components["schemas"]["WebtestQuestionSummary"];
 export type WebtestQuestionDetail = components["schemas"]["WebtestQuestionDetail"];
 export type WebtestQuestionCreate = components["schemas"]["WebtestQuestionCreate"];
+export type WebtestQuestionUpdate = components["schemas"]["WebtestQuestionUpdate"];
 
 const webtestKeys = {
   list: (testType = "") => ["webtest-questions", "list", testType] as const,
@@ -38,6 +39,19 @@ export function useCreateWebtestQuestion() {
       queryClient.setQueryData(webtestKeys.detail(question.id), question);
       void queryClient.invalidateQueries({ queryKey: ["webtest-questions", "list"] });
       applyXpResult(queryClient, xp);
+    },
+  });
+}
+
+/** 問題を編集する。解答履歴は残るため、正解を変えた場合も過去の正誤は書き換えない。 */
+export function useUpdateWebtestQuestion(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: WebtestQuestionUpdate) =>
+      unwrap(api.PATCH("/v1/webtest-questions/{webtestQuestionId}", { params: { path: { webtestQuestionId: id } }, body })),
+    onSuccess: (question) => {
+      queryClient.setQueryData(webtestKeys.detail(id), question);
+      void queryClient.invalidateQueries({ queryKey: ["webtest-questions", "list"] });
     },
   });
 }

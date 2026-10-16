@@ -748,6 +748,25 @@ paths:
                 $ref: "#/components/schemas/WebtestQuestionDetail"
         default:
           $ref: "#/components/responses/Problem"
+    patch:
+      operationId: updateWebtestQuestion
+      summary: Webテストの問題を更新する
+      description: 問題文・正解・解説などを置き換える。過去の解答履歴は、その時点の記録として残る。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebtestQuestionUpdate"
+      responses:
+        "200":
+          description: 更新後の問題
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebtestQuestionDetail"
+        default:
+          $ref: "#/components/responses/Problem"
 
   /v1/webtest-questions/{webtestQuestionId}/attempts:
     parameters:
@@ -1943,6 +1962,49 @@ components:
           $ref: "#/components/schemas/WebtestQuestionDetail"
         xp:
           $ref: "#/components/schemas/XpResult"
+
+    WebtestQuestionUpdate:
+      type: object
+      additionalProperties: false
+      required: [title, body, answer, choices]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 500
+        choices:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            maxLength: 500
+        explanation:
+          type: string
+          maxLength: 5000
+        testType:
+          type: string
+          maxLength: 50
+        category:
+          type: string
+          maxLength: 50
+        format:
+          type: string
+          maxLength: 50
+        difficulty:
+          type: string
+          maxLength: 50
+        timeLimit:
+          type: integer
+          minimum: 0
+          maximum: 3600
 
     WebtestAttempt:
       type: object

@@ -56,6 +56,29 @@ func TestCreateAndAnswer(t *testing.T) {
 	}
 }
 
+func TestUpdateKeepsAttempts(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	s := NewService(pool, xp.NewService())
+	q, _, err := s.Create(t.Context(), userID, NewQuestion{Title: "更新前", Body: "本文", Answer: "A"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, _, err := s.Answer(t.Context(), userID, q.ID, "A", nil); err != nil {
+		t.Fatalf("Answer: %v", err)
+	}
+
+	updated, err := s.Update(t.Context(), userID, q.ID, NewQuestion{
+		Title: "更新後", Body: "更新した本文", Answer: "B", Choices: []string{"A", "B"},
+	})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if updated.Title != "更新後" || updated.Answer != "B" || len(updated.Choices) != 2 || len(updated.Attempts) != 1 {
+		t.Errorf("Update = %+v, want updated question with one existing attempt", updated)
+	}
+}
+
 func TestOtherUsersQuestionIsNotFound(t *testing.T) {
 	pool := dbtest.Connect(t)
 	alice := dbtest.CreateUser(t, pool)
