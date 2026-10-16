@@ -16,6 +16,13 @@ export class ApiError extends Error {
   }
 }
 
+/** エラーを、利用者にそのまま見せられる1続きの文にする。項目ごとのエラーがあれば、その理由も続ける。 */
+export function apiErrorText(error: unknown): string {
+  if (!(error instanceof ApiError)) return "通信に失敗しました。時間をおいて再度お試しください。";
+  const { title, errors } = error.problem;
+  return [title, ...(errors ?? []).map((e) => e.message)].join(" ");
+}
+
 let supabase: ReturnType<typeof createSupabaseBrowserClient> | null = null;
 
 // Supabase Auth のアクセストークンを付ける。トークンの更新は supabase-js が getSession の中で行う

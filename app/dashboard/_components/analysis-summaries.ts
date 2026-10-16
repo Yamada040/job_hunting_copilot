@@ -19,3 +19,13 @@ export function analysisPreview(text: string, length: number): string {
   const flat = sanitizeMarkdown(text).replace(/\s+/g, " ").trim();
   return flat.length > length ? `${flat.slice(0, length)}…` : flat;
 }
+
+/** 1ページに出す件数 */
+export const PAGE_SIZE = 2;
+
+/** page ページ目（0始まり）の項目。分析が終わって件数が減ったときに空のページを出さないよう、page は最後のページまでに収める。 */
+export function pageOf<T>(items: T[], page: number): { items: T[]; page: number; pageCount: number } {
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount - 1);
+  return { items: items.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE), page: current, pageCount };
+}

@@ -1,6 +1,8 @@
 import type { ComponentType, SVGProps } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Props = {
@@ -35,5 +37,45 @@ export function AnalysisPanel({ icon: Icon, title, description, count, children,
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
+  );
+}
+
+/** パネルの中の一覧のページ送り。1ページに収まるときは出さない。 */
+export function Pager({
+  page,
+  pageCount,
+  onChange,
+}: {
+  page: number;
+  pageCount: number;
+  onChange: (page: number) => void;
+}) {
+  if (pageCount <= 1) return null;
+  return (
+    <nav aria-label="ページ送り" className="mt-2 flex items-center justify-end gap-1 text-xs text-muted-foreground">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        aria-label="前のページ"
+        disabled={page === 0}
+        onClick={() => onChange(page - 1)}
+      >
+        <ChevronLeftIcon />
+      </Button>
+      <span className="tabular-nums">
+        {page + 1} / {pageCount}
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        aria-label="次のページ"
+        disabled={page === pageCount - 1}
+        onClick={() => onChange(page + 1)}
+      >
+        <ChevronRightIcon />
+      </Button>
+    </nav>
   );
 }

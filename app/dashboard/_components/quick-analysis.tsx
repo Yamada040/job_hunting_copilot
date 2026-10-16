@@ -9,7 +9,8 @@ import { ArrowRightIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { companiesQuery, companyKeys, useAnalyzeCompany, useCreateCompany, type Company } from "@/lib/api/companies";
 import { ROUTES } from "@/lib/constants/routes";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { apiErrorText } from "@/lib/api/client";
+import { showAvatarNotice } from "@/app/_components/avatar/avatar-notice-store";
 
 // 入力欄が空のあいだ、例の企業名を入れ替えて見せる（https://motion-reference.takayustudio.jp/#motion=word-swap）
 const EXAMPLES = ["トヨタ自動車", "ソニーグループ", "サイバーエージェント", "三菱商事", "任天堂"];
@@ -26,12 +27,10 @@ export function QuickAnalysis() {
   const analyzeCompany = useAnalyzeCompany();
   const [name, setName] = useState("");
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<unknown>(null);
 
   const submit = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    setError(null);
     setPending(true);
     let company: Company;
     try {
@@ -42,7 +41,7 @@ export function QuickAnalysis() {
       if (existing) queryClient.setQueryData(companyKeys.detail(existing.id), existing);
       company = existing ?? (await createCompany.mutateAsync({ name: trimmed })).company;
     } catch (e) {
-      setError(e);
+      showAvatarNotice(apiErrorText(e));
       return;
     } finally {
       setPending(false);
@@ -59,7 +58,7 @@ export function QuickAnalysis() {
 
   return (
     <form
-      className="relative w-full max-w-xl space-y-2"
+      className="w-full max-w-xl space-y-2"
       onSubmit={(e) => {
         e.preventDefault();
         void submit();
@@ -87,11 +86,6 @@ export function QuickAnalysis() {
       <p className="text-xs text-muted-foreground">
         企業名を入れて Enter。登録とAI企業分析を一度に行います（1日3回まで）
       </p>
-      {error !== null && (
-        <div className="absolute inset-x-0 top-full z-10 mt-1 text-left">
-          <ApiErrorMessage error={error} labels={{ name: "企業名" }} />
-        </div>
-      )}
     </form>
   );
 }

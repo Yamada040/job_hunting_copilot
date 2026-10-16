@@ -34,7 +34,7 @@ test("登録済みの企業名を入れると、登録し直さずにその企�
   await expect(page).toHaveURL(url);
 });
 
-test("ホームの「AI分析がまだの企業」から、画面を移らずに分析を始められる", async ({ page }) => {
+test("ホームの「AI分析がまだの企業」から、画面を移らずに分析を始め、失敗はアバターが伝える", async ({ page }) => {
   const name = `その場分析商事-${Date.now()}`;
   await page.goto("/companies/new");
   await page.getByLabel("企業名", { exact: true }).fill(name);
@@ -49,6 +49,6 @@ test("ホームの「AI分析がまだの企業」から、画面を移らずに
   await row.getByRole("button", { name: "分析" }).click();
   await analysis;
   await expect(page).toHaveURL(/\/dashboard$/);
-  // AIのキーが無いので失敗し、その行に理由が出る
-  await expect(row.getByRole("alert")).toBeVisible();
+  // AIのキーが無いので失敗し、画面の右下のアバターが理由を話す
+  await expect(page.getByRole("alert").filter({ hasText: `「${name}」の分析ができませんでした。` })).toBeAttached();
 });

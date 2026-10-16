@@ -1,25 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { BuildingOfficeIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api/client";
+import { apiErrorText } from "@/lib/api/client";
 import { useAnalyzeCompany, useCompanies, useCompanyAnalysis, type Company } from "@/lib/api/companies";
 import { COMPANY_STAGE_LABELS } from "@/lib/companies/stages";
 import { ROUTES } from "@/lib/constants/routes";
 import { StaggerItem, StaggerList } from "@/app/_components/list/list-items";
 import { LinesSkeleton } from "@/app/_components/loading-skeletons";
-import { AnalysisPanel } from "./analysis-panel";
-import { pendingAnalyses } from "./analysis-summaries";
-
-const LIMIT = 3;
+import { showAvatarNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { AnalysisPanel, Pager } from "./analysis-panel";
+import { PAGE_SIZE, pageOf, pendingAnalyses } from "./analysis-summaries";
 
 /** まだAI企業分析をしていない企業。押すとその場で分析を始め、終わると右の「最近のAI分析」へ移る。 */
 export function PendingAnalyses({ className }: { className?: string }) {
   const { data: companies } = useCompanies();
+  const analyzeCompany = useAnalyzeCompany();
   const pending = companies ? pendingAnalyses(companies) : null;
+  const [page, setPage] = useState(0);
+  const paged = pageOf(pending ?? [], page);
 
   return (
     <AnalysisPanel
@@ -30,54 +33,50 @@ export function PendingAnalyses({ className }: { className?: string }) {
       className={className}
     >
       {pending === null ? (
-        <LinesSkeleton lines={LIMIT} />
+        <LinesSkeleton lines={PAGE_SIZE} />
       ) : pending.length === 0 ? (
         <p className="text-xs text-muted-foreground">
           {companies?.length ? "登録した企業はすべて分析済みです" : "企業名を入れて分析すると、企業も登録されます"}
         </p>
       ) : (
-        <StaggerList className="grid-cols-1 gap-2">
-          {pending.slice(0, LIMIT).map((company, index) => (
-            <StaggerItem key={company.id} index={index}>
-              <PendingRow company={company} />
-            </StaggerItem>
-          ))}
-        </StaggerList>
+        <>
+          <StaggerList className="grid-cols-1 gap-2">
+            {paged.items.map((company, index) => (
+              <StaggerItem key={company.id} index={index}>
+                <PendingRow
+                  company={company}
+                  // mutate の onError は最後に呼んだ分しか届かないので、続けて押した企業の失敗も伝わるよう Promise で受ける
+                  onAnalyze={() =>
+                    analyzeCompany
+                      .mutateAsync(company.id)
+                      .catch((e) => showAvatarNotice(`「${company.name}」の分析ができませんでした。${apiErrorText(e)}`))
+                  }
+                />
+              </StaggerItem>
+            ))}
+          </StaggerList>
+          <Pager page={paged.page} pageCount={paged.pageCount} onChange={setPage} />
+        </>
       )}
     </AnalysisPanel>
   );
 }
 
-function PendingRow({ company }: { company: Company }) {
-  const analyzeCompany = useAnalyzeCompany();
+function PendingRow({ company, onAnalyze }: { company: Company; onAnalyze: () => void }) {
   const analysis = useCompanyAnalysis(company.id);
   const running = analysis?.status === "pending";
-  const error = analysis?.status === "error" ? analysis.error : null;
 
   return (
-    <div className="space-y-1">
-      <div className="relative flex items-center gap-2 overflow-clip rounded-xl bg-card px-3 py-1.5 ring-1 ring-border">
-        {running && <Shimmer />}
-        <Link href={ROUTES.COMPANY_DETAIL(company.id)} className="relative min-w-0 flex-1 hover:text-primary">
-          <span className="block truncate text-sm font-medium">{company.name}</span>
-          <span className="block text-xs text-muted-foreground">{COMPANY_STAGE_LABELS[company.stage]}</span>
-        </Link>
-        <Button
-          type="button"
-          size="sm"
-          className="relative"
-          disabled={running}
-          onClick={() => analyzeCompany.mutate(company.id)}
-        >
-          <SparklesIcon />
-          {running ? "分析中…" : "分析"}
-        </Button>
-      </div>
-      {error !== null && (
-        <p role="alert" className="px-1 text-xs text-destructive">
-          {error instanceof ApiError ? error.problem.title : "通信に失敗しました。時間をおいて再度お試しください。"}
-        </p>
-      )}
+    <div className="relative flex items-center gap-2 overflow-clip rounded-xl bg-card px-3 py-1.5 ring-1 ring-border">
+      {running && <Shimmer />}
+      <Link href={ROUTES.COMPANY_DETAIL(company.id)} className="relative min-w-0 flex-1 hover:text-primary">
+        <span className="block truncate text-sm font-medium">{company.name}</span>
+        <span className="block text-xs text-muted-foreground">{COMPANY_STAGE_LABELS[company.stage]}</span>
+      </Link>
+      <Button type="button" size="sm" className="relative" disabled={running} onClick={onAnalyze}>
+        <SparklesIcon />
+        {running ? "分析中…" : "分析"}
+      </Button>
     </div>
   );
 }

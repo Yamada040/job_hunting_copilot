@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SITE_NAME, getSiteUrl } from "@/lib/constants/site";
 import "./globals.css";
 import { Providers } from "./_components/providers";
+import { AvatarNotice } from "./_components/avatar/avatar-notice";
 import { AppHeader } from "./_components/layout/AppHeader";
 import { Dock } from "./_components/layout/Dock";
 
@@ -66,6 +67,7 @@ export default function RootLayout({
           <AppHeader />
           {children}
           <Dock />
+          <AvatarNotice />
         </Providers>
       </body>
     </html>
