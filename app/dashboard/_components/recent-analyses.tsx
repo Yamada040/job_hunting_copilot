@@ -10,11 +10,12 @@ import { StaggerItem, StaggerList } from "@/app/_components/list/list-items";
 import { LinesSkeleton } from "@/app/_components/loading-skeletons";
 import { AnalysisPanel, Pager } from "./analysis-panel";
 import { PAGE_SIZE, analysisPreview, pageOf, recentAnalyses } from "./analysis-summaries";
+import { LoadError } from "@/app/_components/load-error";
 const PREVIEW_LENGTH = 60;
 
 /** 最近AI企業分析をした企業と、分析結果の冒頭。押すとその企業の分析結果を開く。 */
 export function RecentAnalyses({ className }: { className?: string }) {
-  const { data: companies } = useCompanies();
+  const { data: companies, error } = useCompanies();
   const analyzed = companies ? recentAnalyses(companies) : null;
   const [page, setPage] = useState(0);
   const paged = pageOf(analyzed ?? [], page);
@@ -26,7 +27,9 @@ export function RecentAnalyses({ className }: { className?: string }) {
       description="分析結果を開いて、ESや面接の準備に使えます"
       className={className}
     >
-      {analyzed === null ? (
+      {error ? (
+        <LoadError error={error} />
+      ) : analyzed === null ? (
         <LinesSkeleton lines={PAGE_SIZE} />
       ) : analyzed.length === 0 ? (
         <p className="text-xs text-muted-foreground">分析した企業はまだありません。企業名を入れて試してみましょう</p>
