@@ -5,7 +5,6 @@ import { CheckIcon, ClipboardDocumentIcon, SparklesIcon } from "@heroicons/react
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { sanitizeMarkdown } from "./sanitize";
 import { EmptyState } from "@/app/_components/empty-state";
 
@@ -19,7 +18,6 @@ type Props = {
   runLabel: string;
   onRun: () => void;
   pending: boolean;
-  error: unknown;
   /** 1回だけ実行できる機能で、すでに結果がある場合は true（ボタンを出さない） */
   done?: boolean;
   /** 実行できない理由（未保存など）。あればボタンを押せなくして表示する */
@@ -38,7 +36,6 @@ export function AiResultPanel({
   runLabel,
   onRun,
   pending,
-  error,
   done,
   blockedReason,
 }: Props) {
@@ -79,7 +76,6 @@ export function AiResultPanel({
             {runAction}
           </EmptyState>
         )}
-        <ApiErrorMessage error={error} />
 
         {text && (
           <Card variant="muted" className="gap-2 px-4">

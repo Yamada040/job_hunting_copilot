@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useAptitudeResult, useDiagnoseAptitude, useSubmitAptitude, type AptitudeResult } from "@/lib/api/assessments";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -136,9 +137,8 @@ function AptitudeFormLoaded({ result }: { result: AptitudeResult | null }) {
         description="保存した回答をもとに、向いている業界・職種をAIが診断します。1回だけ実行できます。"
         result={result?.aiResult ?? null}
         runLabel="AI適性診断を行う"
-        onRun={() => diagnose.mutate()}
+        onRun={() => diagnose.mutate(undefined, { onError: (e) => showFailureNotice("AI適性診断", e) })}
         pending={diagnose.isPending}
-        error={diagnose.error}
         done={!!result?.aiResult}
         blockedReason={locked ? undefined : "回答を保存すると実行できます"}
       />

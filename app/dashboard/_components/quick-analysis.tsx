@@ -9,8 +9,7 @@ import { ArrowRightIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { companiesQuery, companyKeys, useAnalyzeCompany, useCreateCompany, type Company } from "@/lib/api/companies";
 import { ROUTES } from "@/lib/constants/routes";
-import { apiErrorText } from "@/lib/api/client";
-import { showAvatarNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
 
 // 入力欄が空のあいだ、例の企業名を入れ替えて見せる（https://motion-reference.takayustudio.jp/#motion=word-swap）
 const EXAMPLES = ["トヨタ自動車", "ソニーグループ", "サイバーエージェント", "三菱商事", "任天堂"];
@@ -41,7 +40,7 @@ export function QuickAnalysis() {
       if (existing) queryClient.setQueryData(companyKeys.detail(existing.id), existing);
       company = existing ?? (await createCompany.mutateAsync({ name: trimmed })).company;
     } catch (e) {
-      showAvatarNotice(apiErrorText(e));
+      showFailureNotice("企業の登録", e);
       return;
     } finally {
       setPending(false);
@@ -51,7 +50,10 @@ export function QuickAnalysis() {
         mutationKey: companyKeys.analysis,
         predicate: (mutation) => mutation.state.variables === company.id,
       }) > 0;
-    if (company.aiResult === null && !analyzing) analyzeCompany.mutate(company.id);
+    // 詳細の画面へ移るとこの部品は消え、mutate の onError は届かないので、Promise で受けて失敗を伝える
+    if (company.aiResult === null && !analyzing) {
+      analyzeCompany.mutateAsync(company.id).catch((e) => showFailureNotice(`「${company.name}」のAI企業分析`, e));
+    }
     setName("");
     router.push(ROUTES.COMPANY_ANALYSIS(company.id));
   };

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { calendarFeedUrl, useCalendarFeed, useCreateCalendarFeed, useDeleteCalendarFeed } from "@/lib/api/calendar";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { LinesSkeleton } from "@/app/_components/loading-skeletons";
 
@@ -36,6 +37,7 @@ export function CalendarSubscription() {
         setUrl(calendarFeedUrl(token));
         setCopied(false);
       },
+      onError: (e) => showFailureNotice("購読用のURLの発行", e),
     });
   const copy = async () => {
     if (!url) return;
@@ -118,12 +120,16 @@ export function CalendarSubscription() {
                 description="今のURLは使えなくなり、Googleカレンダーには新しい予定が届かなくなります。"
                 confirmLabel="止める"
                 destructive
-                onConfirm={() => deleteFeed.mutate(undefined, { onSuccess: () => setUrl(null) })}
+                onConfirm={() =>
+                  deleteFeed.mutate(undefined, {
+                    onSuccess: () => setUrl(null),
+                    onError: (e) => showFailureNotice("共有の停止", e),
+                  })
+                }
               />
             </>
           )}
         </div>
-        <ApiErrorMessage error={createFeed.error ?? deleteFeed.error} />
       </CardContent>
     </Card>
   );

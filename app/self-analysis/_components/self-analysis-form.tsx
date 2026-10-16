@@ -10,6 +10,7 @@ import {
   type SelfAnalysisResult,
 } from "@/lib/api/assessments";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -149,9 +150,8 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
         description="保存した回答をもとに、強み・価値観・モチベーションの源泉と自己PRの骨子をAIがまとめます。1回だけ実行できます。"
         result={result?.aiResult ?? null}
         runLabel="AI自己分析を行う"
-        onRun={() => analyze.mutate()}
+        onRun={() => analyze.mutate(undefined, { onError: (e) => showFailureNotice("AI自己分析", e) })}
         pending={analyze.isPending}
-        error={analyze.error}
         done={!!result?.aiResult}
         blockedReason={locked ? undefined : "回答を保存すると実行できます"}
       />

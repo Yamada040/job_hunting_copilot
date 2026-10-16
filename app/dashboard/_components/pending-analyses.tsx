@@ -6,13 +6,12 @@ import { motion, useReducedMotion } from "framer-motion";
 import { BuildingOfficeIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
-import { apiErrorText } from "@/lib/api/client";
 import { useAnalyzeCompany, useCompanies, useCompanyAnalysis, type Company } from "@/lib/api/companies";
 import { COMPANY_STAGE_LABELS } from "@/lib/companies/stages";
 import { ROUTES } from "@/lib/constants/routes";
 import { StaggerItem, StaggerList } from "@/app/_components/list/list-items";
 import { LinesSkeleton } from "@/app/_components/loading-skeletons";
-import { showAvatarNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { AnalysisPanel, Pager } from "./analysis-panel";
 import { PAGE_SIZE, pageOf, pendingAnalyses } from "./analysis-summaries";
 
@@ -49,7 +48,7 @@ export function PendingAnalyses({ className }: { className?: string }) {
                   onAnalyze={() =>
                     analyzeCompany
                       .mutateAsync(company.id)
-                      .catch((e) => showAvatarNotice(`「${company.name}」の分析ができませんでした。${apiErrorText(e)}`))
+                      .catch((e) => showFailureNotice(`「${company.name}」のAI企業分析`, e))
                   }
                 />
               </StaggerItem>

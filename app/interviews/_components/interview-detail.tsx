@@ -12,7 +12,7 @@ import {
   type InterviewLog,
 } from "@/lib/api/interviews";
 import { ROUTES } from "@/lib/constants/routes";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { InterviewForm } from "./interview-form";
@@ -45,7 +45,10 @@ function InterviewDetailLoaded({
   const reviewLog = useReviewInterviewLog(log.id);
 
   const handleDelete = () => {
-    deleteLog.mutate(undefined, { onSuccess: () => router.push(ROUTES.INTERVIEWS) });
+    deleteLog.mutate(undefined, {
+      onSuccess: () => router.push(ROUTES.INTERVIEWS),
+      onError: (e) => showFailureNotice("面接ログの削除", e),
+    });
   };
 
   return (
@@ -67,9 +70,8 @@ function InterviewDetailLoaded({
         description="保存済みの面接ログをもとに、AIが良かった点・改善点・次回の行動をまとめます。何度でも実行でき、結果は上書きされます（1日の上限あり）。"
         result={log.aiResult}
         runLabel={log.aiResult ? "もう一度振り返る" : "AI振り返りを行う"}
-        onRun={() => reviewLog.mutate()}
+        onRun={() => reviewLog.mutate(undefined, { onError: (e) => showFailureNotice("AI振り返り", e) })}
         pending={reviewLog.isPending}
-        error={reviewLog.error}
       />
 
       <div className="space-y-2">
@@ -85,7 +87,6 @@ function InterviewDetailLoaded({
             </Button>
           }
         />
-        <ApiErrorMessage error={deleteLog.error} />
       </div>
     </div>
   );

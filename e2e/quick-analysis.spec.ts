@@ -50,5 +50,7 @@ test("ホームの「AI分析がまだの企業」から、画面を移らずに
   await analysis;
   await expect(page).toHaveURL(/\/dashboard$/);
   // AIのキーが無いので失敗し、画面の右下のアバターが理由を話す
-  await expect(page.getByRole("alert").filter({ hasText: `「${name}」の分析ができませんでした。` })).toBeAttached();
+  await expect(
+    page.getByRole("alert").filter({ hasText: `「${name}」のAI企業分析ができませんでした。` }),
+  ).toBeAttached();
 });

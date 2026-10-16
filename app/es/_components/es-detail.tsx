@@ -7,7 +7,7 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 import { useDeleteEsEntry, useEsEntry, useSubmitEsEntry, useUpdateEsEntry, type EsEntry } from "@/lib/api/es";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constants/routes";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { EsForm } from "./es-form";
 import { EsReviewPanel } from "./es-review-panel";
@@ -73,9 +73,13 @@ function EsDetailLoaded({
           description={`「${entry.title}」を削除します。よろしいですか？`}
           confirmLabel="削除する"
           destructive
-          onConfirm={() => deleteEsEntry.mutate(undefined, { onSuccess: () => router.push(ROUTES.ES) })}
+          onConfirm={() =>
+            deleteEsEntry.mutate(undefined, {
+              onSuccess: () => router.push(ROUTES.ES),
+              onError: (e) => showFailureNotice("ESの削除", e),
+            })
+          }
         />
-        <ApiErrorMessage error={deleteEsEntry.error} />
       </div>
     </div>
   );

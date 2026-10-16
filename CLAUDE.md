@@ -187,7 +187,7 @@ backend/
 - レベル・XPの表示: `app/_components/xp-badge.tsx` と `app/_components/xp/`（紋章・ゲージ・レベルアップの演出）。ゲージの繰り上がりの順番は `lib/xp/gauge.ts`
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
 - 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示、`ConfirmDialog`）
-- 操作のエラー（分析に失敗した、など）は、画面の右下に飛び出すアバター（`AvatarNotice`）が話す。`showAvatarNotice(apiErrorText(error))` で呼ぶ。入力欄ごとのエラーは、直す場所が分かるよう欄の下に出す（`ApiErrorMessage`）。今はホームの入力欄とパネルでだけ使っている
+- 操作のエラー（分析に失敗した、など）は、画面の右下に飛び出すアバター（`AvatarNotice`）が話す。失敗した操作の名前を渡して `showFailureNotice("AI添削", error)` で呼ぶ（AIの実行・削除・解答の送信など）。入力欄ごとのエラーと、フォームの保存・読み込みの失敗は、直す場所が分かるよう欄の下に出す（`ApiErrorMessage`）。ダイアログの中のエラーも、アバターが暗い幕に隠れるので欄の下に出す
 - 画面の見出し: `AppLayout` の `headerTitle`・`headerDescription`・`headerActions`（主な操作）・`avatar`（見出しの横で話す `AvatarGuide`。話す一言は `app/_components/avatar/guide-messages.ts`）
 - フォーム: `app/_components/form/`。保存のボタンは `FormActions`（画面の下に付いてくる帯）に置き、`useFormEditing` で変更の有無と ⌘/Ctrl + Enter の送信、`LeaveGuard` で保存せずに離れる前の確認をする。項目は `FormSection` で区切る
 - 一覧: `app/_components/list/`（`ListToolbar`・`FilterChips` の絞り込み、`StaggerList`・`ListCardLink` のカード）。読み込み中は `loading-skeletons.tsx` の枠を出す
