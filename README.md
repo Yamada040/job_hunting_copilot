@@ -171,7 +171,7 @@ Next.js 認証コールバック: `app/auth/callback/route.ts` で `exchangeCode
 2. Authorization path に `/oauth/consent` を指定する（SupabaseのSite URLと組み合わされ、`https://<公開URL>/oauth/consent` になる）。
 3. 任意のMCPクライアントから接続できるよう Dynamic Client Registration を有効にする。接続のたびにアプリ名・要求権限・リダイレクト先を表示する同意画面を経由する。
 
-接続済みアプリの一覧・取り消し画面は、利用状況を確認してから追加する。Supabaseが認可済みクライアント、同意、認可コード、更新トークンを管理するため、アプリ固有のテーブルは不要である。
+接続済みアプリはプロフィール画面で一覧・取り消しできる。取り消すと、Supabaseが当該クライアントへの同意、セッション、更新トークンを無効にする。認可済みクライアント、同意、認可コード、更新トークンはSupabaseが管理するため、アプリ固有のテーブルは不要である。
 
 ## 開発ルール
 
