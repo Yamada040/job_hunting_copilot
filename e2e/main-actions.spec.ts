@@ -15,7 +15,7 @@ test("企業を登録して編集する", async ({ page }) => {
   await expect(page).toHaveURL(/\/companies\/[0-9a-f-]{36}$/);
   await page.getByLabel("業界").fill("IT");
   await page.getByRole("button", { name: "保存する" }).click();
-  await expect(page.getByText("保存しました")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "企業の情報を保存しました" })).toBeAttached();
   await page.goto("/companies");
   await expect(page.getByText(company)).toBeVisible();
 });
@@ -81,7 +81,7 @@ test("プロフィールを保存する", async ({ page }) => {
   await page.getByLabel("氏名").fill("テスト 太郎");
   await page.getByLabel("就活で達成したい状態（短文）").fill(`目標-${stamp}`);
   await page.getByRole("button", { name: "保存する" }).click();
-  await expect(page.getByText("保存しました")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "プロフィールを保存しました" })).toBeAttached();
   await page.goto("/dashboard");
   await expect(page.getByText(`目標-${stamp}`)).toBeVisible();
 });
@@ -116,5 +116,6 @@ test("企業を削除する", async ({ page }) => {
   await page.getByRole("button", { name: /削除/ }).first().click();
   await page.getByRole("alertdialog").getByRole("button", { name: "削除する" }).click();
   await expect(page).toHaveURL(/\/companies$/);
-  await expect(page.getByText(company)).toHaveCount(0);
+  // 削除したことをアバターが企業名入りで話すので、画面全体ではなく一覧のリンクが消えたことを確かめる
+  await expect(page.getByRole("link", { name: company })).toHaveCount(0);
 });

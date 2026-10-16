@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { useAnswerWebtestQuestion, useWebtestQuestion } from "@/lib/api/webtests";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
 import { ROUTES } from "@/lib/constants/routes";
 import { LoadError } from "@/app/_components/load-error";
@@ -30,7 +30,10 @@ export function WebtestDetail({ id }: { id: string }) {
     setStatus(null);
     answer.mutate(
       { answer: String(form.get("answer") ?? ""), timeSpent: timeSpent ? Number(timeSpent) : undefined },
-      { onSuccess: ({ attempt }) => setStatus(attempt.isCorrect ? "correct" : "incorrect") },
+      {
+        onSuccess: ({ attempt }) => setStatus(attempt.isCorrect ? "correct" : "incorrect"),
+        onError: (e) => showFailureNotice("解答の送信", e),
+      },
     );
   };
 
@@ -105,8 +108,6 @@ export function WebtestDetail({ id }: { id: string }) {
               </div>
             </form>
           </Card>
-
-          <ApiErrorMessage error={answer.error} />
 
           {question.explanation ? (
             <Card variant="muted" className="gap-1 p-4 text-sm">

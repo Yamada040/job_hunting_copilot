@@ -45,12 +45,10 @@ type Props = {
   submitLabel: string;
   pending: boolean;
   error: unknown;
-  /** 直前の保存がうまくいったか（保存の帯に「保存しました」を出す） */
-  saved?: boolean;
   onSubmit: (values: InterviewFormValues) => void;
 };
 
-export function InterviewForm({ initial, submitLabel, pending, error, saved, onSubmit }: Props) {
+export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }: Props) {
   const [company, setCompany] = useState<CompanySummary | null>(initial?.company ?? null);
   const [questions, setQuestions] = useState<InterviewQuestion[]>(initial?.questions ?? [emptyQuestion]);
   const { dirty, markDirty, formProps } = useFormEditing();
@@ -212,7 +210,7 @@ export function InterviewForm({ initial, submitLabel, pending, error, saved, onS
 
         <ApiErrorMessage error={error} labels={FIELD_LABELS} />
 
-        <FormActions dirty={dirty} saved={saved}>
+        <FormActions dirty={dirty}>
           <Button type="submit" variant="default" disabled={pending || !company}>
             {pending ? "保存中…" : submitLabel}
           </Button>

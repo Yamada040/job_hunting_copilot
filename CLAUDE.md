@@ -188,6 +188,7 @@ backend/
 - レベル・XPの表示: `app/_components/xp-badge.tsx` と `app/_components/xp/`（紋章・ゲージ・レベルアップの演出）。ゲージの繰り上がりの順番は `lib/xp/gauge.ts`
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
 - 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示、`ConfirmDialog`）
+- 操作の結果は、画面の右下に飛び出すアバター（`AvatarNotice`）が話す。成功は `showSuccessNotice("ESを提出しました")`、失敗は操作の名前を渡して `showFailureNotice("AI添削", error)`、AIの実行のように時間がかかるものは `noticeWhenDone(mutation.mutateAsync(), { action, done, link })` で呼ぶ（待つ間に画面を移っても届く）。話す成功は、AIの実行が終わったとき・取り消せない操作（提出・削除）・フォームの保存。結果がその場に出る操作（Webテストの解答など）では話さない。入力欄ごとのエラーと、フォームの保存・読み込みの失敗は、直す場所が分かるよう欄の下に出す（`ApiErrorMessage`）。ダイアログの中のエラーも、アバターが暗い幕に隠れるので欄の下に出す
 - 画面の見出し: `AppLayout` の `headerTitle`・`headerDescription`・`headerActions`（主な操作）・`avatar`（見出しの横で話す `AvatarGuide`。話す一言は `app/_components/avatar/guide-messages.ts`）
 - フォーム: `app/_components/form/`。保存のボタンは `FormActions`（画面の下に付いてくる帯）に置き、`useFormEditing` で変更の有無と ⌘/Ctrl + Enter の送信、`LeaveGuard` で保存せずに離れる前の確認をする。項目は `FormSection` で区切る
 - 一覧: `app/_components/list/`（`ListToolbar`・`FilterChips` の絞り込み、`StaggerList`・`ListCardLink` のカード）。読み込み中は `loading-skeletons.tsx` の枠を出す
@@ -216,7 +217,8 @@ backend/
 **ダッシュボード（`/dashboard`）**:
 
 - 専用のAPIは作らず、各機能の一覧APIを組み合わせる
-- 表示内容: 3Dのカルーセル（`MenuCarousel`）だけ。回して選ぶと各画面を開く。カードには各機能の今の状況（件数・締切が近いESなどの急ぎのもの）と、今日の獲得XPを出す。情報は必要になったら足していく
+- 表示内容: 3Dのカルーセル（`MenuCarousel`）。回して選ぶと各画面を開く。カードには各機能の今の状況（件数・締切が近いESなどの急ぎのもの）と、今日の獲得XPを出す。情報は必要になったら足していく
+- AI企業分析の入口: 見出しの下の入力欄（`QuickAnalysis`）に企業名を入れると、企業の登録とAI企業分析をまとめて始めて詳細の画面へ移る。左右に「AI分析がまだの企業」（その場で分析できる）と「最近のAI分析」を、2社ずつのページ送りで置く（狭い画面ではカルーセルの下）。分析の状態は `useCompanyAnalysis` で企業ごとに読み、どの画面から始めた分析も詳細の画面で「処理中」と出す
 - カルーセルは CSS の3D変形で作る（three.js などは使わない）。←→キー・ドラッグ・ホイールで回せ、OS の「視差効果を減らす」設定では動きを止める
 - 保護ルート: 未ログインならリダイレクト
 

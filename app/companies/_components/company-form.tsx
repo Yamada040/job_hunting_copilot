@@ -54,12 +54,10 @@ type Props = {
   submitLabel: string;
   pending: boolean;
   error: unknown;
-  /** 直前の保存がうまくいったか（保存の帯に「保存しました」を出す） */
-  saved?: boolean;
   onSubmit: (values: CompanyFormValues) => void;
 };
 
-export function CompanyForm({ initial, submitLabel, pending, error, saved, onSubmit }: Props) {
+export function CompanyForm({ initial, submitLabel, pending, error, onSubmit }: Props) {
   const { dirty, formProps } = useFormEditing();
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -153,7 +151,7 @@ export function CompanyForm({ initial, submitLabel, pending, error, saved, onSub
 
         <ApiErrorMessage error={error} labels={COMPANY_FIELD_LABELS} />
 
-        <FormActions dirty={dirty} saved={saved}>
+        <FormActions dirty={dirty}>
           <Button type="submit" variant="default" disabled={pending}>
             {pending ? "保存中…" : submitLabel}
           </Button>

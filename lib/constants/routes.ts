@@ -1,3 +1,6 @@
+/** 企業の詳細の画面で、AI企業分析の欄を開いて見せるための目印 */
+export const COMPANY_ANALYSIS_ANCHOR = "ai-analysis";
+
 export const ROUTES = {
   HOME: "/",
   LOGIN: "/login",
@@ -10,6 +13,7 @@ export const ROUTES = {
   COMPANIES: "/companies",
   COMPANIES_NEW: "/companies/new",
   COMPANY_DETAIL: (id: string) => `/companies/${id}`,
+  COMPANY_ANALYSIS: (id: string) => `/companies/${id}#${COMPANY_ANALYSIS_ANCHOR}`,
 
   // ES関連
   ES: "/es",
