@@ -7,9 +7,10 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRightIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
-import { companiesQuery, companyKeys, useAnalyzeCompany, useCreateCompany, type Company } from "@/lib/api/companies";
+import { companiesQuery, companyKeys, useCreateCompany, type Company } from "@/lib/api/companies";
 import { ROUTES } from "@/lib/constants/routes";
 import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { useStartCompanyAnalysis } from "@/app/companies/_components/use-start-company-analysis";
 
 // 入力欄が空のあいだ、例の企業名を入れ替えて見せる（https://motion-reference.takayustudio.jp/#motion=word-swap）
 const EXAMPLES = ["トヨタ自動車", "ソニーグループ", "サイバーエージェント", "三菱商事", "任天堂"];
@@ -23,7 +24,7 @@ export function QuickAnalysis() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const createCompany = useCreateCompany();
-  const analyzeCompany = useAnalyzeCompany();
+  const startAnalysis = useStartCompanyAnalysis();
   const [name, setName] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -50,10 +51,7 @@ export function QuickAnalysis() {
         mutationKey: companyKeys.analysis,
         predicate: (mutation) => mutation.state.variables === company.id,
       }) > 0;
-    // 詳細の画面へ移るとこの部品は消え、mutate の onError は届かないので、Promise で受けて失敗を伝える
-    if (company.aiResult === null && !analyzing) {
-      analyzeCompany.mutateAsync(company.id).catch((e) => showFailureNotice(`「${company.name}」のAI企業分析`, e));
-    }
+    if (company.aiResult === null && !analyzing) void startAnalysis(company);
     setName("");
     router.push(ROUTES.COMPANY_ANALYSIS(company.id));
   };

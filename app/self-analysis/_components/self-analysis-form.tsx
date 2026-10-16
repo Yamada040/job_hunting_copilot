@@ -10,7 +10,8 @@ import {
   type SelfAnalysisResult,
 } from "@/lib/api/assessments";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
-import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { noticeWhenDone, showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { ROUTES } from "@/lib/constants/routes";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -135,7 +136,7 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
                   title="回答を保存しますか？"
                   description={`回答は1回だけ保存できます。${unanswered > 0 ? `まだ答えていない質問が${unanswered}問あります。` : ""}この内容で保存しますか？`}
                   confirmLabel="保存する"
-                  onConfirm={() => submit.mutate(answers)}
+                  onConfirm={() => submit.mutate(answers, { onSuccess: () => showSuccessNotice("回答を保存しました") })}
                 />
               )}
             />
@@ -150,7 +151,13 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
         description="保存した回答をもとに、強み・価値観・モチベーションの源泉と自己PRの骨子をAIがまとめます。1回だけ実行できます。"
         result={result?.aiResult ?? null}
         runLabel="AI自己分析を行う"
-        onRun={() => analyze.mutate(undefined, { onError: (e) => showFailureNotice("AI自己分析", e) })}
+        onRun={() =>
+          void noticeWhenDone(analyze.mutateAsync(), {
+            action: "AI自己分析",
+            done: "AI自己分析が終わりました",
+            link: { href: ROUTES.SELF_ANALYSIS, label: "結果を見る" },
+          })
+        }
         pending={analyze.isPending}
         done={!!result?.aiResult}
         blockedReason={locked ? undefined : "回答を保存すると実行できます"}

@@ -1,13 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
 import { useDeleteEsEntry, useEsEntry, useSubmitEsEntry, useUpdateEsEntry, type EsEntry } from "@/lib/api/es";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constants/routes";
-import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { showFailureNotice, showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { EsForm } from "./es-form";
 import { EsReviewPanel } from "./es-review-panel";
@@ -16,24 +15,14 @@ import { LoadError } from "@/app/_components/load-error";
 
 export function EsDetail({ id }: { id: string }) {
   const { data: entry, error } = useEsEntry(id);
-  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
-  const [saved, setSaved] = useState(false);
 
   if (error) return <LoadError error={error} back={{ href: ROUTES.ES, label: "ESの一覧へ戻る" }} />;
   if (!entry) return <FormSkeleton />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return <EsDetailLoaded key={entry.updatedAt} entry={entry} saved={saved} onSavedChange={setSaved} />;
+  return <EsDetailLoaded key={entry.updatedAt} entry={entry} />;
 }
 
-function EsDetailLoaded({
-  entry,
-  saved,
-  onSavedChange: setSaved,
-}: {
-  entry: EsEntry;
-  saved: boolean;
-  onSavedChange: (saved: boolean) => void;
-}) {
+function EsDetailLoaded({ entry }: { entry: EsEntry }) {
   const router = useRouter();
   const updateEsEntry = useUpdateEsEntry(entry.id);
   const submitEsEntry = useSubmitEsEntry();
@@ -50,13 +39,14 @@ function EsDetailLoaded({
         canSubmit={entry.status === "draft"}
         pending={updateEsEntry.isPending || submitEsEntry.isPending}
         error={updateEsEntry.error ?? submitEsEntry.error}
-        saved={saved}
-        onSubmit={(values, submit) => {
-          setSaved(false);
+        onSubmit={(values, submit) =>
           updateEsEntry.mutate(values, {
-            onSuccess: () => (submit ? submitEsEntry.mutate(entry.id) : setSaved(true)),
-          });
-        }}
+            onSuccess: () =>
+              submit
+                ? submitEsEntry.mutate(entry.id, { onSuccess: () => showSuccessNotice("ESを提出しました") })
+                : showSuccessNotice("ESを保存しました"),
+          })
+        }
       />
 
       <EsReviewPanel entryId={entry.id} companyId={entry.company.id} />
@@ -75,7 +65,10 @@ function EsDetailLoaded({
           destructive
           onConfirm={() =>
             deleteEsEntry.mutate(undefined, {
-              onSuccess: () => router.push(ROUTES.ES),
+              onSuccess: () => {
+                showSuccessNotice(`「${entry.title}」を削除しました`);
+                router.push(ROUTES.ES);
+              },
               onError: (e) => showFailureNotice("ESの削除", e),
             })
           }

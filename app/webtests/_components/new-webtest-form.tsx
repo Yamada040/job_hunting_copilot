@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateWebtestQuestion } from "@/lib/api/webtests";
 import { ROUTES } from "@/lib/constants/routes";
+import { showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { FormActions } from "@/app/_components/form/form-actions";
 import { LeaveGuard } from "@/app/_components/form/leave-guard";
@@ -53,7 +54,12 @@ export function NewWebtestForm() {
         difficulty: text("difficulty"),
         timeLimit: timeLimit ? Number(timeLimit) : undefined,
       },
-      { onSuccess: () => router.push(ROUTES.WEBTESTS) },
+      {
+        onSuccess: () => {
+          showSuccessNotice("問題を作りました");
+          router.push(ROUTES.WEBTESTS);
+        },
+      },
     );
   };
 

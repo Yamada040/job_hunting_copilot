@@ -5,6 +5,7 @@ import { useActionState, useMemo, useOptimistic, useReducer, useState, useTransi
 
 import { calendarKeys, createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from "@/lib/api/calendar";
 import { TYPE_LABEL } from "./calendar/constants";
+import { showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { EventDialog } from "./calendar/event-dialog";
 import { eventLink, eventTiming } from "./calendar/event-fields";
 import { EventSummary } from "./calendar/event-summary";
@@ -117,6 +118,7 @@ export function InteractiveCalendar({ events }: Props) {
       }
       await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
       dispatch({ type: "saveSuccess" });
+      showSuccessNotice(editingId ? "予定を保存しました" : "予定を追加しました");
     } catch (err) {
       console.error(err);
       dispatch({ type: "saveFailed", message: "保存に失敗しました。時間をおいてもう一度お試しください。" });
@@ -137,6 +139,7 @@ export function InteractiveCalendar({ events }: Props) {
         await deleteCalendarEvent(evt.id);
         await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
         dispatch({ type: "deleteSuccess" });
+        showSuccessNotice("予定を削除しました");
       } catch (err) {
         console.error(err);
         dispatch({ type: "deleteFailed", message: "削除に失敗しました。時間をおいてもう一度お試しください。" });

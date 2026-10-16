@@ -15,7 +15,7 @@ test("企業を登録して編集する", async ({ page }) => {
   await expect(page).toHaveURL(/\/companies\/[0-9a-f-]{36}$/);
   await page.getByLabel("業界").fill("IT");
   await page.getByRole("button", { name: "保存する" }).click();
-  await expect(page.getByText("保存しました")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "企業の情報を保存しました" })).toBeAttached();
   await page.goto("/companies");
   await expect(page.getByText(company)).toBeVisible();
 });
@@ -81,7 +81,7 @@ test("プロフィールを保存する", async ({ page }) => {
   await page.getByLabel("氏名").fill("テスト 太郎");
   await page.getByLabel("就活で達成したい状態（短文）").fill(`目標-${stamp}`);
   await page.getByRole("button", { name: "保存する" }).click();
-  await expect(page.getByText("保存しました")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "プロフィールを保存しました" })).toBeAttached();
   await page.goto("/dashboard");
   await expect(page.getByText(`目標-${stamp}`)).toBeVisible();
 });

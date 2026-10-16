@@ -6,19 +6,19 @@ import { motion, useReducedMotion } from "framer-motion";
 import { BuildingOfficeIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
-import { useAnalyzeCompany, useCompanies, useCompanyAnalysis, type Company } from "@/lib/api/companies";
+import { useCompanies, useCompanyAnalysis, type Company } from "@/lib/api/companies";
 import { COMPANY_STAGE_LABELS } from "@/lib/companies/stages";
 import { ROUTES } from "@/lib/constants/routes";
 import { StaggerItem, StaggerList } from "@/app/_components/list/list-items";
 import { LinesSkeleton } from "@/app/_components/loading-skeletons";
-import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { useStartCompanyAnalysis } from "@/app/companies/_components/use-start-company-analysis";
 import { AnalysisPanel, Pager } from "./analysis-panel";
 import { PAGE_SIZE, pageOf, pendingAnalyses } from "./analysis-summaries";
 
 /** まだAI企業分析をしていない企業。押すとその場で分析を始め、終わると右の「最近のAI分析」へ移る。 */
 export function PendingAnalyses({ className }: { className?: string }) {
   const { data: companies } = useCompanies();
-  const analyzeCompany = useAnalyzeCompany();
+  const startAnalysis = useStartCompanyAnalysis();
   const pending = companies ? pendingAnalyses(companies) : null;
   const [page, setPage] = useState(0);
   const paged = pageOf(pending ?? [], page);
@@ -42,15 +42,7 @@ export function PendingAnalyses({ className }: { className?: string }) {
           <StaggerList className="grid-cols-1 gap-2">
             {paged.items.map((company, index) => (
               <StaggerItem key={company.id} index={index}>
-                <PendingRow
-                  company={company}
-                  // mutate の onError は最後に呼んだ分しか届かないので、続けて押した企業の失敗も伝わるよう Promise で受ける
-                  onAnalyze={() =>
-                    analyzeCompany
-                      .mutateAsync(company.id)
-                      .catch((e) => showFailureNotice(`「${company.name}」のAI企業分析`, e))
-                  }
-                />
+                <PendingRow company={company} onAnalyze={() => void startAnalysis(company)} />
               </StaggerItem>
             ))}
           </StaggerList>

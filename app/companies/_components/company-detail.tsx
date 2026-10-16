@@ -1,21 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { ArrowTopRightOnSquareIcon, StarIcon, TrashIcon } from "@heroicons/react/24/outline";
 
-import {
-  useAnalyzeCompany,
-  useCompany,
-  useCompanyAnalysis,
-  useDeleteCompany,
-  useUpdateCompany,
-  type Company,
-} from "@/lib/api/companies";
+import { useCompany, useCompanyAnalysis, useDeleteCompany, useUpdateCompany, type Company } from "@/lib/api/companies";
 import { Button } from "@/components/ui/button";
 import { COMPANY_ANALYSIS_ANCHOR, ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
-import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { showFailureNotice, showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { useStartCompanyAnalysis } from "./use-start-company-analysis";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { CompanyForm } from "./company-form";
@@ -24,28 +17,18 @@ import { LoadError } from "@/app/_components/load-error";
 
 export function CompanyDetail({ id }: { id: string }) {
   const { data: company, error } = useCompany(id);
-  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
-  const [saved, setSaved] = useState(false);
 
   if (error) return <LoadError error={error} back={{ href: ROUTES.COMPANIES, label: "企業の一覧へ戻る" }} />;
   if (!company) return <FormSkeleton />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return <CompanyDetailLoaded key={company.updatedAt} company={company} saved={saved} onSavedChange={setSaved} />;
+  return <CompanyDetailLoaded key={company.updatedAt} company={company} />;
 }
 
-function CompanyDetailLoaded({
-  company,
-  saved,
-  onSavedChange: setSaved,
-}: {
-  company: Company;
-  saved: boolean;
-  onSavedChange: (saved: boolean) => void;
-}) {
+function CompanyDetailLoaded({ company }: { company: Company }) {
   const router = useRouter();
   const updateCompany = useUpdateCompany(company.id);
   const deleteCompany = useDeleteCompany(company.id);
-  const analyzeCompany = useAnalyzeCompany();
+  const startAnalysis = useStartCompanyAnalysis();
   const analysis = useCompanyAnalysis(company.id);
 
   return (
@@ -75,11 +58,9 @@ function CompanyDetailLoaded({
         submitLabel="保存する"
         pending={updateCompany.isPending}
         error={updateCompany.error}
-        saved={saved}
-        onSubmit={(values) => {
-          setSaved(false);
-          updateCompany.mutate(values, { onSuccess: () => setSaved(true) });
-        }}
+        onSubmit={(values) =>
+          updateCompany.mutate(values, { onSuccess: () => showSuccessNotice("企業の情報を保存しました") })
+        }
       />
 
       <AiResultPanel
@@ -88,7 +69,7 @@ function CompanyDetailLoaded({
         description="AIがWebで最新の採用情報などを検索し、企業の概要・強み・求める人物像をまとめます。企業ごとに1回だけ実行できます（数十秒かかります）。"
         result={company.aiResult}
         runLabel="AI企業分析を行う"
-        onRun={() => analyzeCompany.mutate(company.id, { onError: (e) => showFailureNotice("AI企業分析", e) })}
+        onRun={() => void startAnalysis(company)}
         pending={analysis?.status === "pending"}
         done={company.aiResult !== null}
       />
@@ -107,7 +88,10 @@ function CompanyDetailLoaded({
           destructive
           onConfirm={() =>
             deleteCompany.mutate(undefined, {
-              onSuccess: () => router.push(ROUTES.COMPANIES),
+              onSuccess: () => {
+                showSuccessNotice(`「${company.name}」を削除しました`);
+                router.push(ROUTES.COMPANIES);
+              },
               onError: (e) => showFailureNotice("企業の削除", e),
             })
           }

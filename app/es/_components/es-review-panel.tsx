@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROUTES } from "@/lib/constants/routes";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
-import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { noticeWhenDone } from "@/app/_components/avatar/avatar-notice-store";
 import { EsReviewItemCard } from "./es-review-item";
 import { EmptyState } from "@/app/_components/empty-state";
 
@@ -35,7 +35,13 @@ export function EsReviewPanel({ entryId, companyId }: { entryId: string; company
         <Button
           type="button"
           variant="default"
-          onClick={() => reviewEsEntry.mutate(undefined, { onError: (e) => showFailureNotice("AI添削", e) })}
+          onClick={() =>
+            void noticeWhenDone(reviewEsEntry.mutateAsync(), {
+              action: "AI添削",
+              done: "AI添削が終わりました",
+              link: { href: ROUTES.ES_DETAIL(entryId), label: "結果を見る" },
+            })
+          }
           disabled={reviewEsEntry.isPending}
         >
           {reviewEsEntry.isPending
