@@ -119,9 +119,9 @@ export function QuickAdd() {
           aria-label={open ? "追加のメニューを閉じる" : "追加する（N）"}
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="grid h-14 w-14 place-items-center rounded-full bg-linear-to-b from-ring to-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="grid h-12 w-12 place-items-center rounded-full bg-linear-to-b from-ring to-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring sm:h-14 sm:w-14"
         >
-          <PlusIcon className={cn("h-7 w-7 transition-transform duration-300", open && "rotate-45")} aria-hidden />
+          <PlusIcon className={cn("h-6 w-6 transition-transform duration-300 sm:h-7 sm:w-7", open && "rotate-45")} aria-hidden />
         </button>
       </div>
 
