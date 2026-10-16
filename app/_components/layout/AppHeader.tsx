@@ -22,9 +22,9 @@ export function AppHeader() {
       leftContent={<XpBadge />}
       rightContent={
         <form action="/auth/signout" method="post">
-          <Button type="submit" variant="ghost" size="sm">
+          <Button type="submit" variant="ghost" size="icon-sm" aria-label="ログアウト" className="sm:w-auto sm:px-2.5">
             <ArrowRightOnRectangleIcon />
-            ログアウト
+            <span className="hidden sm:inline">ログアウト</span>
           </Button>
         </form>
       }
