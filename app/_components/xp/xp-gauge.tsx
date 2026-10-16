@@ -66,15 +66,15 @@ export function XpGauge({ xp, level }: XpState) {
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1">
-      <div className="flex items-baseline justify-between gap-3 text-[11px] font-bold text-muted-foreground">
+      <div className="flex items-baseline justify-between gap-1 text-[10px] font-bold text-muted-foreground sm:gap-3 sm:text-[11px]">
         <span>
           次のレベルまで <span className="text-foreground tabular-nums">{Math.max(0, next - xp)}</span> XP
         </span>
-        <span>
+        <span className="hidden sm:inline">
           累計 <motion.span className="text-foreground tabular-nums">{roundedXp}</motion.span> XP
         </span>
       </div>
-      <div className="relative h-4 overflow-hidden rounded-full border bg-secondary">
+      <div className="relative h-3 overflow-hidden rounded-full border bg-secondary sm:h-4">
         <motion.div className="absolute inset-y-0 left-0 bg-ring/35" style={{ width: ghostWidth }} />
         <motion.div
           className="absolute inset-y-0 left-0 rounded-full bg-linear-to-r from-ring to-primary"
