@@ -114,11 +114,17 @@ export default function PrivacyPage() {
 
       <LegalSection title="6. 退会とデータの削除">
         <p>
-          退会と、預かった情報の削除は、
+          <Link href={ROUTES.PROFILE} className="text-primary underline underline-offset-4">
+            プロフィールの画面
+          </Link>
+          から退会できます。退会すると、アカウントと預かったすべての情報が消えます。企業・ES・面接ログ・予定などは、画面から1件ずつ消すこともできます。
+        </p>
+        <p>
+          ログインできないときなどは、
           <Link href={ROUTES.CONTACT} className="text-primary underline underline-offset-4">
             問い合わせフォーム
           </Link>
-          から依頼してください。本人の依頼であることを確かめやすいよう、できればログインしてから送ってください（ログインできないときは、登録したGoogleアカウントのメールアドレスを返信先にしてください）。運営者が本人の依頼であることを確かめてから、アカウントと登録した内容をまとめて消します。企業・ES・面接ログ・予定などは、画面から1件ずつ消すこともできます。
+          から削除を依頼できます。登録したGoogleアカウントのメールアドレスを返信先にしてください。運営者が本人の依頼であることを確かめてから、アカウントと登録した内容をまとめて消します。
         </p>
       </LegalSection>
 

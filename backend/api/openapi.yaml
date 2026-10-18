@@ -58,6 +58,15 @@ paths:
                 $ref: "#/components/schemas/Me"
         default:
           $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteMe
+      summary: 退会する（アカウントとすべてのデータを削除する）
+      description: Supabase Auth のユーザーを削除し、企業・ES・面接ログ・予定・XPなど、その人のデータもすべて削除する。取り消せない。
+      responses:
+        "204":
+          description: 削除した
+        default:
+          $ref: "#/components/responses/Problem"
 
   /v1/companies:
     get:

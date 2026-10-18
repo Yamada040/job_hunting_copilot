@@ -162,7 +162,7 @@ backend/
 - `api_rate_limits`: AI・問い合わせの回数制限の状態（1人ごと）
 - `api_app_rate_limits`: ユーザーに結び付かない回数制限の状態（`bucket` ごとに1行）。AIと問い合わせのアプリ全体の上限と、ログインしていない人の問い合わせのIPごとの上限（`contact_daily:ip:<IPのハッシュ>`）
 
-企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
+企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。全テーブルが `auth.users` を `on delete cascade` で参照しており、退会（`DELETE /v1/me`）はバックエンドが `auth.users` の行を消すだけで、その人のデータをすべて消す。テーブルを足すときも `auth.users` への参照は必ず `on delete cascade` にする（`internal/profile` のテストが確かめる）。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
 
 ### APIルート
 
@@ -383,7 +383,7 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 - `/self-analysis` — 自己分析アンケート＋AI自己分析
 - `/aptitude` — 適性チェック＋AI診断
 - `/webtests`, `/webtests/new`, `/webtests/[id]` — Webテスト練習
-- `/profile` — プロフィール/目標の編集
+- `/profile` — プロフィール/目標の編集、退会（成功したらこの端末からログアウトして `/` へ移る）
 - `/contact` — 問い合わせ（ログインせずに使える。LP のフッターとログイン画面からリンクする。ログインしていなければヘッダーはロゴとログインへの入口だけにし、下のメニューは出さない）
 - `/developer` — 開発者向け管理ページ（バックエンドが `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけ下のメニューにリンクが出る）
 - `/privacy` — プライバシーポリシー（預かる情報、外部のAIなどへ送る内容、削除の依頼方法）。Google の OAuth 同意画面にもこのURLを登録する
