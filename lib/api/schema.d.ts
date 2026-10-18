@@ -35,7 +35,11 @@ export interface paths {
     get: operations["getMe"];
     put?: never;
     post?: never;
-    delete?: never;
+    /**
+     * 退会する（アカウントとすべてのデータを削除する）
+     * @description Supabase Auth のユーザーを削除し、企業・ES・面接ログ・予定・XPなど、その人のデータもすべて削除する。取り消せない。
+     */
+    delete: operations["deleteMe"];
     options?: never;
     head?: never;
     /**
@@ -60,7 +64,7 @@ export interface paths {
     put?: never;
     /**
      * 企業を登録する
-     * @description 正規化した企業名が同じ企業がすでにあれば 409 を返す。登録でXPが付く（1日5回まで）。
+     * @description 正規化した企業名が同じ企業がすでにあれば 409 を返す。1人500社まで（超えると 409）。登録でXPが付く（1日5回まで）。
      */
     post: operations["createCompany"];
     delete?: never;
@@ -131,7 +135,10 @@ export interface paths {
      */
     get: operations["listEsEntries"];
     put?: never;
-    /** ESを作成する（常に下書き） */
+    /**
+     * ESを作成する（常に下書き）
+     * @description 1人500件まで（超えると 409）。
+     */
     post: operations["createEsEntry"];
     delete?: never;
     options?: never;
@@ -196,7 +203,7 @@ export interface paths {
     };
     /**
      * ESのAI添削の履歴を取得する
-     * @description 新しい順。点数の推移を見せるため、添削のたびに1件ずつ残している。
+     * @description 新しい順に10件まで。点数の推移を見せるため、添削のたびに1件ずつ残している。
      */
     get: operations["listEsReviews"];
     put?: never;
@@ -226,7 +233,7 @@ export interface paths {
     put?: never;
     /**
      * 面接ログを作成する
-     * @description XPが付く（同じ面接ログには1回、1日5回まで）。
+     * @description 1人500件まで（超えると 409）。XPが付く（同じ面接ログには1回、1日5回まで）。
      */
     post: operations["createInterviewLog"];
     delete?: never;
@@ -290,12 +297,60 @@ export interface paths {
     };
     /**
      * カレンダーに表示する予定を取得する
-     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる。
+     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。
      */
     get: operations["listCalendarItems"];
     put?: never;
-    /** 予定を登録する */
+    /**
+     * 予定を登録する
+     * @description 1人2000件まで（超えると 409）。
+     */
     post: operations["createCalendarEvent"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/calendar-feed": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * カレンダーの購読用URLを作ってあるかを取得する
+     * @description URLそのものは作ったときにしか返さない（トークンはハッシュだけを保存しているため）。
+     */
+    get: operations["getCalendarFeed"];
+    put?: never;
+    /**
+     * カレンダーの購読用URLを作る（作り直す）
+     * @description 作り直すと、前に作ったURLは使えなくなる。返したトークンは二度と取得できない。
+     */
+    post: operations["createCalendarFeed"];
+    /** カレンダーの購読用URLを止める */
+    delete: operations["deleteCalendarFeed"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/calendar-feed/{token}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 購読用URL。予定とESの締切を iCal 形式で返す
+     * @description Googleカレンダーなどが、ログインせずに定期的に読みに来る。トークンが合わなければ 404 を返す。
+     */
+    get: operations["getCalendarFeedIcal"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -448,7 +503,7 @@ export interface paths {
     put?: never;
     /**
      * Webテストの問題を作る
-     * @description XPが付く（1日3回まで）。
+     * @description 1人500問まで（超えると 409）。XPが付く（1日3回まで）。
      */
     post: operations["createWebtestQuestion"];
     delete?: never;
@@ -468,9 +523,17 @@ export interface paths {
     };
     /** 問題と、これまでの解答の記録を取得する */
     get: operations["getWebtestQuestion"];
-    put?: never;
+    /**
+     * 問題を書き換える
+     * @description 送った内容で問題全体を置き換える（送らなかった任意の項目は空になる）。 これまでの解答の記録は、解いたときの正誤のまま残す（解答そのものは保存していないので判定し直せない）。XPは付かない。
+     */
+    put: operations["updateWebtestQuestion"];
     post?: never;
-    delete?: never;
+    /**
+     * 問題を削除する
+     * @description 解答の記録も一緒に消える。
+     */
+    delete: operations["deleteWebtestQuestion"];
     options?: never;
     head?: never;
     patch?: never;
@@ -489,7 +552,7 @@ export interface paths {
     put?: never;
     /**
      * 問題に解答する
-     * @description 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
+     * @description 正誤はバックエンドが判定する（前後の空白・英字の大文字と小文字・全角と半角の違いは無視）。解答の記録は問題ごとに新しい20件だけを残す。XPが付く（1日2回まで）。
      */
     post: operations["answerWebtestQuestion"];
     delete?: never;
@@ -507,7 +570,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** 問い合わせを運営にメールで送る */
+    /**
+     * 問い合わせを運営にメールで送る
+     * @description ログインできない人も連絡できるよう、ログインせずに使える。ログイン中ならユーザーIDとログインのメールアドレスを添える。 送れるのは、ログイン中は1人1日5通、ログインしていなければIPごとに1日3通、アプリ全体で1日50通まで（超えると 429）。 メールの送信の設定が無ければ 503。
+     */
     post: operations["sendContact"];
     delete?: never;
     options?: never;
@@ -607,6 +673,27 @@ export interface components {
       favorite: boolean;
       /** @description AI企業分析の分析結果 */
       aiResult: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    /** @description 一覧の企業。分析結果は長いので、全文ではなく冒頭だけを返す（全文は企業の取得で返す） */
+    CompanyListItem: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      industry: string | null;
+      url: string | null;
+      mypageId: string | null;
+      mypageUrl: string | null;
+      memo: string | null;
+      stage: components["schemas"]["CompanyStage"];
+      /** @description 志望度（1〜5） */
+      preference: number | null;
+      favorite: boolean;
+      /** @description AI企業分析の分析結果の冒頭（200文字まで）。まだ分析していなければ null */
+      aiResultPreview: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -720,6 +807,26 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    /** @description 一覧のES。設問・本文・メモは長いので返さない（ESの取得で返す） */
+    EsEntrySummary: {
+      /** Format: uuid */
+      id: string;
+      company: components["schemas"]["CompanySummary"];
+      /** @description 職種・募集枠 */
+      position: string | null;
+      title: string;
+      status: components["schemas"]["EsStatus"];
+      tags: string[];
+      /**
+       * Format: date
+       * @description 締切日。カレンダーにも表示される
+       */
+      deadline: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
     EsEntryCreate: {
       /** Format: uuid */
       companyId: string;
@@ -784,6 +891,25 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    /** @description 一覧の面接ログ。質問と答え・想定外だった点・振り返り結果は長いので返さず、振り返り済みかだけを返す（面接ログの取得で返す） */
+    InterviewLogSummary: {
+      /** Format: uuid */
+      id: string;
+      company: components["schemas"]["CompanySummary"];
+      format: components["schemas"]["InterviewFormat"] | null;
+      /** @description 面接の回次（一次・二次・最終など） */
+      round: string | null;
+      /** Format: date */
+      interviewDate: string | null;
+      /** @description 次回改善したい点 */
+      improvement: string | null;
+      /** @description AI振り返りをしたか */
+      reviewed: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
     InterviewLogCreate: {
       /** Format: uuid */
       companyId: string;
@@ -815,6 +941,21 @@ export interface components {
      * @enum {string}
      */
     CalendarEventType: "es" | "interview" | "intern" | "other";
+    CalendarFeedStatus: {
+      /** @description 購読用URLを作ってあるか */
+      enabled: boolean;
+      /**
+       * Format: date-time
+       * @description URLを作った日時。作っていなければ null
+       */
+      createdAt: string | null;
+    };
+    CalendarFeedCreated: {
+      /** @description 購読用URLの秘密の部分。このときにしか返さない */
+      token: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
     /** @description カレンダーの1件。source が event ならユーザーが登録した予定（id は予定のID）、es_deadline ならESの締切（id はESのID） */
     CalendarItem: {
       /** Format: uuid */
@@ -825,27 +966,49 @@ export interface components {
       type: components["schemas"]["CalendarEventType"];
       /** Format: date */
       date: string;
+      /**
+       * Format: date
+       * @description 何日か続く予定（インターンなど）の最終日。null なら1日だけ
+       */
+      endDate: string | null;
       /** @description 時刻（HH:MM） */
       time: string | null;
       company: components["schemas"]["CompanySummary"] | null;
+      /** @description リンク（オンライン面接のURLなど） */
+      url: string | null;
+      /** @description 備考 */
+      note: string | null;
     };
     CalendarEventCreate: {
       title: string;
       type?: components["schemas"]["CalendarEventType"];
       /** Format: date */
       date: string;
+      /**
+       * Format: date
+       * @description 何日か続く予定の最終日（date 以降）。期間のある予定は終日として扱うので、time と一緒には送れない
+       */
+      endDate?: string;
       time?: string;
       /** Format: uuid */
       companyId?: string;
+      /** @description リンク（オンライン面接のURLなど） */
+      url?: string;
+      /** @description 備考 */
+      note?: string;
     };
     CalendarEventUpdate: {
       title?: string;
       type?: components["schemas"]["CalendarEventType"];
       /** Format: date */
       date?: string;
+      /** Format: date */
+      endDate?: string | null;
       time?: string | null;
       /** Format: uuid */
       companyId?: string | null;
+      url?: string | null;
+      note?: string | null;
     };
     /**
      * @description XPが付いた操作。日本語の表示名はフロントエンドが持つ
@@ -954,7 +1117,7 @@ export interface components {
       choices: string[];
       answer: string;
       explanation: string | null;
-      /** @description 解答の記録（新しい順） */
+      /** @description 解答の記録（新しい順。問題ごとに20件まで） */
       attempts: components["schemas"]["WebtestAttempt"][];
     };
     WebtestQuestionCreate: {
@@ -969,6 +1132,7 @@ export interface components {
       difficulty?: string;
       timeLimit?: number;
     };
+    WebtestQuestionUpdate: components["schemas"]["WebtestQuestionCreate"];
     WebtestQuestionCreated: {
       question: components["schemas"]["WebtestQuestionDetail"];
       xp: components["schemas"]["XpResult"];
@@ -993,6 +1157,10 @@ export interface components {
     ContactRequest: {
       subject: string;
       message: string;
+      /** @description 返信先のメールアドレス。ログインしていなければ必須。ログイン中に省くと、ログインのメールアドレスに返信する */
+      email?: string;
+      /** @description 迷惑な自動送信を見分けるための欄。画面では隠しており、人は入力しない。値があれば送ったことにして何も送らない */
+      website?: string;
     };
     AdminStats: {
       totalUsers: number;
@@ -1124,6 +1292,25 @@ export interface operations {
       default: components["responses"]["Problem"];
     };
   };
+  deleteMe: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 削除した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
   updateMe: {
     parameters: {
       query?: never;
@@ -1166,7 +1353,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Company"][];
+          "application/json": components["schemas"]["CompanyListItem"][];
         };
       };
       default: components["responses"]["Problem"];
@@ -1309,7 +1496,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["EsEntry"][];
+          "application/json": components["schemas"]["EsEntrySummary"][];
         };
       };
       default: components["responses"]["Problem"];
@@ -1498,7 +1685,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["InterviewLog"][];
+          "application/json": components["schemas"]["InterviewLogSummary"][];
         };
       };
       default: components["responses"]["Problem"];
@@ -1667,6 +1854,90 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CalendarItem"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getCalendarFeed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 購読用URLの状態 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarFeedStatus"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  createCalendarFeed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 作ったトークン。URLは /v1/calendar-feed/{token} */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarFeedCreated"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteCalendarFeed: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 止めた（作っていなくても成功する） */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  getCalendarFeedIcal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description iCal（RFC 5545） */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/calendar": string;
         };
       };
       default: components["responses"]["Problem"];
@@ -1948,6 +2219,54 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["WebtestQuestionDetail"];
         };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  updateWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WebtestQuestionUpdate"];
+      };
+    };
+    responses: {
+      /** @description 書き換えた後の問題と解答の記録 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestQuestionDetail"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 削除した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       default: components["responses"]["Problem"];
     };

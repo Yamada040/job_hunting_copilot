@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 
-import { useCalendarItems, type CalendarItem } from "@/lib/api/calendar";
+import { useUpcomingCalendarItems, type CalendarItem } from "@/lib/api/calendar";
 import { ROUTES } from "@/lib/constants/routes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
  * （https://motion-reference.takayustudio.jp/#motion=catalog-ui-navigation-staggered-reveal）。
  */
 export function UpcomingEvents({ today }: { today: string }) {
-  const { data, error } = useCalendarItems();
+  const { data, error } = useUpcomingCalendarItems(today);
   const reduceMotion = useReducedMotion();
   const events = data ? upcomingEvents(data, today) : [];
 

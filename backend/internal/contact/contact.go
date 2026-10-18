@@ -1,11 +1,14 @@
-// Package contact は、ログイン中のユーザーからの問い合わせを、運営にメールで送る。
+// Package contact は、利用者（ログインしていない人を含む）からの問い合わせを、運営にメールで送る。
 package contact
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"fmt"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"strings"
 	"time"
@@ -16,6 +19,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
 )
 
 // SMTPConfig は、送信に使うSMTPサーバーの設定。どれかが欠けていれば、問い合わせだけが 503 を返す。
@@ -42,15 +46,17 @@ type Message struct {
 type Sender func(ctx context.Context, cfg SMTPConfig, m Message) error
 
 type Handler struct {
-	Pool   *pgxpool.Pool
-	Config SMTPConfig
-	Send   Sender
+	Pool    *pgxpool.Pool
+	Config  SMTPConfig
+	Send    Sender
+	Limiter *ratelimit.Limiter
 }
 
 func (h Handler) SendContact(ctx context.Context, req openapi.SendContactRequestObject) (openapi.SendContactResponseObject, error) {
-	userID, err := auth.RequireUserID(ctx)
-	if err != nil {
-		return nil, err
+	// 隠した欄に値があるのは、画面を使わない自動送信。送れたと思わせて、何度も試されないようにする
+	if req.Body.Website != nil && *req.Body.Website != "" {
+		platform.Logger(ctx).Info("contact rejected by honeypot")
+		return openapi.SendContact204Response{}, nil
 	}
 	subject, message := strings.TrimSpace(req.Body.Subject), strings.TrimSpace(req.Body.Message)
 	if subject == "" {
@@ -59,32 +65,79 @@ func (h Handler) SendContact(ctx context.Context, req openapi.SendContactRequest
 	if message == "" {
 		return nil, platform.Required("message", "お問い合わせ内容")
 	}
+	userID, signedIn := auth.UserID(ctx)
+	replyTo := auth.Email(ctx)
+	if email := strings.TrimSpace(ptrValue(req.Body.Email)); email != "" {
+		if !isEmailAddress(email) {
+			return nil, &platform.Error{Kind: platform.KindInvalid, Message: "入力内容に誤りがあります",
+				Fields: []platform.FieldError{{Field: "email", Message: "メールアドレスの形式で入力してください"}}}
+		}
+		replyTo = email
+	}
+	if replyTo == "" {
+		return nil, platform.Required("email", "返信先のメールアドレス")
+	}
 	if !h.Config.ready() {
-		return nil, &platform.Error{Kind: platform.KindUnavailable, Message: "メール送信の設定が完了していないため、現在お問い合わせを受け付けられません。"}
+		return nil, &platform.Error{Kind: platform.KindUnavailable, Message: "現在、お問い合わせを受け付けられない状態です。時間をおいて再度お試しください。"}
 	}
 
-	name := "未設定"
-	if p, err := db.New(h.Pool).GetProfile(ctx, userID); err == nil && p.FullName != nil && *p.FullName != "" {
-		name = *p.FullName
+	q := db.New(h.Pool)
+	// 本人（またはIP）の枠を先に数え、1人の連打がアプリ全体の枠を減らさないようにする。
+	// 送れなかったときも数える。数えずに送ると、送信の失敗を繰り返させてSMTPに負担をかけられるため
+	own := ratelimit.ContactUserDaily
+	if !signedIn {
+		own = ratelimit.ContactIPDaily(ipHash(platform.ClientIPFrom(ctx)))
 	}
-	email := auth.Email(ctx)
-	err = h.Send(ctx, h.Config, Message{
-		ReplyTo: email,
-		Subject: "[就活copilot お問い合わせ] " + subject,
-		Body: strings.Join([]string{
+	if err := h.Limiter.Hit(ctx, q, userID, own, ratelimit.ContactAppDaily); err != nil {
+		return nil, err
+	}
+
+	sender := []string{"ログイン: なし"}
+	if signedIn {
+		name := "未設定"
+		if p, err := q.GetProfile(ctx, userID); err == nil && p.FullName != nil && *p.FullName != "" {
+			name = *p.FullName
+		}
+		sender = []string{
 			"登録ユーザー名: " + name,
-			"ログインメール: " + email,
+			"ログインメール: " + auth.Email(ctx),
 			"ユーザーID: " + userID.String(),
+		}
+	}
+	err := h.Send(ctx, h.Config, Message{
+		ReplyTo: replyTo,
+		Subject: "[就活copilot お問い合わせ] " + subject,
+		Body: strings.Join(append(sender,
+			"返信先: "+replyTo,
 			"",
 			"お問い合わせ内容:",
 			message,
-		}, "\n"),
+		), "\n"),
 	})
 	if err != nil {
 		platform.Logger(ctx).Error("failed to send contact email", "error", err)
 		return nil, &platform.Error{Kind: platform.KindUnavailable, Message: "送信に失敗しました。時間をおいて再度お試しください。"}
 	}
 	return openapi.SendContact204Response{}, nil
+}
+
+func ptrValue(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// isEmailAddress は、「名前 <アドレス>」の形や改行を含まない、アドレスだけの文字列かを確かめる（Reply-To にそのまま入れるため）。
+func isEmailAddress(s string) bool {
+	a, err := mail.ParseAddress(s)
+	return err == nil && a.Address == s
+}
+
+// ipHash は、IPアドレスごとの回数の枠の名前に使う値。IPアドレスそのものはDBに残さないよう、ハッシュにする。
+func ipHash(ip string) string {
+	sum := sha256.Sum256([]byte(ip))
+	return hex.EncodeToString(sum[:])
 }
 
 // SendSMTP は、SMTPでメールを送る。ポート465は最初からTLSで、それ以外はSTARTTLSでつなぐ。

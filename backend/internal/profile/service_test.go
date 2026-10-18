@@ -23,6 +23,8 @@ func (f *fakeStore) Update(_ context.Context, userID uuid.UUID, u Update) (Profi
 	return Profile{ID: userID}, nil
 }
 
+func (f *fakeStore) Delete(context.Context, uuid.UUID) error { return nil }
+
 func TestUpdateTrimsSpaces(t *testing.T) {
 	store := &fakeStore{}
 	s := NewService(store, nil)

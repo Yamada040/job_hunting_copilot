@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import { UserCircleIcon } from "@heroicons/react/24/outline";
-import { useState } from "react";
 
 import { useMe, useUpdateMe, type Me, type ProfileUpdate } from "@/lib/api/me";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { FormSkeleton } from "@/app/_components/loading-skeletons";
 import { FormActions } from "@/app/_components/form/form-actions";
 import { LeaveGuard } from "@/app/_components/form/leave-guard";
 import { useFormEditing } from "@/app/_components/form/use-form-editing";
+import { LoadError } from "@/app/_components/load-error";
 
 // backend/api/openapi.yaml の ProfileUpdate の maxLength と同じ値（超えた入力はバックエンドが400で拒否する）
 const MAX_LENGTH = 100;
@@ -35,28 +36,14 @@ const textFields = [
 
 export function ProfileForm({ email }: { email: string }) {
   const { data, error } = useMe();
-  // 保存すると下の key が変わって作り直され、中で持つ状態は消えるので、「保存しました」はここで持つ
-  const [saved, setSaved] = useState(false);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   if (!data) return <FormSkeleton fields={4} />;
   // 保存後にキャッシュが置き換わったら、フォームの初期値も最新に揃える
-  return (
-    <ProfileFormFields key={JSON.stringify(data)} me={data} email={email} saved={saved} onSavedChange={setSaved} />
-  );
+  return <ProfileFormFields key={JSON.stringify(data)} me={data} email={email} />;
 }
 
-function ProfileFormFields({
-  me,
-  email,
-  saved,
-  onSavedChange: setSaved,
-}: {
-  me: Me;
-  email: string;
-  saved: boolean;
-  onSavedChange: (saved: boolean) => void;
-}) {
+function ProfileFormFields({ me, email }: { me: Me; email: string }) {
   const { dirty, formProps } = useFormEditing();
   const updateMe = useUpdateMe();
 
@@ -64,7 +51,6 @@ function ProfileFormFields({
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const value = (name: keyof ProfileUpdate) => String(form.get(name) ?? "");
-    setSaved(false);
     updateMe.mutate(
       {
         fullName: value("fullName"),
@@ -75,7 +61,7 @@ function ProfileFormFields({
         goalState: value("goalState"),
         avatarId: value("avatarId"),
       },
-      { onSuccess: () => setSaved(true) },
+      { onSuccess: () => showSuccessNotice("プロフィールを保存しました") },
     );
   };
 
@@ -148,7 +134,7 @@ function ProfileFormFields({
             error={updateMe.error}
             labels={Object.fromEntries(textFields.map((f) => [f.name, f.label]))}
           />
-          <FormActions dirty={dirty} saved={saved}>
+          <FormActions dirty={dirty}>
             <Button type="submit" variant="default" disabled={updateMe.isPending}>
               <UserCircleIcon className="h-4 w-4" />
               {updateMe.isPending ? "保存中…" : "保存する"}

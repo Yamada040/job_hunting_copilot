@@ -78,7 +78,7 @@ flowchart LR
 - 面接ログ: 面接質問・回答・振り返りの記録、AI活用前提のデータ整形。
 - 自己分析/適性チェック: 回答保存と AI サマリーで軸整理を支援。
 - プロフィール: 氏名/大学/学部/アバター（固定画像）を保存。
-- お問い合わせ: ログインユーザー情報付きでアプリ内から直接送信（`/api/contact`）。
+- お問い合わせ: ログインせずに送れる（返信先のメールアドレスを入力）。ログイン中はユーザー情報を添えて送る（`POST /v1/contact`）。
 - ホーム（MVP紹介）: 白基調のガラス風 UI。ログイン/新規登録導線と機能紹介。
 - 共通: Tailwind v4 推奨クラス（`bg-linear-to-*` など）で警告回避、`sitemap.xml`/`robots.txt` 自動生成。
 
@@ -107,6 +107,7 @@ flowchart LR
 - [docs/database-schema.md](docs/database-schema.md) — DBスキーマのリファレンス（ER図付き）
 - [docs/testing/unit-test-plan.md](docs/testing/unit-test-plan.md) — 単体テスト（Vitest）の設計
 - [docs/testing/e2e-test-plan.md](docs/testing/e2e-test-plan.md) — E2Eテスト（Playwright）の設計
+- [docs/release-runbook.md](docs/release-runbook.md) — 本番リリース後の確認とロールバック手順
 - [CLAUDE.md](CLAUDE.md) — AIエージェント（Claude Code）向けの開発ガイド。アーキテクチャ規約の要点はこちらにも集約
 
 ## セットアップ
@@ -181,7 +182,7 @@ Next.js 認証コールバック: `app/auth/callback/route.ts` で `exchangeCode
 - `/aptitude` 適性チェック（ログイン必須）
 - `/webtests`, `/webtests/new`, `/webtests/[id]` Webテスト対策（ログイン必須）
 - `/profile` プロフィール編集（ログイン必須）
-- `/contact` お問い合わせ（ログイン必須）
+- `/contact` お問い合わせ（ログイン不要）
 
 ## 必要なキー
 

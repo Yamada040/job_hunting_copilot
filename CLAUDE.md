@@ -85,7 +85,7 @@ flowchart LR
 
 - **ログイン**: Supabase Auth（Google OAuth）。Next.js の `proxy.ts` がページへのアクセス時にセッションを確かめ、未ログインなら `/login` へリダイレクトする
 - **バックエンドの認証**: ブラウザが Supabase のアクセストークンを `Authorization: Bearer` で送り、バックエンドが Supabase の公開鍵（JWKS）で検証する（`backend/internal/auth`）。ユーザーIDは検証したトークンからだけ取り出し、リクエストの本文やURLのIDは信用しない
-- **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける
+- **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける（稼働確認・カレンダーの購読用URL・問い合わせ）。`proxy.ts` は `/v1` を素通しし、ログインの判断はバックエンドに任せる
 - **認可**: バックエンドがすべての問い合わせを `user_id` で絞り込む。DBにアクセスする関数は `userID` を必須の引数にする。他人のデータは存在しないデータと同じく 404 にする
 - **RLS**: 全テーブルで有効だが、ポリシーは1つも作らない。Supabase が公開している Data API を塞ぐためだけに使い、バックエンドはRLSの対象外のロールで接続する
 - **Next.js の Supabase クライアント**: 認証（セッション・ログイン・ログアウト・メールアドレスの表示）にだけ使い、データの読み書きには使わない
@@ -97,6 +97,7 @@ flowchart LR
 - 画面だけの状態は props と hooks で扱い、Redux・Zustand などの汎用の状態管理ライブラリは使わない
 - **ブラウザに保存してよい値**: 業務データはバックエンドのDBを正とし、`localStorage` / `sessionStorage` に保存しない。ブラウザに残すのは、Supabase Auth のCookie（ログインセッション）だけ。端末ごとの表示設定が必要になったら、まず `profiles` の設定としてバックエンドに置けないか考える
 - **ローカル開発**: `next dev` は `/v1` を `API_ORIGIN`（既定 `http://localhost:8080`）のバックエンドに転送する
+- **ほかのアプリの Service Worker**: localhost:3000 はほかのアプリも使うので、そのアプリの Service Worker（Firebase の認証用など）が残っていると API の Authorization を書き換えられ、401 でログアウトされ続ける。開発環境でだけ `DevServiceWorkerReset`（`app/_components/dev-service-worker-reset.tsx`）が開いた時点ですべて解除して読み込み直す。このアプリは Service Worker を使わない
 
 ### バックエンド（Go）の構成
 
@@ -111,7 +112,7 @@ backend/
     ├── db/                   # sqlc が internal/db/queries/*.sql から生成した問い合わせ
     ├── xp/                   # XPの付与（各機能のサービスが、元の操作と同じトランザクションで呼ぶ）
     ├── ai/                   # Gemini / GPT / Tavily とプロンプト
-    ├── ratelimit/            # AIの回数制限（短時間の連打と1日の上限）
+    ├── ratelimit/            # AI・問い合わせの回数制限（短時間の連打と1日の上限）と、AIの1日の利用料の上限
     ├── auth/                 # JWTの検証
     └── platform/             # エラーの形式、ミドルウェア、トランザクション、DB接続
 ```
@@ -120,6 +121,13 @@ backend/
 - **入力の検証**: 形式（必須・文字数・enum）は `openapi.yaml` で定義し、ミドルウェアが仕様と照らし合わせて弾く。ドメインのルール（空白だけの企業名など）は service で確かめる
 - **トランザクション**: 複数の書き込みは `platform.InTx` でまとめる。XPの付与は元の操作と同じトランザクションで行う
 - **企業へのひも付け**: ES・面接ログ・予定を企業にひも付けるときは、`company.EnsureOwned` で本人の企業かを確かめる
+
+### 問い合わせ
+
+- `POST /v1/contact` はログインせずに使える。ログインしていなければ返信先のメールアドレスが必須で、ログイン中はログインのメールアドレスに返信する
+- **回数制限**: ログイン中は1人1日5通、ログインしていなければIPごとに1日3通、アプリ全体で1日50通（送信用の Gmail が止められないように）。IPは `platform.ClientIP` が `X-Real-IP`（Vercel が上書きするので偽れない）から読む
+- 画面では隠した欄（`website`）に値があれば、自動送信として送ったことにして捨てる
+- SMTP の設定が無ければ 503 を返し、画面にはその旨を出す
 
 ### AI
 
@@ -133,7 +141,9 @@ backend/
 | AI適性診断                | `POST /v1/aptitude-result/diagnosis`     | 1回                      |
 | AI自己分析                | `POST /v1/self-analysis-result/analysis` | 1回                      |
 
-- **回数制限**（`internal/ratelimit`）: 汎用のAIは1分12回・1日20回、企業分析は10分5回・1日3回（1人あたり、1日は日本時間）
+- **回数制限**（`internal/ratelimit`）: 汎用のAIは1分12回・1日20回、企業分析は10分5回・1日3回（1人あたり、1日は日本時間）。それとは別に、アプリ全体の1日の上限（既定は汎用のAI 300回・企業分析10回。Tavily の月1,000回に収まる値）を全員で共有し、環境変数で変えられる。本人の上限で断ったリクエストは全体の枠を減らさない。AIの呼び出しが失敗したら1日の上限の1回を戻す（連打の上限と、企業分析の時間切れは戻さない）
+- **利用料の上限**（`internal/ratelimit`）: AIの応答のトークン数から料金を出してアプリ全体で1日ずつ足し、1日の上限（既定は $1）に達したら、AIを呼ぶ前に全体の上限と同じメッセージの 429 を返す。確かめるのは呼ぶ前、足すのは呼んだ後なので、同時に処理中の数件分は超えうる。足すのは `Limiter.TrackCost` で包んだ Generator が1か所で行い（失敗した呼び出しもトークン数が分かれば数える）、各サービスでは足さない
+- **Web検索**: 企業分析の検索は1回の分析で最大3回（実際に Tavily を呼んだ回数で数える）。検索が使えないとき（キーが無い・無料枠が尽きた・失敗した）は検索なしで分析を続け、結果の先頭にその旨を書く
 - **プロバイダー**: `AI_PROVIDER=gemini|gpt`。キーが無いときはAI機能だけが 503 を返す（仮の文章は保存されてしまうので返さない）
 - **用語**: 添削結果・振り返り結果・分析結果・診断結果。「サマリー」「要約」「AI回答」は使わない。DBの列名はすべて `ai_result`
 
@@ -144,14 +154,20 @@ backend/
 - `profiles`: プロフィール、XP、レベル
 - `companies`: 企業（中心のエンティティ）。正規化した企業名（`normalized_name`）はユーザーごとに一意
 - `es_entries` / `interview_logs`: ES・面接ログ。`company_id` は必須
-- `es_reviews`: ESのAI添削の履歴（設問ごとの3観点の点数と修正版）。点数の推移を見せるため、上書きせず1回ずつ残す
-- `calendar_events`: ユーザーが登録した予定（`company_id` は任意）。カレンダーにはESの締切も混ぜて表示する（バックエンドが組み立てる）
+- `es_reviews`: ESのAI添削の履歴（設問ごとの3観点の点数と修正版）。点数の推移を見せるため、上書きせず1回ずつ残す（画面へ返すのは新しい10件）
+- `calendar_events`: ユーザーが登録した予定（`company_id` は任意。`url` はオンライン面接などのリンクで、画面でリンクとして開くので http(s) に限る）。カレンダーにはESの締切も混ぜて表示する（バックエンドが組み立てる）
+- `calendar_feeds`: カレンダーの購読用URL（iCal。Googleカレンダーなどが `GET /v1/calendar-feed/{token}` をログインせずに読む）。トークンはハッシュだけを保存し、URLは作ったときにだけ見せる
 - `xp_logs`: XPの獲得履歴。`(user_id, action, ref_id)` がユニークで、同じ対象への二重付与をDBが防ぐ
 - `aptitude_results` / `self_analysis_results`: 1人1件
-- `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録
-- `api_rate_limits`: AIの回数制限の状態
+- `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録（解答の記録は問題ごとに新しい20件だけを残す）
+- `api_rate_limits`: AI・問い合わせの回数制限の状態（1人ごと）
+- `api_app_rate_limits`: ユーザーに結び付かない回数制限の状態（`bucket` ごとに1行）。AIと問い合わせのアプリ全体の上限と、ログインしていない人の問い合わせのIPごとの上限（`contact_daily:ip:<IPのハッシュ>`）。AIの1日の利用料（`ai_cost_microdollars_daily`）も、`count` にマイクロドルを足してここで数える
 
-企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
+**1人あたりの件数の上限**: 企業500・ES500・面接ログ500・予定2000・Webテストの問題500（各 service の定数。超えると 409）。スクリプトでの量産から無料プランのDB（500MB）と、一覧のレスポンス（Vercel の上限4.5MB）を守るため。数えてから作るので同時に作ると数件超えうるが、許容している（`platform.CheckLimit`）。
+
+**一覧は軽くする**: 一覧のAPIは長い列を返さない（企業は分析結果の冒頭200文字だけ、ESは設問・本文・メモなし、面接ログは質問と回答・振り返り結果なしで `reviewed` だけ）。全文は詳細のAPIで返す。予定は画面が期間（`from`・`to`）を渡し、カレンダーは表示している月と直近7日、ホームは直近7日を取る。
+
+企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。全テーブルが `auth.users` を `on delete cascade` で参照しており、退会（`DELETE /v1/me`）はバックエンドが `auth.users` の行を消すだけで、その人のデータをすべて消す。テーブルを足すときも `auth.users` への参照は必ず `on delete cascade` にする（`internal/profile` のテストが確かめる）。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
 
 ### APIルート
 
@@ -185,7 +201,8 @@ backend/
 - ページレベルのレイアウト: `app/_components/layout/`（`AppLayout`）。ヘッダー（`AppHeader`、レベル・XPの表示）と下のメニュー（`Dock`）は、画面を移っても動きや演出が途切れないよう、各画面ではなくルートのレイアウト（`app/layout.tsx`）に置く
 - レベル・XPの表示: `app/_components/xp-badge.tsx` と `app/_components/xp/`（紋章・ゲージ・レベルアップの演出）。ゲージの繰り上がりの順番は `lib/xp/gauge.ts`
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
-- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示、`ConfirmDialog`）
+- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示と、実行ボタンの近くに置く外部のAIへ送ることの説明（`AiSendingNote`）、`ConfirmDialog`、`legal/`: プライバシーポリシー・利用規約の枠とリンク）
+- 操作の結果は、画面の右下に飛び出すアバター（`AvatarNotice`）が話す。成功は `showSuccessNotice("ESを提出しました")`、失敗は操作の名前を渡して `showFailureNotice("AI添削", error)`、AIの実行のように時間がかかるものは `noticeWhenDone(mutation.mutateAsync(), { action, done, link })` で呼ぶ（待つ間に画面を移っても届く）。話す成功は、AIの実行が終わったとき・取り消せない操作（提出・削除）・フォームの保存。結果がその場に出る操作（Webテストの解答など）では話さない。入力欄ごとのエラーと、フォームの保存・読み込みの失敗は、直す場所が分かるよう欄の下に出す（`ApiErrorMessage`）。ダイアログの中のエラーも、アバターが暗い幕に隠れるので欄の下に出す
 - 画面の見出し: `AppLayout` の `headerTitle`・`headerDescription`・`headerActions`（主な操作）・`avatar`（見出しの横で話す `AvatarGuide`。話す一言は `app/_components/avatar/guide-messages.ts`）
 - フォーム: `app/_components/form/`。保存のボタンは `FormActions`（画面の下に付いてくる帯）に置き、`useFormEditing` で変更の有無と ⌘/Ctrl + Enter の送信、`LeaveGuard` で保存せずに離れる前の確認をする。項目は `FormSection` で区切る
 - 一覧: `app/_components/list/`（`ListToolbar`・`FilterChips` の絞り込み、`StaggerList`・`ListCardLink` のカード）。読み込み中は `loading-skeletons.tsx` の枠を出す
@@ -214,7 +231,8 @@ backend/
 **ダッシュボード（`/dashboard`）**:
 
 - 専用のAPIは作らず、各機能の一覧APIを組み合わせる
-- 表示内容: 3Dのカルーセル（`MenuCarousel`）だけ。回して選ぶと各画面を開く。カードには各機能の今の状況（件数・締切が近いESなどの急ぎのもの）と、今日の獲得XPを出す。情報は必要になったら足していく
+- 表示内容: 3Dのカルーセル（`MenuCarousel`）。回して選ぶと各画面を開く。カードには各機能の今の状況（件数・締切が近いESなどの急ぎのもの）と、今日の獲得XPを出す。情報は必要になったら足していく
+- AI企業分析の入口: 見出しの下の入力欄（`QuickAnalysis`）に企業名を入れると、企業の登録とAI企業分析をまとめて始めて詳細の画面へ移る。左右に「AI分析がまだの企業」（その場で分析できる）と「最近のAI分析」を、2社ずつのページ送りで置く（狭い画面ではカルーセルの下）。分析の状態は `useCompanyAnalysis` で企業ごとに読み、どの画面から始めた分析も詳細の画面で「処理中」と出す
 - カルーセルは CSS の3D変形で作る（three.js などは使わない）。←→キー・ドラッグ・ホイールで回せ、OS の「視差効果を減らす」設定では動きを止める
 - 保護ルート: 未ログインならリダイレクト
 
@@ -260,7 +278,7 @@ backend/
 **UIの一貫性**:
 
 - shadcn/ui の部品（`Card`・`Button`）をベースにする
-- 画面の移動は、画面下のアイコンの帯（`Dock`、`app/_components/layout/Dock.tsx`）で行う。ゲームのメニューのように、どの画面からも1回で移れる。印を滑らせるため、各画面ではなくルートのレイアウト（`app/layout.tsx`）に置く
+- 画面の移動は、画面下のアイコンの帯（`Dock`、`app/_components/layout/Dock.tsx`）で行う。よく使う画面（ホーム・ES・企業・予定・面接）へはどの画面からも1回で、ほかの画面へは「その他」のメニューから移れる。印を滑らせるため、各画面ではなくルートのレイアウト（`app/layout.tsx`）に置く
 
 ### テスト
 
@@ -335,6 +353,11 @@ AI_MODEL=gemini-2.5-flash (Geminiの場合) または gpt-4o-mini (GPTの場合)
 AI_ENDPOINT=https://api.openai.com/v1/chat/completions (カスタムOpenAIエンドポイントを使う場合)
 AI_API_VERSION=v1beta (Geminiの場合)
 TAVILY_API_KEY=...          # AI企業分析のWeb検索
+AI_APP_DAILY_LIMIT=300               # 汎用のAIのアプリ全体の1日の上限（無ければ300）
+COMPANY_ANALYSIS_APP_DAILY_LIMIT=10  # 企業分析のアプリ全体の1日の上限（無ければ10）
+AI_DAILY_BUDGET_USD=1                    # AIの利用料のアプリ全体の1日の上限（ドル。無ければ1）
+AI_INPUT_PRICE_PER_MILLION_TOKENS=0.30   # 入力100万トークンあたりの料金（ドル。無ければ gemini-2.5-flash の0.30）
+AI_OUTPUT_PRICE_PER_MILLION_TOKENS=2.50  # 出力（思考を含む）100万トークンあたりの料金（ドル。無ければ gemini-2.5-flash の2.50）
 SMTP_HOST=smtp.gmail.com    # 問い合わせ（ポート465は最初からTLS、それ以外はSTARTTLS）
 SMTP_PORT=465
 SMTP_USER=your-mail@example.com
@@ -367,12 +390,14 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 - `/interviews`, `/interviews/new`, `/interviews/[id]` — 面接ログ
 - `/self-analysis` — 自己分析アンケート＋AI自己分析
 - `/aptitude` — 適性チェック＋AI診断
-- `/webtests`, `/webtests/new`, `/webtests/[id]` — Webテスト練習
-- `/profile` — プロフィール/目標の編集
-- `/contact` — フィードバックフォーム（ログイン済みユーザー向け）
+- `/webtests`, `/webtests/new`, `/webtests/[id]`, `/webtests/[id]/edit` — Webテスト練習
+- `/profile` — プロフィール/目標の編集、退会（成功したらこの端末からログアウトして `/` へ移る）
+- `/contact` — 問い合わせ（ログインせずに使える。LP のフッターとログイン画面からリンクする。ログインしていなければヘッダーはロゴとログインへの入口だけにし、下のメニューは出さない）
 - `/developer` — 開発者向け管理ページ（バックエンドが `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけ下のメニューにリンクが出る）
+- `/privacy` — プライバシーポリシー（預かる情報、外部のAIなどへ送る内容、削除の依頼方法）。Google の OAuth 同意画面にもこのURLを登録する
+- `/terms` — 利用規約
 
-すべての保護ページ: 未ログインなら `proxy.ts` が `/login` へリダイレクトする。
+すべての保護ページ: 未ログインなら `proxy.ts` が `/login` へリダイレクトする。ログインせずに開けるページ（`/`・`/login`・`/privacy`・`/terms`・`/contact`）は `lib/constants/routes.ts` の `PUBLIC_PAGES` にまとめ、ログインしていなければヘッダー（レベル・XP）と下のメニューを出さない。自分で枠を描くページ（`/contact` 以外）は `STANDALONE_PAGES` にも入れ、ログイン中でも出さない。外部のAIへ送る内容を変えたら、`/privacy` も直す
 
 ### 型定義
 

@@ -30,6 +30,17 @@ func (q *Queries) CompanyExists(ctx context.Context, arg CompanyExistsParams) (b
 	return exists, err
 }
 
+const countEsEntries = `-- name: CountEsEntries :one
+select count(*) from es_entries where user_id = $1
+`
+
+func (q *Queries) CountEsEntries(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countEsEntries, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createEsEntry = `-- name: CreateEsEntry :one
 insert into es_entries (user_id, company_id, position, title, content_md, questions, tags, deadline, memo)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -183,7 +194,8 @@ func (q *Queries) GetEsReviewContext(ctx context.Context, arg GetEsReviewContext
 }
 
 const listEsEntries = `-- name: ListEsEntries :many
-select es_entries.id, es_entries.user_id, es_entries.company_id, es_entries.position, es_entries.title, es_entries.status, es_entries.content_md, es_entries.questions, es_entries.tags, es_entries.deadline, es_entries.memo, es_entries.ai_result, es_entries.created_at, es_entries.updated_at, companies.name as company_name
+select es_entries.id, es_entries.company_id, es_entries.position, es_entries.title, es_entries.status,
+  es_entries.tags, es_entries.deadline, es_entries.created_at, es_entries.updated_at, companies.name as company_name
 from es_entries
 join companies on companies.id = es_entries.company_id
 where es_entries.user_id = $1
@@ -199,11 +211,19 @@ type ListEsEntriesParams struct {
 }
 
 type ListEsEntriesRow struct {
-	EsEntry     EsEntry
+	ID          uuid.UUID
+	CompanyID   uuid.UUID
+	Position    *string
+	Title       *string
+	Status      EsStatus
+	Tags        []string
+	Deadline    *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 	CompanyName string
 }
 
-// company_id を渡すと、その企業のESだけに絞り込む
+// company_id を渡すと、その企業のESだけに絞り込む。設問・本文・メモは長いので、一覧では返さない（詳細で返す）
 func (q *Queries) ListEsEntries(ctx context.Context, arg ListEsEntriesParams) ([]ListEsEntriesRow, error) {
 	rows, err := q.db.Query(ctx, listEsEntries, arg.UserID, arg.CompanyID, arg.MaxRows)
 	if err != nil {
@@ -214,20 +234,15 @@ func (q *Queries) ListEsEntries(ctx context.Context, arg ListEsEntriesParams) ([
 	for rows.Next() {
 		var i ListEsEntriesRow
 		if err := rows.Scan(
-			&i.EsEntry.ID,
-			&i.EsEntry.UserID,
-			&i.EsEntry.CompanyID,
-			&i.EsEntry.Position,
-			&i.EsEntry.Title,
-			&i.EsEntry.Status,
-			&i.EsEntry.ContentMd,
-			&i.EsEntry.Questions,
-			&i.EsEntry.Tags,
-			&i.EsEntry.Deadline,
-			&i.EsEntry.Memo,
-			&i.EsEntry.AiResult,
-			&i.EsEntry.CreatedAt,
-			&i.EsEntry.UpdatedAt,
+			&i.ID,
+			&i.CompanyID,
+			&i.Position,
+			&i.Title,
+			&i.Status,
+			&i.Tags,
+			&i.Deadline,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.CompanyName,
 		); err != nil {
 			return nil, err
@@ -244,16 +259,18 @@ const listEsReviews = `-- name: ListEsReviews :many
 select id, user_id, es_entry_id, ai_result, created_at, ai_input_tokens, ai_output_tokens from es_reviews
 where es_entry_id = $1 and user_id = $2
 order by created_at desc
+limit $3
 `
 
 type ListEsReviewsParams struct {
 	EsEntryID uuid.UUID
 	UserID    uuid.UUID
+	MaxRows   int32
 }
 
 // 新しい順。ESが本人のものかは、呼び出す前に GetEsEntry で確かめる
 func (q *Queries) ListEsReviews(ctx context.Context, arg ListEsReviewsParams) ([]EsReview, error) {
-	rows, err := q.db.Query(ctx, listEsReviews, arg.EsEntryID, arg.UserID)
+	rows, err := q.db.Query(ctx, listEsReviews, arg.EsEntryID, arg.UserID, arg.MaxRows)
 	if err != nil {
 		return nil, err
 	}

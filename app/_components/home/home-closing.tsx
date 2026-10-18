@@ -12,7 +12,10 @@ import { homeCardMuted, homeHeading } from "./theme";
 
 const securityPoints = [
   { title: "通信の暗号化", description: "通信はすべてHTTPSで暗号化しています" },
-  { title: "本人だけが見られる", description: "登録した内容は、本人以外は見られません" },
+  {
+    title: "ほかの利用者には見えない",
+    description: "登録した内容は、ほかの利用者には見えません。AIの機能を使ったときだけ、必要な内容を外部のAIに送ります",
+  },
   { title: "Googleでログイン", description: "新しいパスワードを作る必要はありません" },
 ];
 

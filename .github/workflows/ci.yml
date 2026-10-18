@@ -112,9 +112,11 @@ jobs:
     # supabase start は認証サーバーなどテストに不要なものまで起動して1分以上かかるため、
     # auth スキーマとロールを含む Supabase の Postgres イメージだけをサービスとして起動する。
     # イメージのタグは supabase start がローカルで使うもの（supabase/config.toml の major_version）に合わせる。
+    # ECR Public からは取らない。ログインせずに取ると、ランナーで共有する IP ごとの取得量の上限（Data limit exceeded）で
+    # テストの前に落ち続けることがあるため、GitHub のランナーから制限なく取れる ghcr.io の同じイメージを使う
     services:
       postgres:
-        image: public.ecr.aws/supabase/postgres:17.11.0.004
+        image: ghcr.io/supabase/postgres:17.11.0.004
         env:
           POSTGRES_PASSWORD: postgres
         ports:

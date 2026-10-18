@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,6 +36,7 @@ type config struct {
 	databaseURL string
 	developers  []uuid.UUID
 	ai          ai.Config
+	aiAppLimits ratelimit.AppLimits
 	smtp        contact.SMTPConfig
 }
 
@@ -75,7 +78,49 @@ func loadConfig() (config, error) {
 		return config{}, fmt.Errorf("DEV_ADMIN_USER_IDS: %w", err)
 	}
 	cfg.developers = developers
+	cfg.aiAppLimits = ratelimit.DefaultAppLimits
+	if cfg.aiAppLimits.AIDaily, err = parseLimit("AI_APP_DAILY_LIMIT", cfg.aiAppLimits.AIDaily); err != nil {
+		return config{}, err
+	}
+	if cfg.aiAppLimits.CompanyAnalysisDaily, err = parseLimit("COMPANY_ANALYSIS_APP_DAILY_LIMIT", cfg.aiAppLimits.CompanyAnalysisDaily); err != nil {
+		return config{}, err
+	}
+	if cfg.aiAppLimits.AIDailyBudget, err = parseDollars("AI_DAILY_BUDGET_USD", cfg.aiAppLimits.AIDailyBudget); err != nil {
+		return config{}, err
+	}
+	if cfg.aiAppLimits.AIPrices.Input, err = parseDollars("AI_INPUT_PRICE_PER_MILLION_TOKENS", cfg.aiAppLimits.AIPrices.Input); err != nil {
+		return config{}, err
+	}
+	if cfg.aiAppLimits.AIPrices.Output, err = parseDollars("AI_OUTPUT_PRICE_PER_MILLION_TOKENS", cfg.aiAppLimits.AIPrices.Output); err != nil {
+		return config{}, err
+	}
 	return cfg, nil
+}
+
+// parseLimit は、環境変数 name の上限を読む。空なら fallback を使う。
+func parseLimit(name string, fallback int) (int, error) {
+	raw := os.Getenv(name)
+	if raw == "" {
+		return fallback, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("%s must be a non-negative integer: %q", name, raw)
+	}
+	return n, nil
+}
+
+// parseDollars は、環境変数 name の金額（ドル。小数も可）を読む。空なら fallback を使う。
+func parseDollars(name string, fallback float64) (float64, error) {
+	raw := os.Getenv(name)
+	if raw == "" {
+		return fallback, nil
+	}
+	n, err := strconv.ParseFloat(raw, 64)
+	if err != nil || n < 0 || math.IsInf(n, 0) || math.IsNaN(n) {
+		return 0, fmt.Errorf("%s must be a non-negative number: %q", name, raw)
+	}
+	return n, nil
 }
 
 // parseUserIDs は、カンマ区切りのユーザーIDを読む。空なら開発者はいない。
@@ -120,8 +165,8 @@ func run() error {
 	defer db.Close()
 	xpService := xp.NewService()
 	// 企業分析はWeb検索を挟んで数十秒かかるため、1回の呼び出しの上限は長めにとる（Vercelの関数の上限300秒以内）
-	aiClient := ai.NewClient(cfg.ai, &http.Client{Timeout: 90 * time.Second})
-	limiter := ratelimit.NewLimiter()
+	limiter := ratelimit.NewLimiter(cfg.aiAppLimits)
+	aiClient := limiter.TrackCost(ai.NewClient(cfg.ai, &http.Client{Timeout: 90 * time.Second}), db)
 	profiles := profile.NewService(profile.NewRepository(db), cfg.developers)
 	handler, err := newHandler(verifier, deps{
 		db:        db,
@@ -136,7 +181,7 @@ func run() error {
 			SelfAnalysis: assessment.NewSelfAnalysisService(db, xpService, aiClient, limiter),
 		},
 		webtest: webtest.NewService(db, xpService),
-		contact: contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP},
+		contact: contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP, Limiter: limiter},
 		admin:   admin.Handler{Pool: db, IsDeveloper: profiles.IsDeveloper, Now: time.Now},
 	})
 	if err != nil {

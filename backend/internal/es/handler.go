@@ -7,6 +7,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
@@ -31,7 +32,7 @@ func (h Handler) ListEsEntries(ctx context.Context, req openapi.ListEsEntriesReq
 	}
 	res := make(openapi.ListEsEntries200JSONResponse, len(entries))
 	for i, e := range entries {
-		res[i] = toAPI(e)
+		res[i] = toSummary(e)
 	}
 	return res, nil
 }
@@ -169,33 +170,46 @@ func fromAPIQuestions(qs *[]openapi.EsQuestion) *[]Question {
 	return &out
 }
 
+func toSummary(e db.ListEsEntriesRow) openapi.EsEntrySummary {
+	return openapi.EsEntrySummary{
+		Id:        e.ID,
+		Company:   openapi.CompanySummary{Id: e.CompanyID, Name: e.CompanyName},
+		Position:  e.Position,
+		Title:     valueOr(e.Title, ""),
+		Status:    openapi.EsStatus(e.Status),
+		Tags:      e.Tags,
+		Deadline:  toAPIDate(e.Deadline),
+		CreatedAt: e.CreatedAt,
+		UpdatedAt: e.UpdatedAt,
+	}
+}
+
 func toAPI(e Entry) openapi.EsEntry {
 	questions := make([]openapi.EsQuestion, len(e.Questions))
 	for i, q := range e.Questions {
 		questions[i] = openapi.EsQuestion{Prompt: q.Prompt, Answer: q.Answer, CharLimit: q.CharLimit}
 	}
-	var deadline *openapi_types.Date
-	if e.Deadline != nil {
-		deadline = &openapi_types.Date{Time: *e.Deadline}
-	}
-	title := ""
-	if e.Title != nil {
-		title = *e.Title
-	}
 	return openapi.EsEntry{
 		Id:        e.ID,
 		Company:   openapi.CompanySummary{Id: e.CompanyID, Name: e.CompanyName},
 		Position:  e.Position,
-		Title:     title,
+		Title:     valueOr(e.Title, ""),
 		Status:    openapi.EsStatus(e.Status),
 		Questions: questions,
 		ContentMd: e.ContentMd,
 		Tags:      e.Tags,
-		Deadline:  deadline,
+		Deadline:  toAPIDate(e.Deadline),
 		Memo:      e.Memo,
 		CreatedAt: e.CreatedAt,
 		UpdatedAt: e.UpdatedAt,
 	}
+}
+
+func toAPIDate(t *time.Time) *openapi_types.Date {
+	if t == nil {
+		return nil
+	}
+	return &openapi_types.Date{Time: *t}
 }
 
 func toAPIReview(r Review) openapi.EsReview {

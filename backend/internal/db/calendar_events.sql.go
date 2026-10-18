@@ -13,9 +13,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCalendarEvents = `-- name: CountCalendarEvents :one
+select count(*) from calendar_events where user_id = $1
+`
+
+func (q *Queries) CountCalendarEvents(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countCalendarEvents, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCalendarEvent = `-- name: CreateCalendarEvent :one
-insert into calendar_events (user_id, company_id, title, type, date, time)
-values ($1, $2, $3, $4, $5, $6)
+insert into calendar_events (user_id, company_id, title, type, date, end_date, time, url, note)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 returning id
 `
 
@@ -25,7 +36,10 @@ type CreateCalendarEventParams struct {
 	Title     string
 	Type      CalendarEventType
 	Date      time.Time
+	EndDate   *time.Time
 	Time      pgtype.Time
+	Url       *string
+	Note      *string
 }
 
 func (q *Queries) CreateCalendarEvent(ctx context.Context, arg CreateCalendarEventParams) (uuid.UUID, error) {
@@ -35,7 +49,10 @@ func (q *Queries) CreateCalendarEvent(ctx context.Context, arg CreateCalendarEve
 		arg.Title,
 		arg.Type,
 		arg.Date,
+		arg.EndDate,
 		arg.Time,
+		arg.Url,
+		arg.Note,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -60,7 +77,7 @@ func (q *Queries) DeleteCalendarEvent(ctx context.Context, arg DeleteCalendarEve
 }
 
 const getCalendarEvent = `-- name: GetCalendarEvent :one
-select calendar_events.id, calendar_events.user_id, calendar_events.company_id, calendar_events.title, calendar_events.type, calendar_events.date, calendar_events.time, calendar_events.created_at, calendar_events.updated_at, companies.name as company_name
+select calendar_events.id, calendar_events.user_id, calendar_events.company_id, calendar_events.title, calendar_events.type, calendar_events.date, calendar_events.time, calendar_events.created_at, calendar_events.updated_at, calendar_events.url, calendar_events.end_date, calendar_events.note, companies.name as company_name
 from calendar_events
 left join companies on companies.id = calendar_events.company_id
 where calendar_events.id = $1 and calendar_events.user_id = $2
@@ -89,17 +106,20 @@ func (q *Queries) GetCalendarEvent(ctx context.Context, arg GetCalendarEventPara
 		&i.CalendarEvent.Time,
 		&i.CalendarEvent.CreatedAt,
 		&i.CalendarEvent.UpdatedAt,
+		&i.CalendarEvent.Url,
+		&i.CalendarEvent.EndDate,
+		&i.CalendarEvent.Note,
 		&i.CompanyName,
 	)
 	return i, err
 }
 
 const listCalendarEvents = `-- name: ListCalendarEvents :many
-select calendar_events.id, calendar_events.user_id, calendar_events.company_id, calendar_events.title, calendar_events.type, calendar_events.date, calendar_events.time, calendar_events.created_at, calendar_events.updated_at, companies.name as company_name
+select calendar_events.id, calendar_events.user_id, calendar_events.company_id, calendar_events.title, calendar_events.type, calendar_events.date, calendar_events.time, calendar_events.created_at, calendar_events.updated_at, calendar_events.url, calendar_events.end_date, calendar_events.note, companies.name as company_name
 from calendar_events
 left join companies on companies.id = calendar_events.company_id
 where calendar_events.user_id = $1
-  and ($2::date is null or calendar_events.date >= $2::date)
+  and ($2::date is null or coalesce(calendar_events.end_date, calendar_events.date) >= $2::date)
   and ($3::date is null or calendar_events.date <= $3::date)
 order by calendar_events.date, calendar_events.time nulls last
 `
@@ -115,7 +135,7 @@ type ListCalendarEventsRow struct {
 	CompanyName   *string
 }
 
-// 期間（from 〜 to、どちらも含む）で絞り込む。どちらも省略できる
+// 期間（from 〜 to、どちらも含む）で絞り込む。どちらも省略できる。何日か続く予定は、期間に少しでも重なれば含める
 func (q *Queries) ListCalendarEvents(ctx context.Context, arg ListCalendarEventsParams) ([]ListCalendarEventsRow, error) {
 	rows, err := q.db.Query(ctx, listCalendarEvents, arg.UserID, arg.FromDate, arg.ToDate)
 	if err != nil {
@@ -135,6 +155,9 @@ func (q *Queries) ListCalendarEvents(ctx context.Context, arg ListCalendarEvents
 			&i.CalendarEvent.Time,
 			&i.CalendarEvent.CreatedAt,
 			&i.CalendarEvent.UpdatedAt,
+			&i.CalendarEvent.Url,
+			&i.CalendarEvent.EndDate,
+			&i.CalendarEvent.Note,
 			&i.CompanyName,
 		); err != nil {
 			return nil, err
@@ -205,8 +228,11 @@ update calendar_events set
   title      = case when $3::boolean      then $4::text                   else title end,
   type       = case when $5::boolean       then $6::calendar_event_type     else type end,
   date       = case when $7::boolean       then $8::date                    else date end,
-  time       = case when $9::boolean       then $10::time                    else time end
-where id = $11 and user_id = $12
+  end_date   = case when $9::boolean   then $10::date                else end_date end,
+  time       = case when $11::boolean       then $12::time                    else time end,
+  url        = case when $13::boolean        then $14::text                     else url end,
+  note       = case when $15::boolean       then $16::text                    else note end
+where id = $17 and user_id = $18
 `
 
 type UpdateCalendarEventParams struct {
@@ -218,8 +244,14 @@ type UpdateCalendarEventParams struct {
 	Type         *CalendarEventType
 	SetDate      bool
 	Date         *time.Time
+	SetEndDate   bool
+	EndDate      *time.Time
 	SetTime      bool
 	Time         pgtype.Time
+	SetUrl       bool
+	Url          *string
+	SetNote      bool
+	Note         *string
 	ID           uuid.UUID
 	UserID       uuid.UUID
 }
@@ -235,8 +267,14 @@ func (q *Queries) UpdateCalendarEvent(ctx context.Context, arg UpdateCalendarEve
 		arg.Type,
 		arg.SetDate,
 		arg.Date,
+		arg.SetEndDate,
+		arg.EndDate,
 		arg.SetTime,
 		arg.Time,
+		arg.SetUrl,
+		arg.Url,
+		arg.SetNote,
+		arg.Note,
 		arg.ID,
 		arg.UserID,
 	)

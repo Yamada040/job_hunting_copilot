@@ -1,12 +1,17 @@
 -- name: ListInterviewLogs :many
--- company_id を渡すと、その企業の面接ログだけに絞り込む
-select sqlc.embed(interview_logs), companies.name as company_name
+-- company_id を渡すと、その企業の面接ログだけに絞り込む。質問と答え・振り返り結果は長いので、一覧では振り返り済みかだけを返す（詳細で返す）
+select interview_logs.id, interview_logs.company_id, interview_logs.format, interview_logs.round, interview_logs.interview_date,
+  interview_logs.improvement, (interview_logs.ai_result is not null)::boolean as reviewed,
+  interview_logs.created_at, interview_logs.updated_at, companies.name as company_name
 from interview_logs
 join companies on companies.id = interview_logs.company_id
 where interview_logs.user_id = @user_id
   and (sqlc.narg(company_id)::uuid is null or interview_logs.company_id = sqlc.narg(company_id)::uuid)
 order by interview_logs.interview_date desc nulls last, interview_logs.created_at desc
 limit sqlc.arg(max_rows);
+
+-- name: CountInterviewLogs :one
+select count(*) from interview_logs where user_id = @user_id;
 
 -- name: GetInterviewLog :one
 select sqlc.embed(interview_logs), companies.name as company_name

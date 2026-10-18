@@ -3,48 +3,68 @@ import { CalendarEvent, CalendarFormState } from "./types";
 export const emptyForm: CalendarFormState = {
   title: "",
   company: null,
-  type: "es" as CalendarEvent["type"],
+  type: "interview" as CalendarEvent["type"],
+  // Googleカレンダーの月の表示と同じく、日付を押して作る予定は終日から始める
+  allDay: true,
   time: "",
+  endDate: "",
+  url: "",
+  note: "",
 };
 
+/**
+ * ダイアログで見せる画面。Googleカレンダーと同じく、日付の空いたところを押すと作成、予定を押すと詳細、
+ * 「+N件」を押すとその日の一覧を出す。詳細から編集へ移る。
+ */
+export type ModalView = "create" | "edit" | "detail" | "day";
+
 export type ModalState = {
-  isModalOpen: boolean;
+  /** 開いていなければ null */
+  view: ModalView | null;
   selectedDate: string;
-  editingId: string | null;
+  /** 詳細・編集で見ている予定 */
+  selectedEvent: CalendarEvent | null;
   formState: CalendarFormState;
   deletingId: string | null;
+  /** 保存・削除に失敗したときに、ダイアログの中に出す説明 */
+  error: string | null;
 };
 
 export type ModalAction =
-  | { type: "openModalForDate"; date: string }
+  | { type: "openCreate"; date: string }
+  | { type: "openDay"; date: string }
+  | { type: "openDetail"; event: CalendarEvent }
+  | { type: "startEdit"; event: CalendarEvent }
   | { type: "closeModal" }
   | { type: "setSelectedDate"; date: string }
-  | { type: "editPrefill"; event: CalendarEvent }
-  | { type: "resetForm" }
   | { type: "updateForm"; patch: Partial<CalendarFormState> }
   | { type: "saveSuccess" }
+  | { type: "saveFailed"; message: string }
   | { type: "deleteStart"; id: string }
-  | { type: "deleteSuccess"; id: string }
-  | { type: "deleteEnd" };
+  | { type: "deleteSuccess" }
+  | { type: "deleteFailed"; message: string };
 
 export function modalReducer(state: ModalState, action: ModalAction): ModalState {
   switch (action.type) {
-    case "openModalForDate":
+    case "openCreate":
       return {
         ...state,
+        view: "create",
         selectedDate: action.date,
-        editingId: null,
+        selectedEvent: null,
         formState: { ...emptyForm },
-        isModalOpen: true,
+        error: null,
       };
-    case "closeModal":
-      return { ...state, isModalOpen: false };
-    case "setSelectedDate":
-      return { ...state, selectedDate: action.date };
-    case "editPrefill":
+    case "openDay":
+      return { ...state, view: "day", selectedDate: action.date, selectedEvent: null, error: null };
+    case "openDetail":
+      return { ...state, view: "detail", selectedDate: action.event.date, selectedEvent: action.event, error: null };
+    case "startEdit":
       return {
         ...state,
+        view: "edit",
         selectedDate: action.event.date,
+        selectedEvent: action.event,
         formState: {
           title: action.event.title,
           company:
@@ -52,23 +72,31 @@ export function modalReducer(state: ModalState, action: ModalAction): ModalState
               ? { id: action.event.companyId, name: action.event.company }
               : null,
           type: action.event.type,
+          allDay: !action.event.time,
           time: action.event.time || "",
+          endDate: action.event.endDate || "",
+          url: action.event.url || "",
+          note: action.event.note || "",
         },
-        editingId: action.event.id,
-        isModalOpen: true,
+        error: null,
       };
-    case "resetForm":
-      return { ...state, formState: { ...emptyForm }, editingId: null };
+    case "closeModal":
+      return { ...state, view: null, error: null };
+    case "setSelectedDate":
+      return { ...state, selectedDate: action.date };
     case "updateForm":
       return { ...state, formState: { ...state.formState, ...action.patch } };
+    // Googleカレンダーと同じく、保存・削除できたらダイアログを閉じる
     case "saveSuccess":
-      return { ...state, formState: { ...emptyForm }, editingId: null };
+      return { ...state, view: null, formState: { ...emptyForm }, selectedEvent: null, error: null };
+    case "saveFailed":
+      return { ...state, error: action.message };
     case "deleteStart":
-      return { ...state, deletingId: action.id };
+      return { ...state, deletingId: action.id, error: null };
     case "deleteSuccess":
-      return state.editingId === action.id ? { ...state, formState: { ...emptyForm }, editingId: null } : state;
-    case "deleteEnd":
-      return { ...state, deletingId: null };
+      return { ...state, view: null, selectedEvent: null, deletingId: null };
+    case "deleteFailed":
+      return { ...state, deletingId: null, error: action.message };
     default:
       return state;
   }

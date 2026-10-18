@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { AppLayout } from "@/app/_components/layout";
 import { DeveloperStats } from "./_components/developer-stats";
 import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
+
+export const metadata: Metadata = {
+  title: "開発者ダッシュボード",
+};
 
 export default function DeveloperDashboardPage() {
   return (

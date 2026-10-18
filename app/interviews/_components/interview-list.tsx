@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { useInterviewLogs } from "@/lib/api/interviews";
 import { ROUTES } from "@/lib/constants/routes";
 import { INTERVIEW_FORMAT_LABELS } from "@/lib/interviews/labels";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { EmptyState } from "@/app/_components/empty-state";
 import { CardListSkeleton } from "@/app/_components/loading-skeletons";
 import { ListCardLink, NoMatches, StaggerItem, StaggerList } from "@/app/_components/list/list-items";
 import { FilterChips, ListToolbar } from "@/app/_components/list/list-toolbar";
+import { LoadError } from "@/app/_components/load-error";
+import { unreviewedInterviews } from "@/app/dashboard/_components/menu-summaries";
 
 type ReviewFilter = "all" | "unreviewed" | "reviewed";
 
@@ -24,19 +25,15 @@ export function InterviewList() {
     const matched = (logs ?? []).filter(
       (log) => !query || [log.company.name, log.round ?? ""].some((v) => v.toLowerCase().includes(q)),
     );
-    const unreviewed = matched.filter((log) => log.aiResult === null);
+    const unreviewed = unreviewedInterviews(matched);
     return {
       filtered:
-        review === "all"
-          ? matched
-          : review === "unreviewed"
-            ? unreviewed
-            : matched.filter((log) => log.aiResult !== null),
+        review === "all" ? matched : review === "unreviewed" ? unreviewed : matched.filter((log) => log.reviewed),
       counts: { all: matched.length, unreviewed: unreviewed.length, reviewed: matched.length - unreviewed.length },
     };
   }, [logs, query, review]);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   if (isPending) return <CardListSkeleton className="xl:grid-cols-3" />;
   if (logs.length === 0) {
     return (
@@ -76,7 +73,7 @@ export function InterviewList() {
                 <p className="truncate font-bold">{log.company.name}</p>
                 <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                   <span>{log.format ? INTERVIEW_FORMAT_LABELS[log.format] : "面接形式未設定"}</span>
-                  {log.aiResult ? (
+                  {log.reviewed ? (
                     <Badge className="bg-success/10 text-success">振り返り済み</Badge>
                   ) : (
                     <Badge variant="outline">振り返り待ち</Badge>

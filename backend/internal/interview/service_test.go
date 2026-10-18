@@ -14,7 +14,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
-	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit/ratelimittest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -39,7 +39,7 @@ func setup(t *testing.T) fixture {
 	fake := &aitest.Fake{Reply: "振り返り結果"}
 	return fixture{
 		pool:       pool,
-		interviews: NewService(pool, x, fake, ratelimit.NewLimiter()),
+		interviews: NewService(pool, x, fake, ratelimittest.NewLimiter()),
 		companies:  company.NewService(pool, x, nil, nil),
 		ai:         fake,
 	}
@@ -150,6 +150,48 @@ func TestListOrdersByInterviewDate(t *testing.T) {
 	}
 	if len(got) != 3 || got[0] != "2026-10-15" || got[2] != "2026-10-01" {
 		t.Errorf("dates = %v, want newest first", got)
+	}
+}
+
+func TestListReturnsWhetherReviewed(t *testing.T) {
+	f := setup(t)
+	userID := dbtest.CreateUser(t, f.pool)
+	companyID := f.newCompany(t, userID, "サンプル")
+	reviewed, _, err := f.interviews.Create(t.Context(), userID, validFields(companyID, "2026-10-15"))
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, _, err := f.interviews.Create(t.Context(), userID, validFields(companyID, "2026-10-01")); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := f.interviews.Review(t.Context(), userID, reviewed.ID); err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+
+	logs, err := f.interviews.List(t.Context(), userID, nil, 0)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(logs) != 2 || !logs[0].Reviewed || logs[1].Reviewed {
+		t.Errorf("logs = %+v, want only the newer log reviewed", logs)
+	}
+}
+
+func TestCreateStopsAtLimitPerUser(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	companyID := f.newCompany(t, alice, "サンプル")
+	if _, err := f.pool.Exec(t.Context(),
+		`insert into interview_logs (user_id, company_id) select $1, $2 from generate_series(1, $3)`,
+		alice, companyID, maxLogs); err != nil {
+		t.Fatalf("fill interview logs: %v", err)
+	}
+
+	_, _, err := f.interviews.Create(t.Context(), alice, validFields(companyID, "2026-10-01"))
+	assertKind(t, err, platform.KindConflict)
+	if _, _, err := f.interviews.Create(t.Context(), bob, validFields(f.newCompany(t, bob, "サンプル"), "2026-10-01")); err != nil {
+		t.Errorf("Create for another user: %v, want success", err)
 	}
 }
 

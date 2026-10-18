@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { SITE_NAME, getSiteUrl } from "@/lib/constants/site";
 import "./globals.css";
+import { DevServiceWorkerReset } from "./_components/dev-service-worker-reset";
 import { Providers } from "./_components/providers";
+import { AvatarNotice } from "./_components/avatar/avatar-notice";
 import { AppHeader } from "./_components/layout/AppHeader";
 import { Dock } from "./_components/layout/Dock";
 
@@ -14,30 +16,19 @@ export const metadata: Metadata = {
   description:
     "自己分析・適性チェック・ES管理・企業管理・面接ログを1つにまとめ、就活で次にやるべき行動を明確にするWebアプリ。",
   applicationName: SITE_NAME,
-  icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "32x32" },
-    ],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
-  },
-  alternates: {
-    canonical: "/",
-  },
   openGraph: {
     type: "website",
     locale: "ja_JP",
-    url: "/",
     siteName: SITE_NAME,
     title: `${SITE_NAME} | 就活を整理して前進する`,
     description:
       "自己分析・適性チェック・ES管理・企業管理・面接ログを1つにまとめ、就活で次にやるべき行動を明確にするWebアプリ。",
     images: [
       {
-        url: "/og-image.svg",
-        width: 938,
-        height: 352,
-        alt: `${SITE_NAME} logo`,
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: SITE_NAME,
       },
     ],
   },
@@ -46,7 +37,7 @@ export const metadata: Metadata = {
     title: `${SITE_NAME} | 就活を整理して前進する`,
     description:
       "自己分析・適性チェック・ES管理・企業管理・面接ログを1つにまとめ、就活で次にやるべき行動を明確にするWebアプリ。",
-    images: ["/og-image.svg"],
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
@@ -62,10 +53,12 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className="antialiased">
+        <DevServiceWorkerReset />
         <Providers>
           <AppHeader />
           {children}
           <Dock />
+          <AvatarNotice />
         </Providers>
       </body>
     </html>

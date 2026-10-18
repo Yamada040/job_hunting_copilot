@@ -44,8 +44,6 @@ type Props = {
   initial?: EsEntry;
   pending: boolean;
   error: unknown;
-  /** 直前の保存がうまくいったか（保存の帯に「保存しました」を出す） */
-  saved?: boolean;
   /** submit が true なら、保存したうえで提出する */
   onSubmit: (values: EsFormValues, submit: boolean) => void;
   /** 提出済みのESでは「提出する」を出さない */
@@ -54,7 +52,7 @@ type Props = {
   defaultQuestions?: EsQuestion[];
 };
 
-export function EsForm({ initial, pending, error, saved, onSubmit, canSubmit, defaultQuestions = [] }: Props) {
+export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQuestions = [] }: Props) {
   const [company, setCompany] = useState<CompanySummary | null>(initial?.company ?? null);
   const [questions, setQuestions] = useState<EsQuestion[]>(initial?.questions ?? defaultQuestions);
   const formRef = useRef<HTMLFormElement>(null);
@@ -159,7 +157,7 @@ export function EsForm({ initial, pending, error, saved, onSubmit, canSubmit, de
 
         <ApiErrorMessage error={error} labels={ES_FIELD_LABELS} />
 
-        <FormActions dirty={dirty} saved={saved}>
+        <FormActions dirty={dirty}>
           <Button type="submit" variant="outline" disabled={pending || !company}>
             {pending ? "保存中…" : "下書きとして保存"}
           </Button>

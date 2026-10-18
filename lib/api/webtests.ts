@@ -42,6 +42,33 @@ export function useCreateWebtestQuestion() {
   });
 }
 
+/** 問題全体を書き換える。これまでの解答の記録は、解いたときの正誤のまま残る。 */
+export function useUpdateWebtestQuestion(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: WebtestQuestionCreate) =>
+      unwrap(
+        api.PUT("/v1/webtest-questions/{webtestQuestionId}", { params: { path: { webtestQuestionId: id } }, body }),
+      ),
+    onSuccess: (question) => {
+      queryClient.setQueryData(webtestKeys.detail(id), question);
+      void queryClient.invalidateQueries({ queryKey: ["webtest-questions", "list"] });
+    },
+  });
+}
+
+export function useDeleteWebtestQuestion(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      unwrap(api.DELETE("/v1/webtest-questions/{webtestQuestionId}", { params: { path: { webtestQuestionId: id } } })),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: webtestKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: ["webtest-questions", "list"] });
+    },
+  });
+}
+
 /** 問題に解答する。正誤はバックエンドが判定する。解答の記録を取り直すため、問題の詳細のキャッシュを捨てる。 */
 export function useAnswerWebtestQuestion(id: string) {
   const queryClient = useQueryClient();

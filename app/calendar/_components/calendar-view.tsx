@@ -1,30 +1,40 @@
 "use client";
 
-import { useCalendarItems } from "@/lib/api/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
-import { toCalendarEvent } from "./calendar/types";
+import { useMemo, useState } from "react";
+
+import { useCalendarItems, useUpcomingCalendarItems } from "@/lib/api/calendar";
+import { Card } from "@/components/ui/card";
+import { LoadError } from "@/app/_components/load-error";
+import { toCalendarEvent, type CalendarEvent } from "./calendar/types";
+import { formatDateKey, monthCells } from "./calendar/utils";
 import { InteractiveCalendar } from "./interactive-calendar";
 
 export function CalendarView() {
-  const { data, error } = useCalendarItems();
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const today = formatDateKey(new Date());
+  const cells = monthCells(currentMonth);
+  // 月の表には表示している月の分を、今日と今週の予定には直近の分を取る（別の月を見ていても今週の予定は出し続ける）
+  const month = useCalendarItems({ from: cells[0].date, to: cells[cells.length - 1].date });
+  const upcoming = useUpcomingCalendarItems(today);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  const events = useMemo(() => {
+    const byId = new Map<string, CalendarEvent>();
+    for (const item of [...(month.data ?? []), ...(upcoming.data ?? [])]) {
+      const event = toCalendarEvent(item);
+      byId.set(event.id, event);
+    }
+    return [...byId.values()];
+  }, [month.data, upcoming.data]);
+
+  const error = month.error ?? upcoming.error;
+  if (error) return <LoadError error={error} />;
+  // 読み込み中も同じ形の空の月の表を出す（読み込み後に配置がずれないため）
   return (
-    <Card className="gap-4 py-6">
-      <CardHeader className="px-6">
-        <CardTitle>
-          <h2 className="text-base font-semibold">予定と締切</h2>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-6">
-        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          ES / 面接 / インターン
-        </div>
-        <Card variant="muted" className="rounded-2xl px-3 shadow-inner">
-          <InteractiveCalendar events={(data ?? []).map(toCalendarEvent)} />
-        </Card>
-      </CardContent>
+    <Card className="px-3 py-4 sm:px-6 sm:py-6">
+      <InteractiveCalendar events={events} currentMonth={currentMonth} onMonthChange={setCurrentMonth} />
     </Card>
   );
 }

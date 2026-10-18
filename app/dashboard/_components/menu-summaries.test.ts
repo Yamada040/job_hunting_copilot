@@ -27,8 +27,8 @@ describe("urgentDrafts", () => {
 });
 
 describe("unreviewedInterviews", () => {
-  it("振り返り結果の無いログだけを返す", () => {
-    expect(unreviewedInterviews([{ aiResult: null }, { aiResult: "振り返り結果" }])).toEqual([{ aiResult: null }]);
+  it("振り返りをしていないログだけを返す", () => {
+    expect(unreviewedInterviews([{ reviewed: false }, { reviewed: true }])).toEqual([{ reviewed: false }]);
   });
 });
 
@@ -44,18 +44,31 @@ describe("upcomingEvents", () => {
 
     expect(upcomingEvents(items, "2026-10-12")).toEqual([items[2], items[1], items[0]]);
   });
+  it("もう始まっている何日か続く予定は、最終日が今日以降なら今日の予定として先頭に並べる", () => {
+    const items = [
+      { date: "2026-10-13", time: "10:00" },
+      { date: "2026-10-10", endDate: "2026-10-14", time: null },
+      { date: "2026-10-08", endDate: "2026-10-11", time: null },
+    ];
+
+    expect(upcomingEvents(items, "2026-10-12")).toEqual([items[1], items[0]]);
+  });
 });
 
 describe("todayXp", () => {
-  it("今日の獲得XPだけを合計する", () => {
-    const today = "2026-10-12";
-    const logs = [
-      { xp: 25, createdAt: new Date(2026, 9, 12, 9, 0).toISOString() },
-      { xp: 5, createdAt: new Date(2026, 9, 12, 23, 30).toISOString() },
-      { xp: 20, createdAt: new Date(2026, 9, 11, 23, 59).toISOString() },
-    ];
+  const logs = [
+    { xp: 25, createdAt: "2026-10-12T00:00:00+09:00" },
+    { xp: 5, createdAt: "2026-10-12T23:59:00+09:00" },
+    { xp: 20, createdAt: "2026-10-11T23:59:00+09:00" },
+  ];
 
-    expect(todayXp(logs, today)).toBe(30);
+  it("日本時間の今日の獲得XPだけを合計する", () => {
+    expect(todayXp(logs, new Date("2026-10-12T12:00:00+09:00"))).toBe(30);
+  });
+
+  it("端末のタイムゾーンに関係なく、日本時間の日付で区切る", () => {
+    // 日本時間では 10/12 の 0:30。UTC ではまだ 10/11
+    expect(todayXp(logs, new Date("2026-10-11T15:30:00Z"))).toBe(30);
   });
 });
 

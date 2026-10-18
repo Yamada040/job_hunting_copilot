@@ -24,3 +24,10 @@ export function useUpdateMe() {
     onSuccess: (me) => queryClient.setQueryData(meQueryKey, me),
   });
 }
+
+/** 退会する。アカウントとすべてのデータがサーバーで消える（取り消せない）。 */
+export function useDeleteMe() {
+  return useMutation({
+    mutationFn: () => unwrap(api.DELETE("/v1/me")),
+  });
+}

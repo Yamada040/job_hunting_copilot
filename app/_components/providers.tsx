@@ -1,12 +1,35 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { ApiError } from "@/lib/api/client";
+import { ROUTES } from "@/lib/constants/routes";
+import { createSupabaseBrowserClient } from "@/lib/supabase/supabase-browser";
+import { isControlledByServiceWorkerInDev } from "./dev-service-worker-reset";
+
+let redirectingToLogin = false;
+
+/**
+ * どの画面でも、APIが 401（ログインの期限切れなど）を返したら、この端末からログアウトしてログイン画面へ送る。
+ * 画面ごとにエラーの文を出すだけだと、利用者は何をすればよいか分からないため。
+ * 先にログアウトするのは、Cookie にセッションが残っていると、ログイン画面からダッシュボードへ戻されてしまうため。
+ */
+function handleUnauthorized(error: unknown) {
+  if (!(error instanceof ApiError) || error.problem.status !== 401 || redirectingToLogin) return;
+  // ほかのアプリの Service Worker がトークンを書き換えた 401 なので、ログアウトせずに解除と読み込み直しを待つ
+  if (isControlledByServiceWorkerInDev()) return;
+  redirectingToLogin = true;
+  void createSupabaseBrowserClient()
+    .auth.signOut({ scope: "local" })
+    // router.push ではなくページごと読み込み直す。手元に残っている前のログインのキャッシュ（TanStack Query）を確実に消すため
+    .finally(() => window.location.replace(new URL(`${ROUTES.LOGIN}?error=session`, window.location.origin)));
+}
 
 function createQueryClient() {
   return new QueryClient({
+    queryCache: new QueryCache({ onError: handleUnauthorized }),
+    mutationCache: new MutationCache({ onError: handleUnauthorized }),
     defaultOptions: {
       queries: {
         // 画面を移動するたびに取り直さず、1分以内なら保持しているデータを使う

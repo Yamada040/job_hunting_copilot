@@ -68,7 +68,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    Req["リクエスト"] --> ID["リクエストID"] --> Log["アクセスログ"] --> Recover["panicからの復旧"] --> JWT["JWT検証"] --> Validate["OpenAPIによる検証"] --> Handler["handler"] --> Service["service<br/>(ドメインのルール)"] --> DB["sqlc の問い合わせ"]
+    Req["リクエスト"] --> ID["リクエストID"] --> Log["アクセスログ"] --> Recover["panicからの復旧"] --> IP["接続元のIP"] --> JWT["JWT検証"] --> Validate["OpenAPIによる検証"] --> Handler["handler"] --> Service["service<br/>(ドメインのルール)"] --> DB["sqlc の問い合わせ"]
     Service -.エラー.-> Problem["RFC 9457<br/>Problem Details"]
 ```
 

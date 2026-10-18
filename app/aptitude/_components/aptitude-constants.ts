@@ -75,3 +75,65 @@ export const defaultAnswers: Answers = {
   otherNotes: "",
   mbti: "",
 };
+
+export type MultiKey = "interests" | "strengths" | "values";
+export type TextKey = Exclude<keyof Answers, MultiKey>;
+export type Question =
+  | { kind: "multi"; key: MultiKey; title: string; hint?: string; options: string[] }
+  | { kind: "text"; key: TextKey; title: string; hint?: string }
+  | { kind: "select"; key: TextKey; title: string; hint?: string; options: string[] };
+
+// 質問と、答えに迷わないためのヒント
+export const QUESTIONS: Question[] = [
+  {
+    kind: "multi",
+    key: "interests",
+    title: "興味のある領域",
+    hint: "あてはまるものをいくつでも選んでください。",
+    options: interestOptions,
+  },
+  {
+    kind: "multi",
+    key: "strengths",
+    title: "強み",
+    hint: "あてはまるものをいくつでも選んでください。",
+    options: strengthOptions,
+  },
+  {
+    kind: "multi",
+    key: "values",
+    title: "大事にしたい価値観",
+    hint: "あてはまるものをいくつでも選んでください。",
+    options: valueOptions,
+  },
+  {
+    kind: "text",
+    key: "enjoy",
+    title: "好きな業務・没頭できること",
+    hint: "時間を忘れて取り組めたことを思い出してみましょう。",
+  },
+  {
+    kind: "text",
+    key: "achievements",
+    title: "誇りに思う達成",
+    hint: "大小は問いません。頑張ったと思えることを書いてください。",
+  },
+  { kind: "text", key: "dislike", title: "苦手・避けたいこと", hint: "向いていない仕事を知るのも大事です。" },
+  { kind: "text", key: "workStyle", title: "働き方の希望", hint: "例：リモート中心、出社多め、チームで働きたい。" },
+  { kind: "text", key: "location", title: "希望の勤務地", hint: "例：首都圏、地元に近いところ、こだわらない。" },
+  {
+    kind: "text",
+    key: "industryWish",
+    title: "興味のある業界",
+    hint: "決まっていなければ、気になる業界を挙げるだけで大丈夫です。",
+  },
+  { kind: "text", key: "roleWish", title: "興味のある職種", hint: "例：エンジニア、営業、企画。" },
+  {
+    kind: "select",
+    key: "mbti",
+    title: "MBTIタイプ（任意）",
+    hint: "分かっていれば選んでください。",
+    options: mbtiOptions,
+  },
+  { kind: "text", key: "otherNotes", title: "補足メモ", hint: "ほかに伝えておきたいことがあれば書いてください。" },
+];

@@ -6,6 +6,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -28,7 +29,7 @@ func (h Handler) ListCompanies(ctx context.Context, req openapi.ListCompaniesReq
 	}
 	res := make(openapi.ListCompanies200JSONResponse, len(rows))
 	for i, row := range rows {
-		res[i] = ToAPI(row)
+		res[i] = toListItem(row)
 	}
 	return res, nil
 }
@@ -119,13 +120,26 @@ func (h Handler) DeleteCompany(ctx context.Context, req openapi.DeleteCompanyReq
 	return openapi.DeleteCompany204Response{}, nil
 }
 
+func toListItem(row db.ListCompaniesRow) openapi.CompanyListItem {
+	return openapi.CompanyListItem{
+		Id:              row.ID,
+		Name:            row.Name,
+		Industry:        row.Industry,
+		Url:             row.Url,
+		MypageId:        row.MypageID,
+		MypageUrl:       row.MypageUrl,
+		Memo:            row.Memo,
+		Stage:           openapi.CompanyStage(row.Stage),
+		Preference:      toInt(row.Preference),
+		Favorite:        row.Favorite,
+		AiResultPreview: platform.EmptyToNil(&row.AiResultPreview),
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
+	}
+}
+
 // ToAPI は、DBの企業をAPIの形にする。企業を含めて返す他の機能（ES・面接ログ）からも使う。
 func ToAPI(row db.Company) openapi.Company {
-	var preference *int
-	if row.Preference != nil {
-		v := int(*row.Preference)
-		preference = &v
-	}
 	return openapi.Company{
 		Id:         row.ID,
 		Name:       row.Name,
@@ -135,10 +149,18 @@ func ToAPI(row db.Company) openapi.Company {
 		MypageUrl:  row.MypageUrl,
 		Memo:       row.Memo,
 		Stage:      openapi.CompanyStage(row.Stage),
-		Preference: preference,
+		Preference: toInt(row.Preference),
 		Favorite:   row.Favorite,
 		AiResult:   row.AiResult,
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
 	}
+}
+
+func toInt(v *int16) *int {
+	if v == nil {
+		return nil
+	}
+	n := int(*v)
+	return &n
 }

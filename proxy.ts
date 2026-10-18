@@ -1,9 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { ROUTES } from "@/lib/constants/routes";
+import { PUBLIC_PAGES, ROUTES } from "@/lib/constants/routes";
 
 // 認証不要のパス
-const PUBLIC_PATHS = [ROUTES.HOME, ROUTES.LOGIN, "/auth/callback"];
+const PUBLIC_PATHS = [...PUBLIC_PAGES, "/auth/callback", "/robots.txt", "/sitemap.xml"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -34,7 +34,8 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/api/");
+  // /v1 はバックエンドのAPI。ログインが必要かはバックエンドが決める（手元と E2E では Next.js がここを通して転送する）
+  const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/api/") || pathname.startsWith("/v1/");
 
   // ログイン済みで /login にアクセス → ダッシュボードへ
   if (user && pathname === ROUTES.LOGIN) {

@@ -7,16 +7,16 @@ import { ArrowTopRightOnSquareIcon, StarIcon } from "@heroicons/react/24/outline
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useCompanies, type Company, type CompanyStage } from "@/lib/api/companies";
+import { useCompanies, type CompanyListItem, type CompanyStage } from "@/lib/api/companies";
 import { COMPANY_STAGES, COMPANY_STAGE_LABELS } from "@/lib/companies/stages";
 import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { EmptyState } from "@/app/_components/empty-state";
 import { CardListSkeleton } from "@/app/_components/loading-skeletons";
 import { ListCardLink, NoMatches, StaggerItem, StaggerList } from "@/app/_components/list/list-items";
 import { Chip, FilterChips, ListToolbar } from "@/app/_components/list/list-toolbar";
 import { useMediaQuery } from "@/app/_components/list/use-media-query";
+import { LoadError } from "@/app/_components/load-error";
 
 /** 企業の一覧。広い画面では選考状況や志望度を縦に見比べられる表、狭い画面ではカードで出す。 */
 export function CompanyList() {
@@ -36,7 +36,7 @@ export function CompanyList() {
     );
   }, [companies, stage, favoriteOnly, keyword]);
 
-  if (error) return <ApiErrorMessage error={error} />;
+  if (error) return <LoadError error={error} />;
   if (isPending) return <CardListSkeleton />;
   if (companies.length === 0) {
     return (
@@ -94,7 +94,7 @@ export function CompanyList() {
   );
 }
 
-function CompanyTable({ companies }: { companies: Company[] }) {
+function CompanyTable({ companies }: { companies: CompanyListItem[] }) {
   return (
     <Card className="py-0">
       <Table className="table-fixed">
