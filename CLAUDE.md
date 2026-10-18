@@ -112,7 +112,7 @@ backend/
     ├── db/                   # sqlc が internal/db/queries/*.sql から生成した問い合わせ
     ├── xp/                   # XPの付与（各機能のサービスが、元の操作と同じトランザクションで呼ぶ）
     ├── ai/                   # Gemini / GPT / Tavily とプロンプト
-    ├── ratelimit/            # AI・問い合わせの回数制限（短時間の連打と1日の上限）
+    ├── ratelimit/            # AI・問い合わせの回数制限（短時間の連打と1日の上限）と、AIの1日の利用料の上限
     ├── auth/                 # JWTの検証
     └── platform/             # エラーの形式、ミドルウェア、トランザクション、DB接続
 ```
@@ -142,6 +142,7 @@ backend/
 | AI自己分析                | `POST /v1/self-analysis-result/analysis` | 1回                      |
 
 - **回数制限**（`internal/ratelimit`）: 汎用のAIは1分12回・1日20回、企業分析は10分5回・1日3回（1人あたり、1日は日本時間）。それとは別に、アプリ全体の1日の上限（既定は汎用のAI 300回・企業分析10回。Tavily の月1,000回に収まる値）を全員で共有し、環境変数で変えられる。本人の上限で断ったリクエストは全体の枠を減らさない。AIの呼び出しが失敗したら1日の上限の1回を戻す（連打の上限と、企業分析の時間切れは戻さない）
+- **利用料の上限**（`internal/ratelimit`）: AIの応答のトークン数から料金を出してアプリ全体で1日ずつ足し、1日の上限（既定は $1）に達したら、AIを呼ぶ前に全体の上限と同じメッセージの 429 を返す。確かめるのは呼ぶ前、足すのは呼んだ後なので、同時に処理中の数件分は超えうる。足すのは `Limiter.TrackCost` で包んだ Generator が1か所で行い（失敗した呼び出しもトークン数が分かれば数える）、各サービスでは足さない
 - **Web検索**: 企業分析の検索は1回の分析で最大3回（実際に Tavily を呼んだ回数で数える）。検索が使えないとき（キーが無い・無料枠が尽きた・失敗した）は検索なしで分析を続け、結果の先頭にその旨を書く
 - **プロバイダー**: `AI_PROVIDER=gemini|gpt`。キーが無いときはAI機能だけが 503 を返す（仮の文章は保存されてしまうので返さない）
 - **用語**: 添削結果・振り返り結果・分析結果・診断結果。「サマリー」「要約」「AI回答」は使わない。DBの列名はすべて `ai_result`
@@ -160,7 +161,7 @@ backend/
 - `aptitude_results` / `self_analysis_results`: 1人1件
 - `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録（解答の記録は問題ごとに新しい20件だけを残す）
 - `api_rate_limits`: AI・問い合わせの回数制限の状態（1人ごと）
-- `api_app_rate_limits`: ユーザーに結び付かない回数制限の状態（`bucket` ごとに1行）。AIと問い合わせのアプリ全体の上限と、ログインしていない人の問い合わせのIPごとの上限（`contact_daily:ip:<IPのハッシュ>`）
+- `api_app_rate_limits`: ユーザーに結び付かない回数制限の状態（`bucket` ごとに1行）。AIと問い合わせのアプリ全体の上限と、ログインしていない人の問い合わせのIPごとの上限（`contact_daily:ip:<IPのハッシュ>`）。AIの1日の利用料（`ai_cost_microdollars_daily`）も、`count` にマイクロドルを足してここで数える
 
 **1人あたりの件数の上限**: 企業500・ES500・面接ログ500・予定2000・Webテストの問題500（各 service の定数。超えると 409）。スクリプトでの量産から無料プランのDB（500MB）と、一覧のレスポンス（Vercel の上限4.5MB）を守るため。数えてから作るので同時に作ると数件超えうるが、許容している（`platform.CheckLimit`）。
 
@@ -354,6 +355,9 @@ AI_API_VERSION=v1beta (Geminiの場合)
 TAVILY_API_KEY=...          # AI企業分析のWeb検索
 AI_APP_DAILY_LIMIT=300               # 汎用のAIのアプリ全体の1日の上限（無ければ300）
 COMPANY_ANALYSIS_APP_DAILY_LIMIT=10  # 企業分析のアプリ全体の1日の上限（無ければ10）
+AI_DAILY_BUDGET_USD=1                    # AIの利用料のアプリ全体の1日の上限（ドル。無ければ1）
+AI_INPUT_PRICE_PER_MILLION_TOKENS=0.30   # 入力100万トークンあたりの料金（ドル。無ければ gemini-2.5-flash の0.30）
+AI_OUTPUT_PRICE_PER_MILLION_TOKENS=2.50  # 出力（思考を含む）100万トークンあたりの料金（ドル。無ければ gemini-2.5-flash の2.50）
 SMTP_HOST=smtp.gmail.com    # 問い合わせ（ポート465は最初からTLS、それ以外はSTARTTLS）
 SMTP_PORT=465
 SMTP_USER=your-mail@example.com

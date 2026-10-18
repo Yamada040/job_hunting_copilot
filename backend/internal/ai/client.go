@@ -110,11 +110,12 @@ func (c *Client) GenerateJSON(ctx context.Context, kind Kind, input string, out 
 		return Usage{}, notConfigured()
 	}
 	text, usage, err := c.provider.generate(ctx, buildPrompt(kind, input), true)
+	// 失敗しても usage を返すのは、応答が返ったならトークンの料金はかかっており、アプリ全体の利用料に数えるため
 	if err != nil {
-		return Usage{}, upstream(ctx, err)
+		return usage, upstream(ctx, err)
 	}
 	if err := json.Unmarshal([]byte(text), out); err != nil {
-		return Usage{}, InvalidResult(ctx, fmt.Errorf("decode ai json: %w", err))
+		return usage, InvalidResult(ctx, fmt.Errorf("decode ai json: %w", err))
 	}
 	return usage, nil
 }

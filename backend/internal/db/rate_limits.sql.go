@@ -12,24 +12,50 @@ import (
 	"github.com/google/uuid"
 )
 
-const hitAppRateLimit = `-- name: HitAppRateLimit :one
+const addAppRateLimit = `-- name: AddAppRateLimit :one
 insert into api_app_rate_limits (bucket, window_start, count)
-values ($1, $2, 1)
+values ($1, $2, $3::integer)
 on conflict (bucket) do update set
-  count        = case when api_app_rate_limits.window_start < $3 then 1 else api_app_rate_limits.count + 1 end,
-  window_start = case when api_app_rate_limits.window_start < $3 then $2 else api_app_rate_limits.window_start end
+  count        = case when api_app_rate_limits.window_start < $4 then $3::integer else api_app_rate_limits.count + $3::integer end,
+  window_start = case when api_app_rate_limits.window_start < $4 then $2 else api_app_rate_limits.window_start end
 returning count
 `
 
-type HitAppRateLimitParams struct {
+type AddAppRateLimitParams struct {
 	Bucket      string
 	Now         time.Time
+	Amount      int32
 	WindowStart time.Time
 }
 
-// アプリ全体で共有する枠を、HitRateLimit と同じく1つの文で数える
-func (q *Queries) HitAppRateLimit(ctx context.Context, arg HitAppRateLimitParams) (int32, error) {
-	row := q.db.QueryRow(ctx, hitAppRateLimit, arg.Bucket, arg.Now, arg.WindowStart)
+// アプリ全体で共有する枠に amount を足し、HitRateLimit と同じく1つの文で数える。回数の枠は1ずつ、AIの利用料の枠はマイクロドルを足す
+func (q *Queries) AddAppRateLimit(ctx context.Context, arg AddAppRateLimitParams) (int32, error) {
+	row := q.db.QueryRow(ctx, addAppRateLimit,
+		arg.Bucket,
+		arg.Now,
+		arg.Amount,
+		arg.WindowStart,
+	)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getAppRateLimit = `-- name: GetAppRateLimit :one
+select coalesce((
+  select count from api_app_rate_limits
+  where bucket = $1 and window_start >= $2
+), 0)::integer as count
+`
+
+type GetAppRateLimitParams struct {
+	Bucket      string
+	WindowStart time.Time
+}
+
+// アプリ全体で共有する枠の、今の期間の量を返す。期間が切り替わっていれば（行が無ければ）0
+func (q *Queries) GetAppRateLimit(ctx context.Context, arg GetAppRateLimitParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getAppRateLimit, arg.Bucket, arg.WindowStart)
 	var count int32
 	err := row.Scan(&count)
 	return count, err
