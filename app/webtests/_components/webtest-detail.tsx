@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -8,8 +9,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { useAnswerWebtestQuestion, useWebtestQuestion } from "@/lib/api/webtests";
-import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { useAnswerWebtestQuestion, useDeleteWebtestQuestion, useWebtestQuestion } from "@/lib/api/webtests";
+import { showFailureNotice, showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
 import { ROUTES } from "@/lib/constants/routes";
 import { LoadError } from "@/app/_components/load-error";
@@ -17,6 +19,8 @@ import { LoadError } from "@/app/_components/load-error";
 export function WebtestDetail({ id }: { id: string }) {
   const { data: question, error } = useWebtestQuestion(id);
   const answer = useAnswerWebtestQuestion(id);
+  const deleteQuestion = useDeleteWebtestQuestion(id);
+  const router = useRouter();
   const [status, setStatus] = useState<"correct" | "incorrect" | null>(null);
 
   if (error) return <LoadError error={error} back={{ href: ROUTES.WEBTESTS, label: "問題の一覧へ戻る" }} />;
@@ -37,18 +41,19 @@ export function WebtestDetail({ id }: { id: string }) {
     );
   };
 
+  const handleDelete = () => {
+    deleteQuestion.mutate(undefined, {
+      onSuccess: () => {
+        showSuccessNotice("問題を削除しました");
+        router.push(ROUTES.WEBTESTS);
+      },
+      onError: (e) => showFailureNotice("問題の削除", e),
+    });
+  };
+
   return (
     <>
       <h2 className="text-lg font-semibold">{question.title}</h2>
-      {status === "correct" ? (
-        <Card variant="muted" className="px-4 py-3 text-sm text-success">
-          正解です！
-        </Card>
-      ) : status === "incorrect" ? (
-        <Card variant="muted" className="px-4 py-3 text-sm text-destructive">
-          不正解です。もう一度チャレンジしましょう。
-        </Card>
-      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <Card className="gap-4 p-6">
@@ -109,10 +114,21 @@ export function WebtestDetail({ id }: { id: string }) {
             </form>
           </Card>
 
-          {question.explanation ? (
-            <Card variant="muted" className="gap-1 p-4 text-sm">
-              <p className="text-xs font-semibold text-muted-foreground">解説</p>
-              <p className="whitespace-pre-line leading-6">{question.explanation}</p>
+          {/* 解く前に答えが見えないよう、正解と解説は解答を送った後にだけ出す */}
+          {status ? (
+            <Card variant="muted" className="gap-2 p-4 text-sm">
+              <p className={status === "correct" ? "font-semibold text-success" : "font-semibold text-destructive"}>
+                {status === "correct" ? "正解です！" : "不正解です。解説を読んで、もう一度チャレンジしましょう。"}
+              </p>
+              <p>
+                <span className="text-xs font-semibold text-muted-foreground">正解</span> {question.answer}
+              </p>
+              {question.explanation ? (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground">解説</p>
+                  <p className="whitespace-pre-line leading-6">{question.explanation}</p>
+                </div>
+              ) : null}
             </Card>
           ) : null}
         </Card>
@@ -137,6 +153,19 @@ export function WebtestDetail({ id }: { id: string }) {
           </div>
         </Card>
       </div>
+
+      <ConfirmDialog
+        title="問題を削除しますか？"
+        description={`「${question.title}」と、その解答の記録を削除します。よろしいですか？`}
+        confirmLabel="削除する"
+        destructive
+        onConfirm={handleDelete}
+        trigger={
+          <Button type="button" variant="destructive" disabled={deleteQuestion.isPending}>
+            {deleteQuestion.isPending ? "削除中…" : "この問題を削除する"}
+          </Button>
+        }
+      />
     </>
   );
 }

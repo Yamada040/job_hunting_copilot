@@ -9,7 +9,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
-func TestIsCorrectIgnoresSpacesAndCase(t *testing.T) {
+func TestIsCorrectIgnoresSpacesCaseAndWidth(t *testing.T) {
 	cases := []struct {
 		answer, correct string
 		want            bool
@@ -17,6 +17,9 @@ func TestIsCorrectIgnoresSpacesAndCase(t *testing.T) {
 		{" B ", "b", true},
 		{"ABC", "abc", true},
 		{"A", "B", false},
+		{"１２", "12", true},
+		{"　ｂ　", "B", true},
+		{"ｶﾞ", "ガ", true},
 	}
 	for _, c := range cases {
 		if got := IsCorrect(c.answer, c.correct); got != c.want {
@@ -30,7 +33,7 @@ func TestCreateAndAnswer(t *testing.T) {
 	userID := dbtest.CreateUser(t, pool)
 	s := NewService(pool, xp.NewService())
 
-	q, reward, err := s.Create(t.Context(), userID, NewQuestion{Title: "推論", Body: "AはBより…", Answer: "B", Choices: []string{"A", " ", "B"}})
+	q, reward, err := s.Create(t.Context(), userID, Fields{Title: "推論", Body: "AはBより…", Answer: "B", Choices: []string{"A", " ", "B"}})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -67,12 +70,12 @@ func TestCreateStopsAtLimitPerUser(t *testing.T) {
 		t.Fatalf("fill questions: %v", err)
 	}
 
-	_, _, err := s.Create(t.Context(), alice, NewQuestion{Title: "上限を超える問題", Body: "本文", Answer: "A"})
+	_, _, err := s.Create(t.Context(), alice, Fields{Title: "上限を超える問題", Body: "本文", Answer: "A"})
 	var appErr *platform.Error
 	if !errors.As(err, &appErr) || appErr.Kind != platform.KindConflict {
 		t.Errorf("error = %v, want conflict", err)
 	}
-	if _, _, err := s.Create(t.Context(), bob, NewQuestion{Title: "問題", Body: "本文", Answer: "A"}); err != nil {
+	if _, _, err := s.Create(t.Context(), bob, Fields{Title: "問題", Body: "本文", Answer: "A"}); err != nil {
 		t.Errorf("Create for another user: %v, want success", err)
 	}
 }
@@ -81,11 +84,11 @@ func TestAnswerKeepsOnlyRecentAttemptsOfTheQuestion(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
 	s := NewService(pool, xp.NewService())
-	q, _, err := s.Create(t.Context(), userID, NewQuestion{Title: "問題", Body: "本文", Answer: "A"})
+	q, _, err := s.Create(t.Context(), userID, Fields{Title: "問題", Body: "本文", Answer: "A"})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
-	other, _, err := s.Create(t.Context(), userID, NewQuestion{Title: "別の問題", Body: "本文", Answer: "A"})
+	other, _, err := s.Create(t.Context(), userID, Fields{Title: "別の問題", Body: "本文", Answer: "A"})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -117,7 +120,7 @@ func TestOtherUsersQuestionIsNotFound(t *testing.T) {
 	alice := dbtest.CreateUser(t, pool)
 	bob := dbtest.CreateUser(t, pool)
 	s := NewService(pool, xp.NewService())
-	q, _, err := s.Create(t.Context(), alice, NewQuestion{Title: "問題", Body: "本文", Answer: "A"})
+	q, _, err := s.Create(t.Context(), alice, Fields{Title: "問題", Body: "本文", Answer: "A"})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -125,6 +128,11 @@ func TestOtherUsersQuestionIsNotFound(t *testing.T) {
 	for _, err := range []error{
 		func() error { _, err := s.Get(t.Context(), bob, q.ID); return err }(),
 		func() error { _, _, err := s.Answer(t.Context(), bob, q.ID, "A", nil); return err }(),
+		func() error {
+			_, err := s.Update(t.Context(), bob, q.ID, Fields{Title: "書き換え", Body: "本文", Answer: "B"})
+			return err
+		}(),
+		s.Delete(t.Context(), bob, q.ID),
 	} {
 		var appErr *platform.Error
 		if !errors.As(err, &appErr) || appErr.Kind != platform.KindNotFound {
@@ -132,3 +140,68 @@ func TestOtherUsersQuestionIsNotFound(t *testing.T) {
 		}
 	}
 }
+
+func TestUpdateJudgesWithNewAnswerAndKeepsPastAttempts(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	s := NewService(pool, xp.NewService())
+	q, _, err := s.Create(t.Context(), userID, Fields{Title: "問題", Body: "本文", Answer: "B", Explanation: ptr("解説")})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, _, err := s.Answer(t.Context(), userID, q.ID, "A", nil); err != nil {
+		t.Fatalf("Answer: %v", err)
+	}
+
+	updated, err := s.Update(t.Context(), userID, q.ID, Fields{Title: " 書き換えた問題 ", Body: "本文", Answer: "A"})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if updated.Title != "書き換えた問題" || updated.Explanation != nil {
+		t.Errorf("title = %q, explanation = %v; want the trimmed title and the omitted explanation cleared", updated.Title, updated.Explanation)
+	}
+	if len(updated.Attempts) != 1 || *updated.Attempts[0].IsCorrect {
+		t.Errorf("attempts = %+v, want the past incorrect attempt kept as it was", updated.Attempts)
+	}
+	attempt, _, err := s.Answer(t.Context(), userID, q.ID, "A", nil)
+	if err != nil || !*attempt.IsCorrect {
+		t.Errorf("answer after update = %v, %v; want correct with the new answer", attempt.IsCorrect, err)
+	}
+
+	_, err = s.Update(t.Context(), userID, q.ID, Fields{Title: "問題", Body: "本文", Answer: "  "})
+	var appErr *platform.Error
+	if !errors.As(err, &appErr) || appErr.Kind != platform.KindInvalid {
+		t.Errorf("update with a blank answer: %v, want invalid", err)
+	}
+}
+
+func TestDeleteRemovesQuestionWithAttempts(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	s := NewService(pool, xp.NewService())
+	q, _, err := s.Create(t.Context(), userID, Fields{Title: "問題", Body: "本文", Answer: "A"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, _, err := s.Answer(t.Context(), userID, q.ID, "A", nil); err != nil {
+		t.Fatalf("Answer: %v", err)
+	}
+
+	if err := s.Delete(t.Context(), userID, q.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	var attempts int
+	if err := pool.QueryRow(t.Context(), `select count(*) from webtest_attempts where question_id = $1`, q.ID).Scan(&attempts); err != nil {
+		t.Fatalf("count attempts: %v", err)
+	}
+	if attempts != 0 {
+		t.Errorf("%d attempts remain, want 0", attempts)
+	}
+	_, err = s.Get(t.Context(), userID, q.ID)
+	var appErr *platform.Error
+	if !errors.As(err, &appErr) || appErr.Kind != platform.KindNotFound {
+		t.Errorf("Get after delete: %v, want not found", err)
+	}
+}
+
+func ptr[T any](v T) *T { return &v }
