@@ -16,3 +16,13 @@ on conflict (bucket) do update set
   count        = case when api_app_rate_limits.window_start < @window_start then 1 else api_app_rate_limits.count + 1 end,
   window_start = case when api_app_rate_limits.window_start < @window_start then @now else api_app_rate_limits.window_start end
 returning count;
+
+-- name: RefundRateLimit :exec
+-- HitRateLimit で数えた1回を戻す。数えた後に期間が切り替わって数え直していれば（window_start が数えた時刻より後）、新しい期間の回数なので戻さない
+update api_rate_limits set count = count - 1
+where user_id = @user_id and bucket = @bucket and window_start <= @hit_at and count > 0;
+
+-- name: RefundAppRateLimit :exec
+-- HitAppRateLimit で数えた1回を、RefundRateLimit と同じ条件で戻す
+update api_app_rate_limits set count = count - 1
+where bucket = @bucket and window_start <= @hit_at and count > 0;

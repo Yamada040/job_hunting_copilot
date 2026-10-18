@@ -103,16 +103,19 @@ func (s *Service) Review(ctx context.Context, userID, id uuid.UUID) (Review, err
 		return Review{}, fmt.Errorf("get es review context: %w", err)
 	}
 	rc := reviewContext{companyAnalysis: platform.EmptyToNil(saved.CompanyAnalysis), selfAnalysis: platform.EmptyToNil(saved.SelfAnalysis)}
-	if err := s.limiter.HitAI(ctx, q, userID); err != nil {
+	charge, err := s.limiter.HitAI(ctx, q, userID)
+	if err != nil {
 		return Review{}, err
 	}
 	var out aiReview
 	usage, err := s.ai.GenerateJSON(ctx, ai.KindESReview, reviewInput(entry, items, rc), &out)
 	if err != nil {
+		charge.Refund(ctx, q)
 		return Review{}, err
 	}
 	result, err := mergeReview(items, out)
 	if err != nil {
+		charge.Refund(ctx, q)
 		return Review{}, ai.InvalidResult(ctx, err)
 	}
 	result.UsedCompanyAnalysis = rc.companyAnalysis != nil

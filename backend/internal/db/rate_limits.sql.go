@@ -64,3 +64,36 @@ func (q *Queries) HitRateLimit(ctx context.Context, arg HitRateLimitParams) (int
 	err := row.Scan(&count)
 	return count, err
 }
+
+const refundAppRateLimit = `-- name: RefundAppRateLimit :exec
+update api_app_rate_limits set count = count - 1
+where bucket = $1 and window_start <= $2 and count > 0
+`
+
+type RefundAppRateLimitParams struct {
+	Bucket string
+	HitAt  time.Time
+}
+
+// HitAppRateLimit で数えた1回を、RefundRateLimit と同じ条件で戻す
+func (q *Queries) RefundAppRateLimit(ctx context.Context, arg RefundAppRateLimitParams) error {
+	_, err := q.db.Exec(ctx, refundAppRateLimit, arg.Bucket, arg.HitAt)
+	return err
+}
+
+const refundRateLimit = `-- name: RefundRateLimit :exec
+update api_rate_limits set count = count - 1
+where user_id = $1 and bucket = $2 and window_start <= $3 and count > 0
+`
+
+type RefundRateLimitParams struct {
+	UserID uuid.UUID
+	Bucket string
+	HitAt  time.Time
+}
+
+// HitRateLimit で数えた1回を戻す。数えた後に期間が切り替わって数え直していれば（window_start が数えた時刻より後）、新しい期間の回数なので戻さない
+func (q *Queries) RefundRateLimit(ctx context.Context, arg RefundRateLimitParams) error {
+	_, err := q.db.Exec(ctx, refundRateLimit, arg.UserID, arg.Bucket, arg.HitAt)
+	return err
+}

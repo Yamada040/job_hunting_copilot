@@ -108,10 +108,10 @@ func TestHitAIRejectsOtherUsersAfterAppLimit(t *testing.T) {
 	l := &Limiter{now: time.Now, aiAppDaily: appRule(t, pool, 1)}
 	q := db.New(pool)
 
-	if err := l.HitAI(t.Context(), q, userA); err != nil {
+	if _, err := l.HitAI(t.Context(), q, userA); err != nil {
 		t.Fatalf("user A: %v, want allowed", err)
 	}
-	err := l.HitAI(t.Context(), q, userB)
+	_, err := l.HitAI(t.Context(), q, userB)
 	var appErr *platform.Error
 	if !errors.As(err, &appErr) || appErr.Kind != platform.KindRateLimited || appErr.Message != "アプリ全体の上限です" {
 		t.Errorf("user B: %v, want rejected by the app-wide limit", err)
@@ -127,9 +127,9 @@ func TestUserRejectedByOwnLimitDoesNotUseAppLimit(t *testing.T) {
 	q := db.New(pool)
 
 	for range AIBurst.Max + 5 {
-		_ = l.HitAI(t.Context(), q, heavyUser)
+		_, _ = l.HitAI(t.Context(), q, heavyUser)
 	}
-	if err := l.HitAI(t.Context(), q, otherUser); err != nil {
+	if _, err := l.HitAI(t.Context(), q, otherUser); err != nil {
 		t.Errorf("other user: %v, want allowed because rejected requests do not use the app-wide limit", err)
 	}
 }
@@ -146,7 +146,7 @@ func TestAppLimitAllowsExactlyMaxUnderConcurrentRequestsFromManyUsers(t *testing
 	var wg sync.WaitGroup
 	for _, userID := range users {
 		wg.Go(func() {
-			if err := l.HitCompanyAnalysis(t.Context(), db.New(pool), userID); err == nil {
+			if _, err := l.HitCompanyAnalysis(t.Context(), db.New(pool), userID); err == nil {
 				allowed.Add(1)
 			}
 		})
@@ -155,5 +155,55 @@ func TestAppLimitAllowsExactlyMaxUnderConcurrentRequestsFromManyUsers(t *testing
 
 	if allowed.Load() != 12 {
 		t.Errorf("%d of 20 concurrent requests from different users were allowed, want exactly 12", allowed.Load())
+	}
+}
+
+func TestRefundReturnsDailyLimitsButNotBurst(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	now := time.Date(2026, 10, 10, 12, 0, 0, 0, jst)
+	l := &Limiter{now: func() time.Time { return now }}
+	q := db.New(pool)
+	burst := Rule{Bucket: "test_refund_burst", Max: 1, Window: time.Minute, Message: "連打です"}
+	daily := Rule{Bucket: "test_refund_daily", Max: 1, Daily: true, Message: "今日はもう使えません"}
+	app := appRule(t, pool, 1)
+
+	charge, err := l.charge(t.Context(), q, userID, burst, daily, app)
+	if err != nil {
+		t.Fatalf("first charge: %v", err)
+	}
+	charge.Refund(t.Context(), q)
+
+	_, err = l.charge(t.Context(), q, userID, burst, daily, app)
+	var appErr *platform.Error
+	if !errors.As(err, &appErr) || appErr.Message != burst.Message {
+		t.Fatalf("charge right after refund: %v, want rejected by the burst limit", err)
+	}
+	now = now.Add(2 * time.Minute)
+	if _, err := l.charge(t.Context(), q, userID, burst, daily, app); err != nil {
+		t.Errorf("charge after the burst window: %v, want allowed because the daily limits were refunded", err)
+	}
+}
+
+func TestRefundAfterDailyResetKeepsNewDayCount(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	daily := Rule{Bucket: "test_refund_reset", Max: 1, Daily: true, Message: "今日はもう使えません"}
+	now := time.Date(2026, 10, 10, 23, 50, 0, 0, jst)
+	l := &Limiter{now: func() time.Time { return now }}
+	q := db.New(pool)
+
+	yesterday, err := l.charge(t.Context(), q, userID, daily)
+	if err != nil {
+		t.Fatalf("charge before midnight: %v", err)
+	}
+	now = time.Date(2026, 10, 11, 0, 10, 0, 0, jst)
+	if _, err := l.charge(t.Context(), q, userID, daily); err != nil {
+		t.Fatalf("charge after midnight: %v", err)
+	}
+	yesterday.Refund(t.Context(), q)
+
+	if _, err := l.charge(t.Context(), q, userID, daily); !isRateLimited(err) {
+		t.Errorf("second charge of the new day: %v, want rate limited because refunding yesterday's charge must not reduce today's count", err)
 	}
 }

@@ -146,7 +146,7 @@ func (c *Client) AnalyzeCompany(ctx context.Context, input string) (string, Usag
 	text, usage, err := c.provider.generateWithSearch(deadlineCtx, instructionsFor(KindCompanyAnalysis), prompts[KindCompanyAnalysis].inputLabel+"\n"+input, search)
 	if err != nil && errors.Is(deadlineCtx.Err(), context.DeadlineExceeded) {
 		platform.Logger(ctx).Error("company analysis exceeded deadline", "deadline", c.analysisDeadline, "error", err)
-		return "", usage, analysisTimedOut()
+		return "", usage, ErrAnalysisTimedOut
 	}
 	if err != nil {
 		return "", usage, upstream(ctx, err)
@@ -163,11 +163,10 @@ const searchUnavailableReply = "Web検索は現在使えません。これ以上
 // withoutSearchNotice は、検索なしで分析したときに、結果の先頭に書く断り書き。
 const withoutSearchNotice = "※ Web検索が使えなかったため、AIがもともと持っている知識だけで分析しました。最新の情報と異なる場合があります。"
 
-// 回数制限の消費を締め切り超過で取り消さないのは、それまでのAIと検索の費用はすでにかかっており、
-// 取り消すと遅い応答が続いたときに上限を超えて費用をかけられてしまうため
-func analysisTimedOut() error {
-	return &platform.Error{Kind: platform.KindUnavailable, Message: "企業分析に時間がかかりすぎたため中断しました。この1回も1日の回数に含まれます。しばらく経ってから再試行してください。"}
-}
+// ErrAnalysisTimedOut は、企業分析が締め切りを過ぎて中断したときのエラー。
+// ほかの失敗と違い回数制限の消費を戻さない。それまでのAIと検索の費用はすでにかかっており、
+// 戻すと遅い応答が続いたときに上限を超えて費用をかけられてしまうため
+var ErrAnalysisTimedOut = &platform.Error{Kind: platform.KindUnavailable, Message: "企業分析に時間がかかりすぎたため中断しました。この1回も1日の回数に含まれます。しばらく経ってから再試行してください。"}
 
 // キーが無いときに仮の文章を返さないのは、結果を保存する機能（1回しか実行できない適性診断など）で、仮の文章が保存されてしまうため
 func notConfigured() error {

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai/aitest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
@@ -239,5 +240,41 @@ func TestAnalyzeRunsOncePerCompanyWithoutPrivateMemo(t *testing.T) {
 	assertKind(t, err, platform.KindConflict)
 	if len(fake.Inputs) != 1 {
 		t.Errorf("AI was called %d times, want once", len(fake.Inputs))
+	}
+}
+
+// analyzeUntilRateLimited は、分析を失敗させ続け、回数制限で断られるまでに失敗した回数を返す。
+func analyzeUntilRateLimited(t *testing.T, aiErr error) int {
+	t.Helper()
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	s := NewService(pool, xp.NewService(), &aitest.Fake{Err: aiErr}, ratelimittest.NewLimiter())
+	row := create(t, s, userID, "サンプル")
+	for failures := 0; failures < 10; failures++ {
+		_, err := s.Analyze(t.Context(), userID, row.ID)
+		var appErr *platform.Error
+		if !errors.As(err, &appErr) {
+			t.Fatalf("Analyze: %v, want an application error", err)
+		}
+		if appErr.Kind == platform.KindRateLimited {
+			return failures
+		}
+	}
+	t.Fatal("Analyze was never rate limited")
+	return 0
+}
+
+func TestAnalyzeFailureDoesNotUseDailyLimit(t *testing.T) {
+	failed := analyzeUntilRateLimited(t, &platform.Error{Kind: platform.KindUnavailable, Message: "AIの処理に失敗しました"})
+	// 1日の上限（3回）は戻るので、短時間の連打の上限（10分5回）まで試せる
+	if failed != 5 {
+		t.Errorf("failed %d times before rate limited, want 5 (the burst limit)", failed)
+	}
+}
+
+func TestAnalyzeTimeoutUsesDailyLimit(t *testing.T) {
+	failed := analyzeUntilRateLimited(t, ai.ErrAnalysisTimedOut)
+	if failed != 3 {
+		t.Errorf("timed out %d times before rate limited, want 3 (the daily limit)", failed)
 	}
 }
