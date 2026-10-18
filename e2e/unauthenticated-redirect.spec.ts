@@ -28,4 +28,20 @@ test.describe("未ログイン状態でのアクセス制御", () => {
     expect(response?.headers()["x-frame-options"]).toBe("DENY");
     await expect(page).toHaveURL(/\/$/);
   });
+
+  test("robots.txt は未ログインでも取得できる", async ({ page }) => {
+    const response = await page.goto("/robots.txt");
+
+    expect(response?.ok()).toBe(true);
+    await expect(page).toHaveURL(/\/robots\.txt$/);
+    await expect(page.locator("body")).toContainText("Sitemap:");
+  });
+
+  test("sitemap.xml は未ログインでも取得できる", async ({ page }) => {
+    const response = await page.goto("/sitemap.xml");
+
+    expect(response?.ok()).toBe(true);
+    await expect(page).toHaveURL(/\/sitemap\.xml$/);
+    await expect(page.locator("body")).toContainText("<urlset");
+  });
 });
