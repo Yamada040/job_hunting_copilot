@@ -2,6 +2,7 @@ package interview
 
 import (
 	"context"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -30,7 +31,7 @@ func (h Handler) ListInterviewLogs(ctx context.Context, req openapi.ListIntervie
 	}
 	res := make(openapi.ListInterviewLogs200JSONResponse, len(logs))
 	for i, l := range logs {
-		res[i] = toAPI(l)
+		res[i] = toSummary(l)
 	}
 	return res, nil
 }
@@ -139,16 +140,12 @@ func toAPI(l Log) openapi.InterviewLog {
 			questions[i].Rating = &r
 		}
 	}
-	var date *openapi_types.Date
-	if l.InterviewDate != nil {
-		date = &openapi_types.Date{Time: *l.InterviewDate}
-	}
 	return openapi.InterviewLog{
 		Id:            l.ID,
 		Company:       openapi.CompanySummary{Id: l.CompanyID, Name: l.CompanyName},
 		Format:        (*openapi.InterviewFormat)(l.Format),
 		Round:         l.Round,
-		InterviewDate: date,
+		InterviewDate: toAPIDate(l.InterviewDate),
 		Questions:     questions,
 		Improvement:   l.Improvement,
 		Unexpected:    l.Unexpected,
@@ -156,4 +153,25 @@ func toAPI(l Log) openapi.InterviewLog {
 		CreatedAt:     l.CreatedAt,
 		UpdatedAt:     l.UpdatedAt,
 	}
+}
+
+func toSummary(l db.ListInterviewLogsRow) openapi.InterviewLogSummary {
+	return openapi.InterviewLogSummary{
+		Id:            l.ID,
+		Company:       openapi.CompanySummary{Id: l.CompanyID, Name: l.CompanyName},
+		Format:        (*openapi.InterviewFormat)(l.Format),
+		Round:         l.Round,
+		InterviewDate: toAPIDate(l.InterviewDate),
+		Improvement:   l.Improvement,
+		Reviewed:      l.Reviewed,
+		CreatedAt:     l.CreatedAt,
+		UpdatedAt:     l.UpdatedAt,
+	}
+}
+
+func toAPIDate(t *time.Time) *openapi_types.Date {
+	if t == nil {
+		return nil
+	}
+	return &openapi_types.Date{Time: *t}
 }

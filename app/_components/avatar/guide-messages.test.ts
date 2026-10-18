@@ -38,8 +38,8 @@ describe("companyListMessages", () => {
 
 describe("interviewListMessages", () => {
   it("振り返りをしていないログがあれば、その件数を話す", () => {
-    expect(interviewListMessages([{ aiResult: null }, { aiResult: "結果" }])[0]).toBe("振り返りが1件待ってるよ");
-    expect(interviewListMessages([{ aiResult: "結果" }])[0]).toBe("振り返りはばっちり！");
+    expect(interviewListMessages([{ reviewed: false }, { reviewed: true }])[0]).toBe("振り返りが1件待ってるよ");
+    expect(interviewListMessages([{ reviewed: true }])[0]).toBe("振り返りはばっちり！");
   });
 });
 

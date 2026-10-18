@@ -1,6 +1,6 @@
-import type { CalendarItem } from "@/lib/api/calendar";
-import type { EsEntry } from "@/lib/api/es";
-import type { InterviewLog } from "@/lib/api/interviews";
+import { UPCOMING_DAYS, type CalendarItem } from "@/lib/api/calendar";
+import type { EsEntrySummary } from "@/lib/api/es";
+import type { InterviewLogSummary } from "@/lib/api/interviews";
 import type { XpLog } from "@/lib/api/xp";
 import { formatDateKey } from "@/app/calendar/_components/calendar/utils";
 
@@ -12,7 +12,7 @@ export function daysFrom(today: string, date: string): number {
 }
 
 /** 締切まで withinDays 日以内（今日を含む）の下書きのES。締切を過ぎたものは数えない。 */
-export function urgentDrafts(entries: Pick<EsEntry, "status" | "deadline">[], today: string, withinDays = 3) {
+export function urgentDrafts(entries: Pick<EsEntrySummary, "status" | "deadline">[], today: string, withinDays = 3) {
   return entries.filter((e) => {
     if (e.status !== "draft" || !e.deadline) return false;
     const days = daysFrom(today, e.deadline);
@@ -21,8 +21,8 @@ export function urgentDrafts(entries: Pick<EsEntry, "status" | "deadline">[], to
 }
 
 /** AI振り返りをまだしていない面接ログ。 */
-export function unreviewedInterviews(logs: Pick<InterviewLog, "aiResult">[]) {
-  return logs.filter((log) => log.aiResult === null);
+export function unreviewedInterviews<T extends Pick<InterviewLogSummary, "reviewed">>(logs: T[]): T[] {
+  return logs.filter((log) => !log.reviewed);
 }
 
 /**
@@ -32,7 +32,7 @@ export function unreviewedInterviews(logs: Pick<InterviewLog, "aiResult">[]) {
 export function upcomingEvents<T extends Pick<CalendarItem, "date" | "time"> & { endDate?: string | null }>(
   items: T[],
   today: string,
-  withinDays = 7,
+  withinDays = UPCOMING_DAYS,
 ) {
   const sortKey = (item: T) => `${item.date < today ? today : item.date} ${item.time ?? ""}`;
   return items

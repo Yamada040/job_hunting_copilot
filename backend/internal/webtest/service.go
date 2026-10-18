@@ -36,6 +36,12 @@ type NewQuestion struct {
 	TimeLimit           *int
 }
 
+const (
+	maxQuestions = 500
+	// keptAttempts は、問題ごとに残す解答の記録の数。画面は新しい5件しか見せないので、古い記録は消してDBの容量を守る
+	keptAttempts = 20
+)
+
 type Service struct {
 	pool *pgxpool.Pool
 	xp   *xp.Service
@@ -93,6 +99,13 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, n NewQuestion) (
 	)
 	err := platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
+		count, err := q.CountWebtestQuestions(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("count webtest questions: %w", err)
+		}
+		if err := platform.CheckLimit(count, maxQuestions, fmt.Sprintf("作成できる問題は%d問までです", maxQuestions)); err != nil {
+			return err
+		}
 		row, err := q.CreateWebtestQuestion(ctx, db.CreateWebtestQuestionParams{
 			UserID: userID, Title: n.Title, Body: n.Body, Answer: n.Answer, Choices: rawChoices,
 			Explanation: platform.EmptyToNil(platform.TrimPtr(n.Explanation)),
@@ -138,6 +151,9 @@ func (s *Service) Answer(ctx context.Context, userID, questionID uuid.UUID, answ
 		attempt, err = q.CreateWebtestAttempt(ctx, db.CreateWebtestAttemptParams{UserID: userID, QuestionID: questionID, IsCorrect: &correct, TimeSpent: spent})
 		if err != nil {
 			return fmt.Errorf("create webtest attempt: %w", err)
+		}
+		if err := q.DeleteOldWebtestAttempts(ctx, db.DeleteOldWebtestAttemptsParams{QuestionID: questionID, UserID: userID, KeptRows: keptAttempts}); err != nil {
+			return fmt.Errorf("delete old webtest attempts: %w", err)
 		}
 		reward, err = s.xp.Award(ctx, q, userID, db.XpActionWebtestAttemptComplete, &attempt.ID)
 		return err

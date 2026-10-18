@@ -1,7 +1,7 @@
 import type { CalendarItem } from "@/lib/api/calendar";
 import type { Company } from "@/lib/api/companies";
-import type { EsEntry } from "@/lib/api/es";
-import type { InterviewLog } from "@/lib/api/interviews";
+import type { EsEntrySummary } from "@/lib/api/es";
+import type { InterviewLogSummary } from "@/lib/api/interviews";
 import {
   relativeDay,
   unreviewedInterviews,
@@ -30,7 +30,7 @@ export const GUIDE_TIPS = {
 } satisfies Record<string, string[]>;
 
 /** ES一覧で話す一言。締切が近い下書きを先に話す。 */
-export function esListMessages(entries: Pick<EsEntry, "status" | "deadline">[], today: string): string[] {
+export function esListMessages(entries: Pick<EsEntrySummary, "status" | "deadline">[], today: string): string[] {
   if (entries.length === 0) return ["最初のESを作ってみよう"];
   const messages: string[] = [];
   const urgent = urgentDrafts(entries, today).length;
@@ -52,7 +52,7 @@ export function companyListMessages(companies: Pick<Company, "stage">[]): string
 }
 
 /** 面接ログ一覧で話す一言。振り返りをしていないログを先に話す。 */
-export function interviewListMessages(logs: Pick<InterviewLog, "aiResult">[]): string[] {
+export function interviewListMessages(logs: Pick<InterviewLogSummary, "reviewed">[]): string[] {
   if (logs.length === 0) return ["面接が終わったら、ログを残そう"];
   const unreviewed = unreviewedInterviews(logs).length;
   const messages = unreviewed > 0 ? [`振り返りが${unreviewed}件待ってるよ`] : ["振り返りはばっちり！"];

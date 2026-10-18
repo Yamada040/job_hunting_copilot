@@ -27,8 +27,8 @@ describe("urgentDrafts", () => {
 });
 
 describe("unreviewedInterviews", () => {
-  it("振り返り結果の無いログだけを返す", () => {
-    expect(unreviewedInterviews([{ aiResult: null }, { aiResult: "振り返り結果" }])).toEqual([{ aiResult: null }]);
+  it("振り返りをしていないログだけを返す", () => {
+    expect(unreviewedInterviews([{ reviewed: false }, { reviewed: true }])).toEqual([{ reviewed: false }]);
   });
 });
 

@@ -146,14 +146,18 @@ backend/
 - `profiles`: プロフィール、XP、レベル
 - `companies`: 企業（中心のエンティティ）。正規化した企業名（`normalized_name`）はユーザーごとに一意
 - `es_entries` / `interview_logs`: ES・面接ログ。`company_id` は必須
-- `es_reviews`: ESのAI添削の履歴（設問ごとの3観点の点数と修正版）。点数の推移を見せるため、上書きせず1回ずつ残す
+- `es_reviews`: ESのAI添削の履歴（設問ごとの3観点の点数と修正版）。点数の推移を見せるため、上書きせず1回ずつ残す（画面へ返すのは新しい10件）
 - `calendar_events`: ユーザーが登録した予定（`company_id` は任意。`url` はオンライン面接などのリンクで、画面でリンクとして開くので http(s) に限る）。カレンダーにはESの締切も混ぜて表示する（バックエンドが組み立てる）
 - `calendar_feeds`: カレンダーの購読用URL（iCal。Googleカレンダーなどが `GET /v1/calendar-feed/{token}` をログインせずに読む）。トークンはハッシュだけを保存し、URLは作ったときにだけ見せる
 - `xp_logs`: XPの獲得履歴。`(user_id, action, ref_id)` がユニークで、同じ対象への二重付与をDBが防ぐ
 - `aptitude_results` / `self_analysis_results`: 1人1件
-- `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録
+- `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録（解答の記録は問題ごとに新しい20件だけを残す）
 - `api_rate_limits`: AIの回数制限の状態（1人ごと）
 - `api_app_rate_limits`: AIのアプリ全体の上限の状態（`bucket` ごとに1行）
+
+**1人あたりの件数の上限**: 企業500・ES500・面接ログ500・予定2000・Webテストの問題500（各 service の定数。超えると 409）。スクリプトでの量産から無料プランのDB（500MB）と、一覧のレスポンス（Vercel の上限4.5MB）を守るため。数えてから作るので同時に作ると数件超えうるが、許容している（`platform.CheckLimit`）。
+
+**一覧は軽くする**: 一覧のAPIは長い列を返さない（企業は分析結果の冒頭200文字だけ、ESは設問・本文・メモなし、面接ログは質問と回答・振り返り結果なしで `reviewed` だけ）。全文は詳細のAPIで返す。予定は画面が期間（`from`・`to`）を渡し、カレンダーは表示している月と直近7日、ホームは直近7日を取る。
 
 企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。全テーブルが `auth.users` を `on delete cascade` で参照しており、退会（`DELETE /v1/me`）はバックエンドが `auth.users` の行を消すだけで、その人のデータをすべて消す。テーブルを足すときも `auth.users` への参照は必ず `on delete cascade` にする（`internal/profile` のテストが確かめる）。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
 

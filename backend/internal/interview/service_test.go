@@ -153,6 +153,48 @@ func TestListOrdersByInterviewDate(t *testing.T) {
 	}
 }
 
+func TestListReturnsWhetherReviewed(t *testing.T) {
+	f := setup(t)
+	userID := dbtest.CreateUser(t, f.pool)
+	companyID := f.newCompany(t, userID, "サンプル")
+	reviewed, _, err := f.interviews.Create(t.Context(), userID, validFields(companyID, "2026-10-15"))
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, _, err := f.interviews.Create(t.Context(), userID, validFields(companyID, "2026-10-01")); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := f.interviews.Review(t.Context(), userID, reviewed.ID); err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+
+	logs, err := f.interviews.List(t.Context(), userID, nil, 0)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(logs) != 2 || !logs[0].Reviewed || logs[1].Reviewed {
+		t.Errorf("logs = %+v, want only the newer log reviewed", logs)
+	}
+}
+
+func TestCreateStopsAtLimitPerUser(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	companyID := f.newCompany(t, alice, "サンプル")
+	if _, err := f.pool.Exec(t.Context(),
+		`insert into interview_logs (user_id, company_id) select $1, $2 from generate_series(1, $3)`,
+		alice, companyID, maxLogs); err != nil {
+		t.Fatalf("fill interview logs: %v", err)
+	}
+
+	_, _, err := f.interviews.Create(t.Context(), alice, validFields(companyID, "2026-10-01"))
+	assertKind(t, err, platform.KindConflict)
+	if _, _, err := f.interviews.Create(t.Context(), bob, validFields(f.newCompany(t, bob, "サンプル"), "2026-10-01")); err != nil {
+		t.Errorf("Create for another user: %v, want success", err)
+	}
+}
+
 func TestOtherUsersLogIsNotFound(t *testing.T) {
 	f := setup(t)
 	alice := dbtest.CreateUser(t, f.pool)

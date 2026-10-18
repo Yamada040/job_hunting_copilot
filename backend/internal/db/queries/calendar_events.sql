@@ -19,6 +19,9 @@ where es_entries.user_id = @user_id
   and (sqlc.narg(to_date)::date is null or es_entries.deadline <= sqlc.narg(to_date)::date)
 order by es_entries.deadline;
 
+-- name: CountCalendarEvents :one
+select count(*) from calendar_events where user_id = @user_id;
+
 -- name: GetCalendarEvent :one
 select sqlc.embed(calendar_events), companies.name as company_name
 from calendar_events

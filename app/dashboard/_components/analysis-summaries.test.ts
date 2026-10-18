@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { analysisPreview, pageOf, pendingAnalyses, recentAnalyses } from "./analysis-summaries";
 
 const companies = [
-  { name: "A", aiResult: null },
-  { name: "B", aiResult: "分析B" },
-  { name: "C", aiResult: null },
-  { name: "D", aiResult: "分析D" },
-  { name: "E", aiResult: null },
+  { name: "A", aiResultPreview: null },
+  { name: "B", aiResultPreview: "分析B" },
+  { name: "C", aiResultPreview: null },
+  { name: "D", aiResultPreview: "分析D" },
+  { name: "E", aiResultPreview: null },
 ];
 
 describe("pendingAnalyses", () => {

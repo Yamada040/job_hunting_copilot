@@ -13,6 +13,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCalendarEvents = `-- name: CountCalendarEvents :one
+select count(*) from calendar_events where user_id = $1
+`
+
+func (q *Queries) CountCalendarEvents(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countCalendarEvents, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCalendarEvent = `-- name: CreateCalendarEvent :one
 insert into calendar_events (user_id, company_id, title, type, date, end_date, time, url, note)
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
