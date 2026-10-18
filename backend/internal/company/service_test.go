@@ -12,7 +12,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
-	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit/ratelimittest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -178,7 +178,7 @@ func TestAnalyzeRunsOncePerCompanyWithoutPrivateMemo(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
 	fake := &aitest.Fake{Reply: "分析結果"}
-	s := NewService(pool, xp.NewService(), fake, ratelimit.NewLimiter())
+	s := NewService(pool, xp.NewService(), fake, ratelimittest.NewLimiter())
 	row, _, err := s.Create(t.Context(), userID, Fields{Name: ptr("サンプル"), Industry: ptr("IT"), Memo: ptr("第一志望・年収重視")})
 	if err != nil {
 		t.Fatalf("Create: %v", err)

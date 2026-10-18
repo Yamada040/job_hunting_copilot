@@ -12,7 +12,6 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/ai"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
-	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
 )
 
 // Score は、1つの観点の点数（1〜10）とコメント。判断する情報が無ければ Value は nil。
@@ -104,7 +103,7 @@ func (s *Service) Review(ctx context.Context, userID, id uuid.UUID) (Review, err
 		return Review{}, fmt.Errorf("get es review context: %w", err)
 	}
 	rc := reviewContext{companyAnalysis: platform.EmptyToNil(saved.CompanyAnalysis), selfAnalysis: platform.EmptyToNil(saved.SelfAnalysis)}
-	if err := s.limiter.Hit(ctx, q, userID, ratelimit.AIBurst, ratelimit.AIDaily); err != nil {
+	if err := s.limiter.HitAI(ctx, q, userID); err != nil {
 		return Review{}, err
 	}
 	var out aiReview

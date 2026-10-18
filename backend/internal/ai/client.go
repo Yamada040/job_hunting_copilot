@@ -63,8 +63,8 @@ func (u Usage) add(other Usage) Usage {
 	return Usage{InputTokens: u.InputTokens + other.InputTokens, OutputTokens: u.OutputTokens + other.OutputTokens}
 }
 
-// searchFunc は、企業分析でAIが使うWeb検索。
-type searchFunc func(ctx context.Context, query string) ([]SearchResult, error)
+// searchFunc は、企業分析でAIが使うWeb検索。AIに返す文章を返す（検索できなかったときも、その旨を文章で返す）。
+type searchFunc func(ctx context.Context, query string) string
 
 // provider は、AIのプロバイダーごとの違いを隠す。
 type provider interface {
@@ -76,7 +76,7 @@ type provider interface {
 
 type Client struct {
 	provider         provider
-	search           searchFunc
+	search           func(ctx context.Context, query string) ([]SearchResult, error)
 	analysisDeadline time.Duration
 }
 
@@ -120,19 +120,48 @@ func (c *Client) GenerateJSON(ctx context.Context, kind Kind, input string, out 
 }
 
 // AnalyzeCompany は、AIにWeb検索をさせながら企業を分析した結果と、検索をはさんだ全呼び出しの合計のトークン数を返す。
+// 検索が使えないとき（キーが無い・無料枠が尽きた・失敗した）は、検索なしで分析を続け、結果の先頭にその旨を書く。
+// 分析ごと失敗させないのは、企業分析は企業ごとに1回だけで、検索の無料枠が尽きると月末まで誰も使えなくなるため。
 func (c *Client) AnalyzeCompany(ctx context.Context, input string) (string, Usage, error) {
 	if c.provider == nil {
 		return "", Usage{}, notConfigured()
 	}
+	searchUnavailable := false
+	search := func(ctx context.Context, query string) string {
+		if searchUnavailable {
+			return searchUnavailableReply
+		}
+		results, err := c.search(ctx, query)
+		if err != nil {
+			if !errors.Is(err, errSearchNotConfigured) {
+				platform.Logger(ctx).Warn("web search failed; continuing without search", "error", err)
+			}
+			searchUnavailable = true
+			return searchUnavailableReply
+		}
+		return formatSearchResults(results)
+	}
 	deadlineCtx, cancel := context.WithTimeout(ctx, c.analysisDeadline)
 	defer cancel()
-	text, usage, err := c.provider.generateWithSearch(deadlineCtx, instructionsFor(KindCompanyAnalysis), prompts[KindCompanyAnalysis].inputLabel+"\n"+input, c.search)
+	text, usage, err := c.provider.generateWithSearch(deadlineCtx, instructionsFor(KindCompanyAnalysis), prompts[KindCompanyAnalysis].inputLabel+"\n"+input, search)
 	if err != nil && errors.Is(deadlineCtx.Err(), context.DeadlineExceeded) {
 		platform.Logger(ctx).Error("company analysis exceeded deadline", "deadline", c.analysisDeadline, "error", err)
 		return "", usage, analysisTimedOut()
 	}
-	return text, usage, upstream(ctx, err)
+	if err != nil {
+		return "", usage, upstream(ctx, err)
+	}
+	if searchUnavailable {
+		text = withoutSearchNotice + "\n\n" + text
+	}
+	return text, usage, nil
 }
+
+// searchUnavailableReply は、検索できなかったときにAIへ返す文章。同じ分析の中では、失敗した後に検索をやり直さない
+const searchUnavailableReply = "Web検索は現在使えません。これ以上検索せず、持っている知識だけで回答してください。"
+
+// withoutSearchNotice は、検索なしで分析したときに、結果の先頭に書く断り書き。
+const withoutSearchNotice = "※ Web検索が使えなかったため、AIがもともと持っている知識だけで分析しました。最新の情報と異なる場合があります。"
 
 // 回数制限の消費を締め切り超過で取り消さないのは、それまでのAIと検索の費用はすでにかかっており、
 // 取り消すと遅い応答が続いたときに上限を超えて費用をかけられてしまうため
