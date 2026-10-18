@@ -390,7 +390,7 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 - `/interviews`, `/interviews/new`, `/interviews/[id]` — 面接ログ
 - `/self-analysis` — 自己分析アンケート＋AI自己分析
 - `/aptitude` — 適性チェック＋AI診断
-- `/webtests`, `/webtests/new`, `/webtests/[id]` — Webテスト練習
+- `/webtests`, `/webtests/new`, `/webtests/[id]`, `/webtests/[id]/edit` — Webテスト練習
 - `/profile` — プロフィール/目標の編集、退会（成功したらこの端末からログアウトして `/` へ移る）
 - `/contact` — 問い合わせ（ログインせずに使える。LP のフッターとログイン画面からリンクする。ログインしていなければヘッダーはロゴとログインへの入口だけにし、下のメニューは出さない）
 - `/developer` — 開発者向け管理ページ（バックエンドが `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけ下のメニューにリンクが出る）

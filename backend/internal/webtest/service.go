@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
@@ -24,8 +25,8 @@ type Question struct {
 	Attempts []db.WebtestAttempt
 }
 
-// NewQuestion は、問題の作成で受け取る項目。
-type NewQuestion struct {
+// Fields は、問題の作成・書き換えで受け取る項目。
+type Fields struct {
 	Title, Body, Answer string
 	Choices             []string
 	Explanation         *string
@@ -64,40 +65,16 @@ func (s *Service) Get(ctx context.Context, userID, id uuid.UUID) (Question, erro
 }
 
 // Create は、問題を作り、XPを付与する（1日3回まで）。
-func (s *Service) Create(ctx context.Context, userID uuid.UUID, n NewQuestion) (Question, xp.Result, error) {
-	n.Title, n.Body, n.Answer = strings.TrimSpace(n.Title), strings.TrimSpace(n.Body), strings.TrimSpace(n.Answer)
-	switch {
-	case n.Title == "":
-		return Question{}, xp.Result{}, platform.Required("title", "タイトル")
-	case n.Body == "":
-		return Question{}, xp.Result{}, platform.Required("body", "問題文")
-	case n.Answer == "":
-		return Question{}, xp.Result{}, platform.Required("answer", "正解")
+func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (Question, xp.Result, error) {
+	params, choices, err := f.params(userID)
+	if err != nil {
+		return Question{}, xp.Result{}, err
 	}
-	choices := []string{}
-	for _, c := range n.Choices {
-		if c = strings.TrimSpace(c); c != "" {
-			choices = append(choices, c)
-		}
-	}
-	var rawChoices []byte
-	if len(choices) > 0 {
-		var err error
-		if rawChoices, err = json.Marshal(choices); err != nil {
-			return Question{}, xp.Result{}, fmt.Errorf("encode choices: %w", err)
-		}
-	}
-	var timeLimit *int32
-	if n.TimeLimit != nil {
-		v := int32(*n.TimeLimit)
-		timeLimit = &v
-	}
-
 	var (
 		question Question
 		reward   xp.Result
 	)
-	err := platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
 		count, err := q.CountWebtestQuestions(ctx, userID)
 		if err != nil {
@@ -106,15 +83,7 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, n NewQuestion) (
 		if err := platform.CheckLimit(count, maxQuestions, fmt.Sprintf("作成できる問題は%d問までです", maxQuestions)); err != nil {
 			return err
 		}
-		row, err := q.CreateWebtestQuestion(ctx, db.CreateWebtestQuestionParams{
-			UserID: userID, Title: n.Title, Body: n.Body, Answer: n.Answer, Choices: rawChoices,
-			Explanation: platform.EmptyToNil(platform.TrimPtr(n.Explanation)),
-			TestType:    platform.EmptyToNil(platform.TrimPtr(n.TestType)),
-			Category:    platform.EmptyToNil(platform.TrimPtr(n.Category)),
-			Format:      platform.EmptyToNil(platform.TrimPtr(n.Format)),
-			Difficulty:  platform.EmptyToNil(platform.TrimPtr(n.Difficulty)),
-			TimeLimit:   timeLimit,
-		})
+		row, err := q.CreateWebtestQuestion(ctx, params)
 		if err != nil {
 			return fmt.Errorf("create webtest question: %w", err)
 		}
@@ -125,6 +94,79 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, n NewQuestion) (
 		return nil
 	})
 	return question, reward, err
+}
+
+// Update は、問題全体を f で置き換える。解答の記録は、解いたときの正誤のまま残す。
+func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, f Fields) (Question, error) {
+	params, _, err := f.params(userID)
+	if err != nil {
+		return Question{}, err
+	}
+	q := db.New(s.pool)
+	_, err = q.UpdateWebtestQuestion(ctx, db.UpdateWebtestQuestionParams{
+		ID: id, UserID: userID, Title: params.Title, Body: params.Body, TestType: params.TestType, Choices: params.Choices,
+		Answer: params.Answer, Explanation: params.Explanation, Category: params.Category, Format: params.Format,
+		Difficulty: params.Difficulty, TimeLimit: params.TimeLimit,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Question{}, notFound()
+	}
+	if err != nil {
+		return Question{}, fmt.Errorf("update webtest question: %w", err)
+	}
+	return get(ctx, q, userID, id)
+}
+
+// Delete は、問題を解答の記録ごと消す。
+func (s *Service) Delete(ctx context.Context, userID, id uuid.UUID) error {
+	n, err := db.New(s.pool).DeleteWebtestQuestion(ctx, db.DeleteWebtestQuestionParams{ID: id, UserID: userID})
+	if err != nil {
+		return fmt.Errorf("delete webtest question: %w", err)
+	}
+	if n == 0 {
+		return notFound()
+	}
+	return nil
+}
+
+// params は、前後の空白を除いて必須の項目を確かめ、DBに書く値と、空の選択肢を除いた選択肢を返す。
+func (f Fields) params(userID uuid.UUID) (db.CreateWebtestQuestionParams, []string, error) {
+	f.Title, f.Body, f.Answer = strings.TrimSpace(f.Title), strings.TrimSpace(f.Body), strings.TrimSpace(f.Answer)
+	switch {
+	case f.Title == "":
+		return db.CreateWebtestQuestionParams{}, nil, platform.Required("title", "タイトル")
+	case f.Body == "":
+		return db.CreateWebtestQuestionParams{}, nil, platform.Required("body", "問題文")
+	case f.Answer == "":
+		return db.CreateWebtestQuestionParams{}, nil, platform.Required("answer", "正解")
+	}
+	choices := []string{}
+	for _, c := range f.Choices {
+		if c = strings.TrimSpace(c); c != "" {
+			choices = append(choices, c)
+		}
+	}
+	var rawChoices []byte
+	if len(choices) > 0 {
+		var err error
+		if rawChoices, err = json.Marshal(choices); err != nil {
+			return db.CreateWebtestQuestionParams{}, nil, fmt.Errorf("encode choices: %w", err)
+		}
+	}
+	var timeLimit *int32
+	if f.TimeLimit != nil {
+		v := int32(*f.TimeLimit)
+		timeLimit = &v
+	}
+	return db.CreateWebtestQuestionParams{
+		UserID: userID, Title: f.Title, Body: f.Body, Answer: f.Answer, Choices: rawChoices,
+		Explanation: platform.EmptyToNil(platform.TrimPtr(f.Explanation)),
+		TestType:    platform.EmptyToNil(platform.TrimPtr(f.TestType)),
+		Category:    platform.EmptyToNil(platform.TrimPtr(f.Category)),
+		Format:      platform.EmptyToNil(platform.TrimPtr(f.Format)),
+		Difficulty:  platform.EmptyToNil(platform.TrimPtr(f.Difficulty)),
+		TimeLimit:   timeLimit,
+	}, choices, nil
 }
 
 // Answer は、解答の正誤を判定して記録し、XPを付与する（1日2回まで）。
@@ -161,9 +203,11 @@ func (s *Service) Answer(ctx context.Context, userID, questionID uuid.UUID, answ
 	return attempt, reward, err
 }
 
-// IsCorrect は、解答が正解と一致するかを返す。前後の空白と英字の大文字・小文字は無視する。
+// IsCorrect は、解答が正解と一致するかを返す。前後の空白・英字の大文字と小文字・全角と半角の違いは無視する
+// （日本語入力のまま「１２」と打っても、正解の「12」と一致させる）。
 func IsCorrect(answer, correct string) bool {
-	return strings.EqualFold(strings.TrimSpace(answer), strings.TrimSpace(correct))
+	normalize := func(s string) string { return strings.TrimSpace(norm.NFKC.String(s)) }
+	return strings.EqualFold(normalize(answer), normalize(correct))
 }
 
 func get(ctx context.Context, q *db.Queries, userID, id uuid.UUID) (Question, error) {

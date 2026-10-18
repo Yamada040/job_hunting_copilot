@@ -31,6 +31,7 @@ export const ROUTES = {
   WEBTESTS: "/webtests",
   WEBTESTS_NEW: "/webtests/new",
   WEBTEST_DETAIL: (id: string) => `/webtests/${id}`,
+  WEBTEST_EDIT: (id: string) => `/webtests/${id}/edit`,
 
   // その他
   CALENDAR: "/calendar",

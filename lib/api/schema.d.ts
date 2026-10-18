@@ -523,9 +523,17 @@ export interface paths {
     };
     /** 問題と、これまでの解答の記録を取得する */
     get: operations["getWebtestQuestion"];
-    put?: never;
+    /**
+     * 問題を書き換える
+     * @description 送った内容で問題全体を置き換える（送らなかった任意の項目は空になる）。 これまでの解答の記録は、解いたときの正誤のまま残す（解答そのものは保存していないので判定し直せない）。XPは付かない。
+     */
+    put: operations["updateWebtestQuestion"];
     post?: never;
-    delete?: never;
+    /**
+     * 問題を削除する
+     * @description 解答の記録も一緒に消える。
+     */
+    delete: operations["deleteWebtestQuestion"];
     options?: never;
     head?: never;
     patch?: never;
@@ -544,7 +552,7 @@ export interface paths {
     put?: never;
     /**
      * 問題に解答する
-     * @description 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。解答の記録は問題ごとに新しい20件だけを残す。XPが付く（1日2回まで）。
+     * @description 正誤はバックエンドが判定する（前後の空白・英字の大文字と小文字・全角と半角の違いは無視）。解答の記録は問題ごとに新しい20件だけを残す。XPが付く（1日2回まで）。
      */
     post: operations["answerWebtestQuestion"];
     delete?: never;
@@ -1124,6 +1132,7 @@ export interface components {
       difficulty?: string;
       timeLimit?: number;
     };
+    WebtestQuestionUpdate: components["schemas"]["WebtestQuestionCreate"];
     WebtestQuestionCreated: {
       question: components["schemas"]["WebtestQuestionDetail"];
       xp: components["schemas"]["XpResult"];
@@ -2210,6 +2219,54 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["WebtestQuestionDetail"];
         };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  updateWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WebtestQuestionUpdate"];
+      };
+    };
+    responses: {
+      /** @description 書き換えた後の問題と解答の記録 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebtestQuestionDetail"];
+        };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteWebtestQuestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        webtestQuestionId: components["parameters"]["WebtestQuestionId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 削除した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       default: components["responses"]["Problem"];
     };

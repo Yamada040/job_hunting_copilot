@@ -37,15 +37,7 @@ func (h Handler) CreateWebtestQuestion(ctx context.Context, req openapi.CreateWe
 	if err != nil {
 		return nil, err
 	}
-	b := req.Body
-	n := NewQuestion{
-		Title: b.Title, Body: b.Body, Answer: b.Answer, Explanation: b.Explanation,
-		TestType: b.TestType, Category: b.Category, Format: b.Format, Difficulty: b.Difficulty, TimeLimit: b.TimeLimit,
-	}
-	if b.Choices != nil {
-		n.Choices = *b.Choices
-	}
-	q, reward, err := h.Service.Create(ctx, userID, n)
+	q, reward, err := h.Service.Create(ctx, userID, fieldsFromAPI(*req.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +56,29 @@ func (h Handler) GetWebtestQuestion(ctx context.Context, req openapi.GetWebtestQ
 	return openapi.GetWebtestQuestion200JSONResponse(toAPI(q)), nil
 }
 
+func (h Handler) UpdateWebtestQuestion(ctx context.Context, req openapi.UpdateWebtestQuestionRequestObject) (openapi.UpdateWebtestQuestionResponseObject, error) {
+	userID, err := auth.RequireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	q, err := h.Service.Update(ctx, userID, req.WebtestQuestionId, fieldsFromAPI(*req.Body))
+	if err != nil {
+		return nil, err
+	}
+	return openapi.UpdateWebtestQuestion200JSONResponse(toAPI(q)), nil
+}
+
+func (h Handler) DeleteWebtestQuestion(ctx context.Context, req openapi.DeleteWebtestQuestionRequestObject) (openapi.DeleteWebtestQuestionResponseObject, error) {
+	userID, err := auth.RequireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.Service.Delete(ctx, userID, req.WebtestQuestionId); err != nil {
+		return nil, err
+	}
+	return openapi.DeleteWebtestQuestion204Response{}, nil
+}
+
 func (h Handler) AnswerWebtestQuestion(ctx context.Context, req openapi.AnswerWebtestQuestionRequestObject) (openapi.AnswerWebtestQuestionResponseObject, error) {
 	userID, err := auth.RequireUserID(ctx)
 	if err != nil {
@@ -74,6 +89,17 @@ func (h Handler) AnswerWebtestQuestion(ctx context.Context, req openapi.AnswerWe
 		return nil, err
 	}
 	return openapi.AnswerWebtestQuestion201JSONResponse{Attempt: attemptToAPI(attempt), Xp: xp.ToAPI(reward)}, nil
+}
+
+func fieldsFromAPI(b openapi.WebtestQuestionCreate) Fields {
+	f := Fields{
+		Title: b.Title, Body: b.Body, Answer: b.Answer, Explanation: b.Explanation,
+		TestType: b.TestType, Category: b.Category, Format: b.Format, Difficulty: b.Difficulty, TimeLimit: b.TimeLimit,
+	}
+	if b.Choices != nil {
+		f.Choices = *b.Choices
+	}
+	return f
 }
 
 func toAPI(q Question) openapi.WebtestQuestionDetail {

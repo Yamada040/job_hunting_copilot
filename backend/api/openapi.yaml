@@ -759,6 +759,36 @@ paths:
                 $ref: "#/components/schemas/WebtestQuestionDetail"
         default:
           $ref: "#/components/responses/Problem"
+    put:
+      operationId: updateWebtestQuestion
+      summary: 問題を書き換える
+      description: >-
+        送った内容で問題全体を置き換える（送らなかった任意の項目は空になる）。
+        これまでの解答の記録は、解いたときの正誤のまま残す（解答そのものは保存していないので判定し直せない）。XPは付かない。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebtestQuestionUpdate"
+      responses:
+        "200":
+          description: 書き換えた後の問題と解答の記録
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebtestQuestionDetail"
+        default:
+          $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteWebtestQuestion
+      summary: 問題を削除する
+      description: 解答の記録も一緒に消える。
+      responses:
+        "204":
+          description: 削除した
+        default:
+          $ref: "#/components/responses/Problem"
 
   /v1/webtest-questions/{webtestQuestionId}/attempts:
     parameters:
@@ -766,7 +796,7 @@ paths:
     post:
       operationId: answerWebtestQuestion
       summary: 問題に解答する
-      description: 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。解答の記録は問題ごとに新しい20件だけを残す。XPが付く（1日2回まで）。
+      description: 正誤はバックエンドが判定する（前後の空白・英字の大文字と小文字・全角と半角の違いは無視）。解答の記録は問題ごとに新しい20件だけを残す。XPが付く（1日2回まで）。
       requestBody:
         required: true
         content:
@@ -2081,6 +2111,9 @@ components:
           type: integer
           minimum: 0
           maximum: 3600
+
+    WebtestQuestionUpdate:
+      $ref: "#/components/schemas/WebtestQuestionCreate"
 
     WebtestQuestionCreated:
       type: object
