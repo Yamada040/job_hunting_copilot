@@ -1,8 +1,11 @@
 package platform
 
 import (
+	"bytes"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -91,5 +94,24 @@ func TestChainRunsFirstMiddlewareOutermost(t *testing.T) {
 		if order[i] != want[i] {
 			t.Fatalf("order = %v, want %v", order, want)
 		}
+	}
+}
+
+func TestAccessLogMasksCalendarFeedToken(t *testing.T) {
+	var buf bytes.Buffer
+	defaultLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(defaultLogger) })
+	h := AccessLog(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/v1/calendar-feed/secret-token", nil))
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/v1/calendar-feed", nil))
+
+	logs := buf.String()
+	if strings.Contains(logs, "secret-token") || !strings.Contains(logs, "path=/v1/calendar-feed/***") {
+		t.Errorf("log = %q, want the token masked", logs)
+	}
+	if !strings.Contains(logs, "path=/v1/calendar-feed ") {
+		t.Errorf("log = %q, want the path without a token kept as is", logs)
 	}
 }
