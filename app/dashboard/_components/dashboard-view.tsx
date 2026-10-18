@@ -19,7 +19,7 @@ export function DashboardView() {
   const today = formatDateKey(new Date());
   const items = useMenuItems(today);
   const { data: xpLogs } = useXpLogs();
-  const earned = xpLogs ? todayXp(xpLogs, today) : null;
+  const earned = xpLogs ? todayXp(xpLogs, new Date()) : null;
   // 一覧の取得は各画面・カルーセルと同じキャッシュを使うので、通信は増えない
   const { data: es } = useEsEntries();
   const { data: interviews } = useInterviewLogs();

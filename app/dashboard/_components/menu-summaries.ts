@@ -2,7 +2,6 @@ import { UPCOMING_DAYS, type CalendarItem } from "@/lib/api/calendar";
 import type { EsEntrySummary } from "@/lib/api/es";
 import type { InterviewLogSummary } from "@/lib/api/interviews";
 import type { XpLog } from "@/lib/api/xp";
-import { formatDateKey } from "@/app/calendar/_components/calendar/utils";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -40,9 +39,18 @@ export function upcomingEvents<T extends Pick<CalendarItem, "date" | "time"> & {
     .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 }
 
-/** 今日（端末の日付）に獲得したXPの合計。 */
-export function todayXp(logs: Pick<XpLog, "xp" | "createdAt">[], today: string) {
-  return logs.filter((log) => formatDateKey(log.createdAt) === today).reduce((sum, log) => sum + log.xp, 0);
+// en-CA は日付を YYYY-MM-DD で書くので、そのまま日付のキーとして比べられる
+const japanDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" });
+
+/**
+ * now の日（日本時間）に獲得したXPの合計。
+ * 端末の日付で数えないのは、バックエンドの1日（XPの日次上限）が日本時間で、海外や時計のずれた端末で食い違うため。
+ */
+export function todayXp(logs: Pick<XpLog, "xp" | "createdAt">[], now: Date) {
+  const today = japanDate.format(now);
+  return logs
+    .filter((log) => japanDate.format(new Date(log.createdAt)) === today)
+    .reduce((sum, log) => sum + log.xp, 0);
 }
 
 /** 予定の日が今日から見ていつか。今日・明日、それ以降は「○日後」。 */
