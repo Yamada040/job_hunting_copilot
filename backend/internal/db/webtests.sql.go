@@ -13,6 +13,17 @@ import (
 	"github.com/google/uuid"
 )
 
+const countWebtestQuestions = `-- name: CountWebtestQuestions :one
+select count(*) from webtest_questions where user_id = $1
+`
+
+func (q *Queries) CountWebtestQuestions(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countWebtestQuestions, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createWebtestAttempt = `-- name: CreateWebtestAttempt :one
 insert into webtest_attempts (user_id, question_id, is_correct, time_spent)
 values ($1, $2, $3, $4)
@@ -96,6 +107,28 @@ func (q *Queries) CreateWebtestQuestion(ctx context.Context, arg CreateWebtestQu
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const deleteOldWebtestAttempts = `-- name: DeleteOldWebtestAttempts :exec
+delete from webtest_attempts
+where id in (
+  select old.id from webtest_attempts as old
+  where old.question_id = $1 and old.user_id = $2
+  order by old.created_at desc, old.id
+  offset $3
+)
+`
+
+type DeleteOldWebtestAttemptsParams struct {
+	QuestionID uuid.UUID
+	UserID     uuid.UUID
+	KeptRows   int32
+}
+
+// 問題ごとに、新しい方から kept_rows 件を残して古いものを消す
+func (q *Queries) DeleteOldWebtestAttempts(ctx context.Context, arg DeleteOldWebtestAttemptsParams) error {
+	_, err := q.db.Exec(ctx, deleteOldWebtestAttempts, arg.QuestionID, arg.UserID, arg.KeptRows)
+	return err
 }
 
 const getWebtestQuestion = `-- name: GetWebtestQuestion :one

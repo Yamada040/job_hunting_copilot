@@ -101,6 +101,46 @@ func TestListFiltersByNormalizedName(t *testing.T) {
 	}
 }
 
+func TestListReturnsOnlyHeadOfAnalysisResult(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	s := NewService(pool, xp.NewService(), &aitest.Fake{Reply: strings.Repeat("分", 300)}, ratelimit.NewLimiter())
+	analyzed := create(t, s, userID, "分析済み")
+	create(t, s, userID, "未分析")
+	if _, err := s.Analyze(t.Context(), userID, analyzed.ID); err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+
+	rows, err := s.List(t.Context(), userID, "")
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+
+	previews := map[string]string{}
+	for _, row := range rows {
+		previews[row.Name] = row.AiResultPreview
+	}
+	if previews["分析済み"] != strings.Repeat("分", 200) || previews["未分析"] != "" {
+		t.Errorf("previews = %v, want the first 200 characters only for the analyzed company", previews)
+	}
+}
+
+func TestCreateStopsAtLimitPerUser(t *testing.T) {
+	pool, s, alice := setup(t)
+	bob := dbtest.CreateUser(t, pool)
+	if _, err := pool.Exec(t.Context(),
+		`insert into companies (user_id, name, normalized_name) select $1, '企業' || n, '企業' || n from generate_series(1, $2) as n`,
+		alice, maxCompanies); err != nil {
+		t.Fatalf("fill companies: %v", err)
+	}
+
+	_, _, err := s.Create(t.Context(), alice, Fields{Name: ptr("上限を超える企業")})
+	assertKind(t, err, platform.KindConflict)
+	if _, _, err := s.Create(t.Context(), bob, Fields{Name: ptr("上限を超える企業")}); err != nil {
+		t.Errorf("Create for another user: %v, want success", err)
+	}
+}
+
 func TestUpdateChangesOnlyGivenFields(t *testing.T) {
 	_, s, userID := setup(t)
 	row, _, err := s.Create(t.Context(), userID, Fields{Name: ptr("サンプル"), Memo: ptr("メモ"), Preference: ptr(3)})

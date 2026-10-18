@@ -114,6 +114,24 @@ func TestCompanyLinkIsOptionalAndMustBeOwn(t *testing.T) {
 	}
 }
 
+func TestCreateStopsAtLimitPerUser(t *testing.T) {
+	pool := dbtest.Connect(t)
+	alice := dbtest.CreateUser(t, pool)
+	bob := dbtest.CreateUser(t, pool)
+	s := NewService(pool)
+	if _, err := pool.Exec(t.Context(),
+		`insert into calendar_events (user_id, title, date) select $1, '予定', date '2026-11-01' from generate_series(1, $2)`,
+		alice, maxEvents); err != nil {
+		t.Fatalf("fill calendar events: %v", err)
+	}
+
+	_, err := s.Create(t.Context(), alice, Fields{Title: ptr("上限を超える予定"), Date: day("2026-11-01")})
+	assertKind(t, err, platform.KindConflict)
+	if _, err := s.Create(t.Context(), bob, Fields{Title: ptr("予定"), Date: day("2026-11-01")}); err != nil {
+		t.Errorf("Create for another user: %v, want success", err)
+	}
+}
+
 func TestOtherUsersEventIsNotFound(t *testing.T) {
 	pool := dbtest.Connect(t)
 	alice := dbtest.CreateUser(t, pool)

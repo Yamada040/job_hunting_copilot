@@ -5,6 +5,8 @@ import type { components } from "./schema";
 import { applyXpResult } from "./xp";
 
 export type Company = components["schemas"]["Company"];
+/** 一覧の企業。分析結果は全文ではなく冒頭（aiResultPreview）だけを持つ。 */
+export type CompanyListItem = components["schemas"]["CompanyListItem"];
 export type CompanyStage = components["schemas"]["CompanyStage"];
 export type CompanyCreate = components["schemas"]["CompanyCreate"];
 export type CompanyUpdate = components["schemas"]["CompanyUpdate"];
@@ -27,11 +29,14 @@ export function useCompanies(query = "") {
   return useQuery(companiesQuery(query));
 }
 
+/** 企業1件の問い合わせ。画面の外（入力欄の送信時など）で fetchQuery するときも、同じキャッシュを使う。 */
+export const companyQuery = (id: string) => ({
+  queryKey: companyKeys.detail(id),
+  queryFn: () => unwrap(api.GET("/v1/companies/{companyId}", { params: { path: { companyId: id } } })),
+});
+
 export function useCompany(id: string) {
-  return useQuery({
-    queryKey: companyKeys.detail(id),
-    queryFn: () => unwrap(api.GET("/v1/companies/{companyId}", { params: { path: { companyId: id } } })),
-  });
+  return useQuery(companyQuery(id));
 }
 
 export function useCreateCompany() {

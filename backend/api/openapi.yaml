@@ -79,13 +79,13 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Company"
+                  $ref: "#/components/schemas/CompanyListItem"
         default:
           $ref: "#/components/responses/Problem"
     post:
       operationId: createCompany
       summary: 企業を登録する
-      description: 正規化した企業名が同じ企業がすでにあれば 409 を返す。登録でXPが付く（1日5回まで）。
+      description: 正規化した企業名が同じ企業がすでにあれば 409 を返す。1人500社まで（超えると 409）。登録でXPが付く（1日5回まで）。
       requestBody:
         required: true
         content:
@@ -190,12 +190,13 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/EsEntry"
+                  $ref: "#/components/schemas/EsEntrySummary"
         default:
           $ref: "#/components/responses/Problem"
     post:
       operationId: createEsEntry
       summary: ESを作成する（常に下書き）
+      description: 1人500件まで（超えると 409）。
       requestBody:
         required: true
         content:
@@ -278,7 +279,7 @@ paths:
     get:
       operationId: listEsReviews
       summary: ESのAI添削の履歴を取得する
-      description: 新しい順。点数の推移を見せるため、添削のたびに1件ずつ残している。
+      description: 新しい順に10件まで。点数の推移を見せるため、添削のたびに1件ずつ残している。
       responses:
         "200":
           description: 添削結果の一覧
@@ -331,13 +332,13 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/InterviewLog"
+                  $ref: "#/components/schemas/InterviewLogSummary"
         default:
           $ref: "#/components/responses/Problem"
     post:
       operationId: createInterviewLog
       summary: 面接ログを作成する
-      description: XPが付く（同じ面接ログには1回、1日5回まで）。
+      description: 1人500件まで（超えると 409）。XPが付く（同じ面接ログには1回、1日5回まで）。
       requestBody:
         required: true
         content:
@@ -418,7 +419,7 @@ paths:
     get:
       operationId: listCalendarItems
       summary: カレンダーに表示する予定を取得する
-      description: ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる。
+      description: ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。
       parameters:
         - name: from
           in: query
@@ -446,6 +447,7 @@ paths:
     post:
       operationId: createCalendarEvent
       summary: 予定を登録する
+      description: 1人2000件まで（超えると 409）。
       requestBody:
         required: true
         content:
@@ -716,7 +718,7 @@ paths:
     post:
       operationId: createWebtestQuestion
       summary: Webテストの問題を作る
-      description: XPが付く（1日3回まで）。
+      description: 1人500問まで（超えると 409）。XPが付く（1日3回まで）。
       requestBody:
         required: true
         content:
@@ -755,7 +757,7 @@ paths:
     post:
       operationId: answerWebtestQuestion
       summary: 問題に解答する
-      description: 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
+      description: 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。解答の記録は問題ごとに新しい20件だけを残す。XPが付く（1日2回まで）。
       requestBody:
         required: true
         content:
@@ -1020,6 +1022,67 @@ components:
           type: string
           format: date-time
 
+    CompanyListItem:
+      type: object
+      description: 一覧の企業。分析結果は長いので、全文ではなく冒頭だけを返す（全文は企業の取得で返す）
+      required:
+        [
+          id,
+          name,
+          industry,
+          url,
+          mypageId,
+          mypageUrl,
+          memo,
+          stage,
+          preference,
+          favorite,
+          aiResultPreview,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        industry:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        mypageId:
+          type: string
+          nullable: true
+        mypageUrl:
+          type: string
+          nullable: true
+        memo:
+          type: string
+          nullable: true
+        stage:
+          $ref: "#/components/schemas/CompanyStage"
+        preference:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+          description: 志望度（1〜5）
+        favorite:
+          type: boolean
+        aiResultPreview:
+          type: string
+          nullable: true
+          description: AI企業分析の分析結果の冒頭（200文字まで）。まだ分析していなければ null
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     CompanyCreate:
       type: object
       additionalProperties: false
@@ -1257,6 +1320,40 @@ components:
           type: string
           format: date-time
 
+    EsEntrySummary:
+      type: object
+      description: 一覧のES。設問・本文・メモは長いので返さない（ESの取得で返す）
+      required: [id, company, position, title, status, tags, deadline, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        company:
+          $ref: "#/components/schemas/CompanySummary"
+        position:
+          type: string
+          nullable: true
+          description: 職種・募集枠
+        title:
+          type: string
+        status:
+          $ref: "#/components/schemas/EsStatus"
+        tags:
+          type: array
+          items:
+            type: string
+        deadline:
+          type: string
+          format: date
+          nullable: true
+          description: 締切日。カレンダーにも表示される
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     EsEntryCreate:
       type: object
       additionalProperties: false
@@ -1407,6 +1504,42 @@ components:
           type: string
           nullable: true
           description: AI振り返りの振り返り結果
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    InterviewLogSummary:
+      type: object
+      description: 一覧の面接ログ。質問と答え・想定外だった点・振り返り結果は長いので返さず、振り返り済みかだけを返す（面接ログの取得で返す）
+      required: [id, company, format, round, interviewDate, improvement, reviewed, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        company:
+          $ref: "#/components/schemas/CompanySummary"
+        format:
+          allOf:
+            - $ref: "#/components/schemas/InterviewFormat"
+          nullable: true
+        round:
+          type: string
+          nullable: true
+          description: 面接の回次（一次・二次・最終など）
+        interviewDate:
+          type: string
+          format: date
+          nullable: true
+        improvement:
+          type: string
+          nullable: true
+          description: 次回改善したい点
+        reviewed:
+          type: boolean
+          description: AI振り返りをしたか
         createdAt:
           type: string
           format: date-time
@@ -1888,7 +2021,7 @@ components:
               nullable: true
             attempts:
               type: array
-              description: 解答の記録（新しい順）
+              description: 解答の記録（新しい順。問題ごとに20件まで）
               items:
                 $ref: "#/components/schemas/WebtestAttempt"
 

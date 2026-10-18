@@ -30,3 +30,13 @@ type Error struct {
 func (e *Error) Error() string {
 	return e.Message
 }
+
+// CheckLimit は、1人あたりの件数が上限に達していれば、message を伝えるエラーを返す。
+// 数えてから作るまでの間に同時に作られると数件超えうるが、行をロックして厳密にはしない。
+// 上限はスクリプトでの量産からDBの容量を守るためのもので、数件の超過は害にならないため。
+func CheckLimit(count int64, limit int, message string) error {
+	if count < int64(limit) {
+		return nil
+	}
+	return &Error{Kind: KindConflict, Message: message}
+}

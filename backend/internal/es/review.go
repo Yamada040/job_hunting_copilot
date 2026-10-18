@@ -130,13 +130,17 @@ func (s *Service) Review(ctx context.Context, userID, id uuid.UUID) (Review, err
 	return Review{EsReview: row, Result: result}, nil
 }
 
-// ListReviews は、ESの添削結果を新しい順に返す。他人のESなら、存在しないESと同じく 404 にする。
+// reviewHistoryLimit は、添削の履歴として返す件数。画面は点数の推移を見せるだけなので、古い添削結果まで返さない。
+// 古い履歴を消さないのは、AI添削の回数制限で1日の件数が限られ、DBの容量を圧迫しないため。
+const reviewHistoryLimit = 10
+
+// ListReviews は、ESの添削結果を新しい順に reviewHistoryLimit 件まで返す。他人のESなら、存在しないESと同じく 404 にする。
 func (s *Service) ListReviews(ctx context.Context, userID, id uuid.UUID) ([]Review, error) {
 	q := db.New(s.pool)
 	if _, err := get(ctx, q, userID, id); err != nil {
 		return nil, err
 	}
-	rows, err := q.ListEsReviews(ctx, db.ListEsReviewsParams{EsEntryID: id, UserID: userID})
+	rows, err := q.ListEsReviews(ctx, db.ListEsReviewsParams{EsEntryID: id, UserID: userID, MaxRows: reviewHistoryLimit})
 	if err != nil {
 		return nil, fmt.Errorf("list es reviews: %w", err)
 	}

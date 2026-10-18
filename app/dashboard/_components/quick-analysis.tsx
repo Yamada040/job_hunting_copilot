@@ -7,7 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRightIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
-import { companiesQuery, companyKeys, useCreateCompany, type Company } from "@/lib/api/companies";
+import { companiesQuery, companyKeys, companyQuery, useCreateCompany, type Company } from "@/lib/api/companies";
 import { ROUTES } from "@/lib/constants/routes";
 import { showFailureNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { useStartCompanyAnalysis } from "@/app/companies/_components/use-start-company-analysis";
@@ -37,9 +37,11 @@ export function QuickAnalysis() {
       // 同じ名前の企業がもうあれば、登録し直さずにその企業を分析する（登録し直すと 409 になる）
       const candidates = await queryClient.fetchQuery(companiesQuery(trimmed));
       const existing = candidates.find((c) => c.name === trimmed);
-      // 移った先の詳細の画面を読み込み中にせず、すぐ分析の欄まで送れるよう、一覧の値で詳細のキャッシュを埋める
-      if (existing) queryClient.setQueryData(companyKeys.detail(existing.id), existing);
-      company = existing ?? (await createCompany.mutateAsync({ name: trimmed })).company;
+      // 移った先の詳細の画面を読み込み中にせず、すぐ分析の欄まで送れるよう、移る前に詳細を取ってキャッシュに入れる
+      // （一覧の値は分析結果の冒頭しか持たないので、詳細のキャッシュには使えない）
+      company = existing
+        ? await queryClient.fetchQuery(companyQuery(existing.id))
+        : (await createCompany.mutateAsync({ name: trimmed })).company;
     } catch (e) {
       showFailureNotice("企業の登録", e);
       return;

@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { BuildingOfficeIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
-import { useCompanies, useCompanyAnalysis, type Company } from "@/lib/api/companies";
+import { useCompanies, useCompanyAnalysis, type CompanyListItem } from "@/lib/api/companies";
 import { COMPANY_STAGE_LABELS } from "@/lib/companies/stages";
 import { ROUTES } from "@/lib/constants/routes";
 import { StaggerItem, StaggerList } from "@/app/_components/list/list-items";
@@ -56,7 +56,7 @@ export function PendingAnalyses({ className }: { className?: string }) {
   );
 }
 
-function PendingRow({ company, onAnalyze }: { company: Company; onAnalyze: () => void }) {
+function PendingRow({ company, onAnalyze }: { company: CompanyListItem; onAnalyze: () => void }) {
   const analysis = useCompanyAnalysis(company.id);
   const running = analysis?.status === "pending";
 

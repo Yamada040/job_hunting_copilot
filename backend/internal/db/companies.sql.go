@@ -7,9 +7,21 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+const countCompanies = `-- name: CountCompanies :one
+select count(*) from companies where user_id = $1
+`
+
+func (q *Queries) CountCompanies(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countCompanies, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
 
 const createCompany = `-- name: CreateCompany :one
 insert into companies (user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite)
@@ -120,7 +132,9 @@ func (q *Queries) GetCompany(ctx context.Context, arg GetCompanyParams) (Company
 }
 
 const listCompanies = `-- name: ListCompanies :many
-select id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at, ai_input_tokens, ai_output_tokens from companies
+select id, name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite,
+  coalesce(left(ai_result, 200), '')::text as ai_result_preview, created_at, updated_at
+from companies
 where user_id = $1
   and ($2::text is null or normalized_name like '%' || $2::text || '%')
 order by updated_at desc
@@ -131,21 +145,36 @@ type ListCompaniesParams struct {
 	Query  *string
 }
 
+type ListCompaniesRow struct {
+	ID              uuid.UUID
+	Name            string
+	Industry        *string
+	Url             *string
+	MypageID        *string
+	MypageUrl       *string
+	Memo            *string
+	Stage           CompanyStage
+	Preference      *int16
+	Favorite        bool
+	AiResultPreview string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
 // query を渡すと、正規化した企業名の部分一致で絞り込む（企業の候補の表示に使う）
-func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([]Company, error) {
+// 分析結果は長いので、一覧では冒頭だけを返す（全文は詳細で返す）。sqlc は left() の結果を null にならない型にするため、未分析は空文字で返す
+func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([]ListCompaniesRow, error) {
 	rows, err := q.db.Query(ctx, listCompanies, arg.UserID, arg.Query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Company
+	var items []ListCompaniesRow
 	for rows.Next() {
-		var i Company
+		var i ListCompaniesRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.UserID,
 			&i.Name,
-			&i.NormalizedName,
 			&i.Industry,
 			&i.Url,
 			&i.MypageID,
@@ -154,11 +183,9 @@ func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([
 			&i.Stage,
 			&i.Preference,
 			&i.Favorite,
-			&i.AiResult,
+			&i.AiResultPreview,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.AiInputTokens,
-			&i.AiOutputTokens,
 		); err != nil {
 			return nil, err
 		}

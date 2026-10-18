@@ -44,8 +44,10 @@ func NewService(pool *pgxpool.Pool, xp *xp.Service, ai ai.Generator, limiter *ra
 	return &Service{pool: pool, xp: xp, ai: ai, limiter: limiter}
 }
 
+const maxCompanies = 500
+
 // List は、ユーザーの企業を更新日時の新しい順に返す。query を渡すと、正規化した企業名の部分一致で絞り込む。
-func (s *Service) List(ctx context.Context, userID uuid.UUID, query string) ([]db.Company, error) {
+func (s *Service) List(ctx context.Context, userID uuid.UUID, query string) ([]db.ListCompaniesRow, error) {
 	var normalized *string
 	if n := Normalize(query); n != "" {
 		normalized = &n
@@ -85,7 +87,13 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (db.Co
 	)
 	err := platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
-		var err error
+		count, err := q.CountCompanies(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if err := platform.CheckLimit(count, maxCompanies, fmt.Sprintf("登録できる企業は%d社までです。使わない企業を削除してから登録してください", maxCompanies)); err != nil {
+			return err
+		}
 		row, err = q.CreateCompany(ctx, db.CreateCompanyParams{
 			UserID:         userID,
 			Name:           *f.Name,

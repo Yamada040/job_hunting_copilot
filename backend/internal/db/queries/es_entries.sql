@@ -1,12 +1,16 @@
 -- name: ListEsEntries :many
--- company_id を渡すと、その企業のESだけに絞り込む
-select sqlc.embed(es_entries), companies.name as company_name
+-- company_id を渡すと、その企業のESだけに絞り込む。設問・本文・メモは長いので、一覧では返さない（詳細で返す）
+select es_entries.id, es_entries.company_id, es_entries.position, es_entries.title, es_entries.status,
+  es_entries.tags, es_entries.deadline, es_entries.created_at, es_entries.updated_at, companies.name as company_name
 from es_entries
 join companies on companies.id = es_entries.company_id
 where es_entries.user_id = @user_id
   and (sqlc.narg(company_id)::uuid is null or es_entries.company_id = sqlc.narg(company_id)::uuid)
 order by es_entries.updated_at desc
 limit sqlc.arg(max_rows);
+
+-- name: CountEsEntries :one
+select count(*) from es_entries where user_id = @user_id;
 
 -- name: GetEsEntry :one
 select sqlc.embed(es_entries), companies.name as company_name
@@ -51,7 +55,8 @@ returning *;
 -- 新しい順。ESが本人のものかは、呼び出す前に GetEsEntry で確かめる
 select * from es_reviews
 where es_entry_id = @es_entry_id and user_id = @user_id
-order by created_at desc;
+order by created_at desc
+limit sqlc.arg(max_rows);
 
 -- name: GetEsReviewContext :one
 -- AI添削に渡す、企業分析の分析結果と自己分析の分析結果。どちらもまだ無ければ null

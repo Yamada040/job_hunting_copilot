@@ -180,6 +180,44 @@ func TestListFiltersByCompanyAndLimits(t *testing.T) {
 	}
 }
 
+func TestCreateStopsAtLimitPerUser(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	companyID := f.company(t, alice, "サンプル")
+	if _, err := f.pool.Exec(t.Context(),
+		`insert into es_entries (user_id, company_id, title) select $1, $2, 'ES' || n from generate_series(1, $3) as n`,
+		alice, companyID, maxEntries); err != nil {
+		t.Fatalf("fill es entries: %v", err)
+	}
+
+	_, err := f.es.Create(t.Context(), alice, Fields{CompanyID: &companyID, Title: ptr("上限を超えるES")})
+	assertKind(t, err, platform.KindConflict)
+	f.entry(t, bob, f.company(t, bob, "サンプル"), "別のユーザーのES")
+}
+
+func TestListReviewsReturnsOnlyRecentHistory(t *testing.T) {
+	f := setup(t)
+	f.ai.Reply = oneItemReply
+	userID := dbtest.CreateUser(t, f.pool)
+	companyID := f.company(t, userID, "サンプル")
+	e, err := f.es.Create(t.Context(), userID, Fields{CompanyID: &companyID, Title: ptr("ES"), Questions: &[]Question{{Prompt: "志望動機", Answer: "回答"}}})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	var latest Review
+	for range reviewHistoryLimit + 1 {
+		if latest, err = f.es.Review(t.Context(), userID, e.ID); err != nil {
+			t.Fatalf("Review: %v", err)
+		}
+	}
+
+	reviews, err := f.es.ListReviews(t.Context(), userID, e.ID)
+	if err != nil || len(reviews) != reviewHistoryLimit || reviews[0].ID != latest.ID {
+		t.Errorf("reviews = %d, %v; want the newest %d reviews", len(reviews), err, reviewHistoryLimit)
+	}
+}
+
 func TestOtherUsersEntryIsNotFound(t *testing.T) {
 	f := setup(t)
 	alice := dbtest.CreateUser(t, f.pool)
