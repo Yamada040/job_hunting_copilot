@@ -62,16 +62,16 @@ func TestHitAIAndCompanyAnalysisRejectedOnceAICostReachesBudget(t *testing.T) {
 	if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 600, OutputTokens: 399}); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	if err := l.HitAI(t.Context(), q, userID); err != nil {
+	if _, err := l.HitAI(t.Context(), q, userID); err != nil {
 		t.Fatalf("hit below the budget: %v, want allowed", err)
 	}
 	if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 1}); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	if err := l.HitAI(t.Context(), q, userID); !isRateLimited(err) {
+	if _, err := l.HitAI(t.Context(), q, userID); !isRateLimited(err) {
 		t.Errorf("HitAI at the budget: %v, want rate limited", err)
 	}
-	if err := l.HitCompanyAnalysis(t.Context(), q, userID); !isRateLimited(err) {
+	if _, err := l.HitCompanyAnalysis(t.Context(), q, userID); !isRateLimited(err) {
 		t.Errorf("HitCompanyAnalysis at the budget: %v, want rate limited", err)
 	}
 }
@@ -87,12 +87,12 @@ func TestAICostResetsAtMidnightInJST(t *testing.T) {
 	if err := l.AddAICost(t.Context(), q, ai.Usage{OutputTokens: 1000}); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	if err := l.HitAI(t.Context(), q, userID); !isRateLimited(err) {
+	if _, err := l.HitAI(t.Context(), q, userID); !isRateLimited(err) {
 		t.Fatalf("hit on the same day: %v, want rate limited", err)
 	}
 
 	now = time.Date(2026, 10, 11, 0, 10, 0, 0, jst)
-	if err := l.HitAI(t.Context(), q, userID); err != nil {
+	if _, err := l.HitAI(t.Context(), q, userID); err != nil {
 		t.Errorf("hit after midnight in JST: %v, want allowed", err)
 	}
 	if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 10}); err != nil {
@@ -118,7 +118,7 @@ func TestAICostUnderConcurrentRequestsOvershootsOnlyByInFlightRequests(t *testin
 	for _, userID := range users {
 		wg.Go(func() {
 			q := db.New(pool)
-			if err := l.HitAI(t.Context(), q, userID); err != nil {
+			if _, err := l.HitAI(t.Context(), q, userID); err != nil {
 				return
 			}
 			allowed.Add(1)
@@ -137,7 +137,7 @@ func TestAICostUnderConcurrentRequestsOvershootsOnlyByInFlightRequests(t *testin
 	if spent < budget || spent >= budget+requests*cost {
 		t.Errorf("spent %d microdollars, want at least the budget %d and less than the budget plus all requests", spent, budget)
 	}
-	if err := l.HitAI(t.Context(), q, dbtest.CreateUser(t, pool)); !isRateLimited(err) {
+	if _, err := l.HitAI(t.Context(), q, dbtest.CreateUser(t, pool)); !isRateLimited(err) {
 		t.Errorf("hit after the budget is used: %v, want rate limited", err)
 	}
 }
