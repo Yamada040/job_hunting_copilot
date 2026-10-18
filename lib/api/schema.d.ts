@@ -35,7 +35,11 @@ export interface paths {
     get: operations["getMe"];
     put?: never;
     post?: never;
-    delete?: never;
+    /**
+     * 退会する（アカウントとすべてのデータを削除する）
+     * @description Supabase Auth のユーザーを削除し、企業・ES・面接ログ・予定・XPなど、その人のデータもすべて削除する。取り消せない。
+     */
+    delete: operations["deleteMe"];
     options?: never;
     head?: never;
     /**
@@ -1268,6 +1272,25 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["Me"];
         };
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  deleteMe: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 削除した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       default: components["responses"]["Problem"];
     };

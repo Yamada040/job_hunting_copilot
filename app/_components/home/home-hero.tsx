@@ -36,7 +36,7 @@ const tagClass = "h-auto gap-2 border-border px-3 py-1 font-semibold tracking-[0
 
 export function HomeHero() {
   return (
-    <Card className="relative gap-0 rounded-2xl p-10 shadow-[0_20px_60px_color-mix(in_oklab,var(--color-ring)_12%,transparent)]">
+    <Card className="relative gap-0 rounded-2xl p-5 shadow-[0_20px_60px_color-mix(in_oklab,var(--color-ring)_12%,transparent)] sm:p-10">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-ring to-transparent opacity-70" />
       <div className="pointer-events-none absolute -right-24 -top-20 h-56 w-56 rounded-full bg-linear-to-br from-accent/80 to-secondary/50 blur-3xl" />
       <div className="pointer-events-none absolute -left-28 bottom-[-110px] h-56 w-56 rounded-full bg-linear-to-br from-accent/70 to-secondary/30 blur-3xl" />
@@ -67,14 +67,14 @@ export function HomeHero() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-4xl leading-tight font-black tracking-tight sm:text-5xl"
           >
-            {/* 日本語は文字の間のどこででも折り返すので、意味のまとまりごとに inline-block で区切り、途中で切れないようにする */}
-            <span className="inline-block">情報過多な就活を</span>
-            <span className="inline-block">
+            {/* 狭い画面では、意味のまとまりより画面内に収めることを優先して日本語を折り返す */}
+            <span>情報過多な就活を</span>
+            <span>
               <span className="bg-linear-to-r from-ring to-primary bg-clip-text text-transparent">整理</span>して
             </span>
             <span className="block text-muted-foreground">
-              <span className="inline-block">やるべき行動を</span>
-              <span className="inline-block">明確にする</span>
+              <span>やるべき行動を</span>
+              <span>明確にする</span>
             </span>
           </motion.h1>
 

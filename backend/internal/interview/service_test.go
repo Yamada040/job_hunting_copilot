@@ -14,7 +14,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
-	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit/ratelimittest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -39,7 +39,7 @@ func setup(t *testing.T) fixture {
 	fake := &aitest.Fake{Reply: "振り返り結果"}
 	return fixture{
 		pool:       pool,
-		interviews: NewService(pool, x, fake, ratelimit.NewLimiter()),
+		interviews: NewService(pool, x, fake, ratelimittest.NewLimiter()),
 		companies:  company.NewService(pool, x, nil, nil),
 		ai:         fake,
 	}

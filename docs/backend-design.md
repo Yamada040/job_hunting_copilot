@@ -115,7 +115,8 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 
 - 適性診断・自己分析は何度もやるものではなく、AIの費用も抑えたいため1回だけとする
 - 企業分析の上限が厳しいのは、Tavilyの無料枠（月1,000クレジット程度）に対し、1回で最大3回検索するため
-- サービス全体の上限は、利用者が増えてから検討する
+- 1人ごとの上限とは別に、アプリ全体の1日の上限を全員で共有する（汎用AI 300回・企業分析10回。環境変数 `AI_APP_DAILY_LIMIT`・`COMPANY_ANALYSIS_APP_DAILY_LIMIT` で変えられる）。企業分析の10回は、10回 × 3検索 × 31日 = 930回で Tavily の月1,000回に収まる値
+- Web検索が使えないとき（無料枠が尽きた・失敗した）は、企業分析を止めずに検索なしで続け、結果の先頭にその旨を書く
 - 再実行の可否と上限は、画面ではなくバックエンドで強制する
 
 ## 4. データ
@@ -153,8 +154,13 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 | `aptitude_results` / `self_analysis_results` | id, user_id, answers, ai_result, created_at                                                                                                    | `user_id` がユニーク                                                                   |
 | `webtest_questions` / `webtest_attempts`     | 現行どおり                                                                                                                                     |                                                                                        |
 | `api_rate_limits`                            | user_id, bucket, window_start, count                                                                                                           | AIの1日の上限も `bucket` を分けてここで管理する                                        |
+| `api_app_rate_limits`                        | bucket, window_start, count                                                                                                                    | アプリ全体で共有するAIの1日の上限。`api_rate_limits` の `user_id` は必須のため分ける   |
 
 `company_id` の外部キーはすべて `on delete cascade`。
+
+- **退会**（`DELETE /v1/me`）は、バックエンドが `auth.users` の行を1つ消すだけで行う。アプリのテーブルはすべて `auth.users` を `on delete cascade` で参照しているので、その人のデータもまとめて消える（新しいテーブルも同じにする。`internal/profile` のテストで確かめている）
+  - 採らなかった案: Supabase Auth の管理API（`auth.admin.deleteUser`）。全権限の secret キーが必要になり、発行しない方針と合わないため
+  - 採らなかった案: `security definer` の関数や、権限を足すマイグレーション。バックエンドがつなぐ `postgres` ロールは、元から `auth.users` を削除できるため
 
 ### 個別の判断
 
@@ -335,7 +341,7 @@ backend/
 | エラーの変換       | service はドメインのエラーを返し、Problem Details への変換は1か所で行う。想定外のエラーは利用者に詳細を返さずログにだけ出す。リプレイス後のSlack通知はここに差し込む       |
 | CORS               | 不要。Next.js と同じドメインで動くため（7章）                                                                                                                              |
 | 設定               | すべて環境変数。足りなければ起動しない                                                                                                                                     |
-| タイムアウト       | 通常10秒、AIは60秒、企業分析はより長く（Vercelの上限300秒以内）                                                                                                            |
+| タイムアウト       | 通常10秒、AIは1回90秒。企業分析は全体で250秒（Vercelの上限300秒より手前で止め、時間切れのエラーを返す。回数制限の1回分は戻さない）                                         |
 | AIキーがないとき   | 仮の応答を返し、サーバーは止めない                                                                                                                                         |
 
 ## 7. インフラ
@@ -343,7 +349,7 @@ backend/
 - **バックエンドは Vercel で動かす**。管理するサービスを増やさず、運用の手間を減らすため
   - 採らなかった案: Google Cloud Run（設計どおりに動くが、サービスとカード登録が増える）、Render の無料プラン（停止からの再開が遅い）
 - Vercel の Go ランタイムは `http.Flusher` に対応しておらずSSEが使えないため、**企業分析はストリーミングをやめ、完成してからJSONで返す**。画面は「分析中」の表示にする。進み具合の表示は、必要になってから検討する
-- Hobby プランの関数の実行時間の上限は300秒
+- Hobby プランの関数の実行時間の上限は300秒。`vercel.json` のバックエンドの `functions` で `maxDuration: 300` を明示している
 - Next.js と同じプロジェクトに置くには Vercel の **Services**（ベータ）を使う。ルートの `/api` にGoのファイルを置くと、Next.js のAPIルートが404になる不具合が報告されているため
   - `vercel.json` で、`/v1/...` をバックエンド（`backend/`）に、それ以外を Next.js に振り分ける。バックエンドにはパスがそのまま届く（`/v1/health` はバックエンドでも `/v1/health`）
   - Next.js と同じドメインで動くので、CORSは不要

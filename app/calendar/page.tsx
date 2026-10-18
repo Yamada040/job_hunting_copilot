@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { AppLayout } from "@/app/_components/layout";
 import { CalendarView } from "./_components/calendar-view";
 import { CalendarGuide } from "./_components/calendar-guide";
 import { CalendarSubscription } from "./_components/calendar-subscription";
+
+export const metadata: Metadata = {
+  title: "カレンダー",
+};
 
 export default function CalendarPage() {
   return (

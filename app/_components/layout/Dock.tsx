@@ -18,7 +18,7 @@ import {
 import { useMotionValue, type MotionValue } from "framer-motion";
 
 import { useMe } from "@/lib/api/me";
-import { ROUTES } from "@/lib/constants/routes";
+import { PUBLIC_PAGES, ROUTES } from "@/lib/constants/routes";
 import { QuickAdd } from "../quick-add/quick-add";
 import { DockIcon, isActive, type DockItem } from "./DockIcon";
 import { MoreMenu } from "./DockMoreMenu";
@@ -59,8 +59,8 @@ const LEFT_COUNT = 3;
  */
 export function Dock() {
   const pathname = usePathname();
-  // ログインとホームはログイン前の画面なので出さない
-  if (pathname === ROUTES.HOME || pathname === ROUTES.LOGIN) return null;
+  // ログインしていなくても開ける画面では出さない
+  if (PUBLIC_PAGES.includes(pathname)) return null;
   return <DockBar pathname={pathname} />;
 }
 

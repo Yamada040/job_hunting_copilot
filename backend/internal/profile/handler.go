@@ -43,6 +43,17 @@ func (h Handler) UpdateMe(ctx context.Context, req openapi.UpdateMeRequestObject
 	return openapi.UpdateMe200JSONResponse(h.toMe(p)), nil
 }
 
+func (h Handler) DeleteMe(ctx context.Context, _ openapi.DeleteMeRequestObject) (openapi.DeleteMeResponseObject, error) {
+	userID, err := auth.RequireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.Service.Delete(ctx, userID); err != nil {
+		return nil, err
+	}
+	return openapi.DeleteMe204Response{}, nil
+}
+
 func (h Handler) toMe(p Profile) openapi.Me {
 	return openapi.Me{
 		Id:             p.ID,
