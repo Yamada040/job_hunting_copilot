@@ -115,7 +115,8 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 
 - 適性診断・自己分析は何度もやるものではなく、AIの費用も抑えたいため1回だけとする
 - 企業分析の上限が厳しいのは、Tavilyの無料枠（月1,000クレジット程度）に対し、1回で最大3回検索するため
-- サービス全体の上限は、利用者が増えてから検討する
+- 1人ごとの上限とは別に、アプリ全体の1日の上限を全員で共有する（汎用AI 300回・企業分析10回。環境変数 `AI_APP_DAILY_LIMIT`・`COMPANY_ANALYSIS_APP_DAILY_LIMIT` で変えられる）。企業分析の10回は、10回 × 3検索 × 31日 = 930回で Tavily の月1,000回に収まる値
+- Web検索が使えないとき（無料枠が尽きた・失敗した）は、企業分析を止めずに検索なしで続け、結果の先頭にその旨を書く
 - 再実行の可否と上限は、画面ではなくバックエンドで強制する
 
 ## 4. データ
@@ -153,6 +154,7 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 | `aptitude_results` / `self_analysis_results` | id, user_id, answers, ai_result, created_at                                                                                                    | `user_id` がユニーク                                                                   |
 | `webtest_questions` / `webtest_attempts`     | 現行どおり                                                                                                                                     |                                                                                        |
 | `api_rate_limits`                            | user_id, bucket, window_start, count                                                                                                           | AIの1日の上限も `bucket` を分けてここで管理する                                        |
+| `api_app_rate_limits`                        | bucket, window_start, count                                                                                                                    | アプリ全体で共有するAIの1日の上限。`api_rate_limits` の `user_id` は必須のため分ける   |
 
 `company_id` の外部キーはすべて `on delete cascade`。
 

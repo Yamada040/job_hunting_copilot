@@ -12,6 +12,29 @@ import (
 	"github.com/google/uuid"
 )
 
+const hitAppRateLimit = `-- name: HitAppRateLimit :one
+insert into api_app_rate_limits (bucket, window_start, count)
+values ($1, $2, 1)
+on conflict (bucket) do update set
+  count        = case when api_app_rate_limits.window_start < $3 then 1 else api_app_rate_limits.count + 1 end,
+  window_start = case when api_app_rate_limits.window_start < $3 then $2 else api_app_rate_limits.window_start end
+returning count
+`
+
+type HitAppRateLimitParams struct {
+	Bucket      string
+	Now         time.Time
+	WindowStart time.Time
+}
+
+// アプリ全体で共有する枠を、HitRateLimit と同じく1つの文で数える
+func (q *Queries) HitAppRateLimit(ctx context.Context, arg HitAppRateLimitParams) (int32, error) {
+	row := q.db.QueryRow(ctx, hitAppRateLimit, arg.Bucket, arg.Now, arg.WindowStart)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
+}
+
 const hitRateLimit = `-- name: HitRateLimit :one
 insert into api_rate_limits (user_id, bucket, window_start, count)
 values ($1, $2, $3, 1)

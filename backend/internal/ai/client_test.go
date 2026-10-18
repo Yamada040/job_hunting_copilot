@@ -115,20 +115,58 @@ func TestGPTGenerateReturnsText(t *testing.T) {
 	}
 }
 
-func TestGPTAnalyzeCompanyAnswersToolCalls(t *testing.T) {
+func TestGPTAnalyzeCompanySearchesAtMostMaxSearchesEvenWhenAskedManyAtOnce(t *testing.T) {
 	gpt, gptBodies := fakeServer(t,
-		`{"choices":[{"message":{"role":"assistant","tool_calls":[{"id":"call-1","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"サンプル\"}"}}]}}]}`,
+		`{"choices":[{"message":{"role":"assistant","tool_calls":[
+			{"id":"call-1","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"q1\"}"}},
+			{"id":"call-2","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"q2\"}"}},
+			{"id":"call-3","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"q3\"}"}},
+			{"id":"call-4","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"q4\"}"}}]}}]}`,
 		`{"choices":[{"message":{"role":"assistant","content":"分析結果"}}]}`,
 	)
-	c := NewClient(Config{Provider: "gpt", APIKey: "k", GPTEndpoint: gpt.URL}, gpt.Client())
+	result := `{"results":[{"title":"採用ページ","url":"https://example.com","content":"新卒採用"}]}`
+	tav, tavBodies := fakeServer(t, result, result, result)
+	c := NewClient(Config{Provider: "gpt", APIKey: "k", GPTEndpoint: gpt.URL, TavilyAPIKey: "t", TavilyEndpoint: tav.URL}, gpt.Client())
 
 	text, _, err := c.AnalyzeCompany(t.Context(), "企業名: サンプル")
 	if err != nil {
 		t.Fatalf("AnalyzeCompany: %v", err)
 	}
 
-	if text != "分析結果" || !strings.Contains((*gptBodies)[1], `"tool_call_id":"call-1"`) {
-		t.Errorf("text = %q, second request = %s; want the tool result answered to call-1", text, (*gptBodies)[1])
+	if text != "分析結果" {
+		t.Errorf("text = %q, want 分析結果", text)
+	}
+	if len(*tavBodies) != maxSearches {
+		t.Errorf("tavily was called %d times, want %d", len(*tavBodies), maxSearches)
+	}
+	second := (*gptBodies)[1]
+	if !strings.Contains(second, `"content":"`+searchLimitReply+`","tool_call_id":"call-4"`) || strings.Contains(second, `"tools"`) {
+		t.Errorf("second request = %s, want the 4th call answered without searching and no more search tool", second)
+	}
+}
+
+func TestAnalyzeCompanyContinuesWithoutSearchWhenSearchFails(t *testing.T) {
+	gem, gemBodies := fakeServer(t,
+		`{"candidates":[{"content":{"parts":[{"functionCall":{"name":"search_web","args":{"query":"q1"}}}]}}]}`,
+		`{"candidates":[{"content":{"parts":[{"functionCall":{"name":"search_web","args":{"query":"q2"}}}]}}]}`,
+		`{"candidates":[{"content":{"parts":[{"text":"分析結果"}]}}]}`,
+	)
+	tav, tavBodies := fakeServer(t) // 無料枠が尽きたときのように、何も返さずエラー
+	c := NewClient(Config{Provider: "gemini", APIKey: "k", GeminiBaseURL: gem.URL, TavilyAPIKey: "t", TavilyEndpoint: tav.URL}, gem.Client())
+
+	text, _, err := c.AnalyzeCompany(t.Context(), "企業名: サンプル")
+	if err != nil {
+		t.Fatalf("AnalyzeCompany: %v, want the analysis to continue without search", err)
+	}
+
+	if text != withoutSearchNotice+"\n\n分析結果" {
+		t.Errorf("text = %q, want the notice that search was not used before the result", text)
+	}
+	if len(*tavBodies) != 1 {
+		t.Errorf("tavily was called %d times, want once (no retry after a failure)", len(*tavBodies))
+	}
+	if !strings.Contains((*gemBodies)[1], searchUnavailableReply) {
+		t.Errorf("second gemini request = %s, want the model told that search is unavailable", (*gemBodies)[1])
 	}
 }
 
