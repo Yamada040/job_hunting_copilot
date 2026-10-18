@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+// 手元・E2E の Supabase は http://127.0.0.1:54321 なので、*.supabase.co を決め打ちせず接続先のURLから許可する。
+// 同じ理由で upgrade-insecure-requests は付けない（本番の https は HSTS で強制する）
+const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin : "";
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -10,10 +14,9 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  `connect-src 'self' ${supabaseOrigin}`,
   "manifest-src 'self'",
   "worker-src 'self' blob:",
-  "upgrade-insecure-requests",
 ].join("; ");
 
 const nextConfig: NextConfig = {
