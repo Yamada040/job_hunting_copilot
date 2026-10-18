@@ -16,6 +16,8 @@ locals {
     VERCEL_TOKEN      = var.vercel_deploy_token
     VERCEL_ORG_ID     = var.vercel_team_id
     VERCEL_PROJECT_ID = var.vercel_project_id
+    # backup.yml・release.yml が本番の DB のダンプを暗号化する
+    BACKUP_PASSPHRASE = var.backup_passphrase
   }
 }
 

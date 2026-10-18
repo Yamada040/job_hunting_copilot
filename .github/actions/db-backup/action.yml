@@ -1,0 +1,51 @@
+name: 本番の DB のバックアップを取る
+description: link 済みの Supabase のロール・スキーマ・データをダンプし、gpg で暗号化して成果物に残す。supabase link の後に使う
+inputs:
+  name:
+    description: 成果物の名前
+    required: true
+  retention-days:
+    description: 成果物を残す日数
+    required: true
+  passphrase:
+    description: 暗号化のパスフレーズ（Secret の BACKUP_PASSPHRASE）
+    required: true
+runs:
+  using: composite
+  steps:
+    # 未設定のまま空のパスフレーズで暗号化すると、誰でも復号できるバックアップが残るため止める
+    - name: パスフレーズが設定されているか確かめる
+      shell: bash
+      env:
+        BACKUP_PASSPHRASE: ${{ inputs.passphrase }}
+      run: |
+        if [ -z "$BACKUP_PASSPHRASE" ]; then
+          echo "::error::Secret の BACKUP_PASSPHRASE が未設定です。infra/terraform.tfvars の backup_passphrase を埋めて terraform apply してください"
+          exit 1
+        fi
+    # Supabase の公式の手順と同じ3つに分ける（復元は docs/backup.md）。
+    # データには auth スキーマ（ログインしたユーザー）も含める。public の表はすべて auth.users を外部キーで参照しており、
+    # ユーザーが無いとデータを流し込めず、作り直しても Google でログインし直したときに別のIDになって自分のデータに戻れないため。
+    # その代わり、退会したユーザーのデータも成果物の保存期間が切れるまではバックアップに残る（保存期間を短くしているのはそのため）
+    - name: ダンプする
+      shell: bash
+      run: |
+        mkdir db-backup
+        supabase db dump --linked --role-only -f db-backup/roles.sql
+        supabase db dump --linked -f db-backup/schema.sql
+        supabase db dump --linked --data-only --use-copy -f db-backup/data.sql
+    - name: 暗号化する
+      shell: bash
+      env:
+        BACKUP_PASSPHRASE: ${{ inputs.passphrase }}
+      run: |
+        tar -czf db-backup.tar.gz db-backup
+        printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+          --symmetric --cipher-algo AES256 -o db-backup.tar.gz.gpg db-backup.tar.gz
+        rm -rf db-backup db-backup.tar.gz
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.name }}
+        path: db-backup.tar.gz.gpg
+        retention-days: ${{ inputs.retention-days }}
+        if-no-files-found: error

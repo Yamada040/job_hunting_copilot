@@ -35,6 +35,14 @@ jobs:
       # config.toml が手元・CI用の JWT の署名鍵のファイルを指しており、無いと CLI が止まる。本番には使わないので使い捨てで作る
       - run: npm run supabase:signing-key
       - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      # マイグレーションは戻さない運用だが、データを壊すマイグレーションに備え、当てる直前の状態を残す。
+      # 取れなければリリースを止める。毎日のバックアップ（backup.yml）より長く残し、リリース後しばらくして気づいても戻れるようにする
+      - name: マイグレーションの前に本番の DB のバックアップを取る
+        uses: ./.github/actions/db-backup
+        with:
+          name: db-backup-before-release-${{ github.sha }}
+          retention-days: 30
+          passphrase: ${{ secrets.BACKUP_PASSPHRASE }}
       - name: 本番の DB にマイグレーションを当てる
         run: supabase db push
       - name: Vercel の本番にデプロイする

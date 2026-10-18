@@ -299,7 +299,8 @@ backend/
   - `e2e`（Playwright。CIの中で Supabase を起動する）: `backend/`・`supabase/`・`e2e/`・依存・ワークフローの変更。フロントだけの変更では走らせない
   - `migrations`: リリース PR（dev → master）でだけ、本番に当たるマイグレーションを `supabase db push --dry-run` で表示する
 - `.github/workflows/cache.yml`: dev への push で、Go のモジュールとビルド結果・npm・Playwright のブラウザのキャッシュを dev に置く（PR は自分のキャッシュと dev のキャッシュしか読めないため）
-- `.github/workflows/release.yml`: master へのマージで、本番の Supabase にマイグレーションを適用し、成功したら Vercel の本番にデプロイし、日付のタグと GitHub Release を作る
+- `.github/workflows/release.yml`: master へのマージで、本番の DB のバックアップを取ってから本番の Supabase にマイグレーションを適用し、成功したら Vercel の本番にデプロイし、日付のタグと GitHub Release を作る
+- `.github/workflows/backup.yml`: 毎日、本番の DB をダンプし、`BACKUP_PASSPHRASE` で暗号化して成果物に7日残す（無料プランは自動のバックアップが無いため）。リリース前のものは30日残す。ダンプは `.github/actions/db-backup`、復元は [docs/backup.md](./docs/backup.md)
 - `.github/workflows/keepalive.yml`: 毎日 `/v1/health` を呼び、Supabase の無料プランの一時停止（7日間アクセスが無いと止まる）を防ぐ
 - Dependabot: 依存パッケージの既知の脆弱性を検知し、直すPRを作る。普段のバージョンアップのPRは作らない（`infra/github.tf`）
 - devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`backend`/`e2e`）を要求し、マージ前にブランチを最新化するルールセットが設定されている。master はそれに `migrations` を加え、マージコミットでのマージだけを許す（`infra/github.tf`）

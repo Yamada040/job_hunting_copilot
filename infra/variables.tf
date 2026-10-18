@@ -81,6 +81,12 @@ variable "supabase_migration_access_token" {
   sensitive   = true
 }
 
+variable "backup_passphrase" {
+  description = "GitHub Actions が本番の DB のダンプを暗号化するパスフレーズ。失うとバックアップを復号できないので、パスワードマネージャーに控える"
+  type        = string
+  sensitive   = true
+}
+
 variable "ai_provider" {
   type    = string
   default = "gemini"
