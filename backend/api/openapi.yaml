@@ -1142,12 +1142,16 @@ components:
         url:
           type: string
           maxLength: 500
+          # 画面でリンクとして開くので、javascript: などは受け付けない。画面は空の欄を "" で送って消すので、空も受け付ける
+          pattern: "^$|^https?://"
         mypageId:
           type: string
           maxLength: 100
         mypageUrl:
           type: string
           maxLength: 500
+          # 画面でリンクとして開くので、javascript: などは受け付けない。画面は空の欄を "" で送って消すので、空も受け付ける
+          pattern: "^$|^https?://"
         memo:
           type: string
           maxLength: 2000
@@ -1174,12 +1178,16 @@ components:
         url:
           type: string
           maxLength: 500
+          # 画面でリンクとして開くので、javascript: などは受け付けない。画面は空の欄を "" で送って消すので、空も受け付ける
+          pattern: "^$|^https?://"
         mypageId:
           type: string
           maxLength: 100
         mypageUrl:
           type: string
           maxLength: 500
+          # 画面でリンクとして開くので、javascript: などは受け付けない。画面は空の欄を "" で送って消すので、空も受け付ける
+          pattern: "^$|^https?://"
         memo:
           type: string
           maxLength: 2000
