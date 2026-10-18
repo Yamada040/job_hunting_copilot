@@ -68,6 +68,22 @@ func TestGeminiGenerateSendsPromptAndReturnsTextAndUsage(t *testing.T) {
 	}
 }
 
+func TestGenerateJSONReturnsUsageWhenResultIsNotJSON(t *testing.T) {
+	srv, _ := fakeServer(t, `{"candidates":[{"content":{"parts":[{"text":"JSONではない文章"}]}}],
+		"usageMetadata":{"promptTokenCount":100,"candidatesTokenCount":40}}`)
+	c := NewClient(Config{Provider: "gemini", APIKey: "k", GeminiBaseURL: srv.URL}, srv.Client())
+
+	var out map[string]any
+	usage, err := c.GenerateJSON(t.Context(), KindESReview, "ES", &out)
+
+	if !isUnavailable(err) {
+		t.Errorf("error = %v, want unavailable", err)
+	}
+	if usage != (Usage{InputTokens: 100, OutputTokens: 40}) {
+		t.Errorf("usage = %+v, want the tokens of the response to count toward the cost", usage)
+	}
+}
+
 func TestGeminiAnalyzeCompanySearchesThenAnswers(t *testing.T) {
 	gem, gemBodies := fakeServer(t,
 		`{"candidates":[{"content":{"parts":[{"functionCall":{"name":"search_web","args":{"query":"サンプル 採用"}}}]}}],"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":1}}`,
