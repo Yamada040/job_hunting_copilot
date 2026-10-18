@@ -204,11 +204,13 @@ func (s *Service) Review(ctx context.Context, userID, id uuid.UUID) (Log, error)
 	if err != nil {
 		return Log{}, err
 	}
-	if err := s.limiter.HitAI(ctx, q, userID); err != nil {
+	charge, err := s.limiter.HitAI(ctx, q, userID)
+	if err != nil {
 		return Log{}, err
 	}
 	text, usage, err := s.ai.Generate(ctx, ai.KindInterviewReview, reviewInput(log))
 	if err != nil {
+		charge.Refund(ctx, q)
 		return Log{}, err
 	}
 	input, output := usage.ColumnValues()

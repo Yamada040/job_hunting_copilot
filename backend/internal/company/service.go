@@ -192,11 +192,15 @@ func (s *Service) Analyze(ctx context.Context, userID, id uuid.UUID) (db.Company
 	if row.AiResult != nil {
 		return db.Company{}, alreadyAnalyzed()
 	}
-	if err := s.limiter.HitCompanyAnalysis(ctx, q, userID); err != nil {
+	charge, err := s.limiter.HitCompanyAnalysis(ctx, q, userID)
+	if err != nil {
 		return db.Company{}, err
 	}
 	text, usage, err := s.ai.AnalyzeCompany(ctx, analysisInput(row))
 	if err != nil {
+		if !errors.Is(err, ai.ErrAnalysisTimedOut) {
+			charge.Refund(ctx, q)
+		}
 		return db.Company{}, err
 	}
 	input, output := usage.ColumnValues()

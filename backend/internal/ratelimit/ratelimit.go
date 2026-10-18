@@ -105,22 +105,59 @@ func NewLimiter(app AppLimits) *Limiter {
 	}
 }
 
+// Charge は、HitAI・HitCompanyAnalysis で数えた1回。AIの呼び出しが失敗したら Refund で戻す。
+type Charge struct {
+	userID uuid.UUID
+	at     time.Time
+	rules  []Rule
+}
+
 // HitAI は、汎用のAI（添削・振り返り・診断・自己分析）の1回を数える。
 // 利用料の上限を先に確かめるのは、アプリ全体で止まっているときに、本人の1日の回数まで減らさないため。
 // アプリ全体の回数の枠を最後に数えるのは、1人の連打が本人の上限で止まり、全員の枠を減らさないようにするため。
-func (l *Limiter) HitAI(ctx context.Context, q *db.Queries, userID uuid.UUID) error {
+func (l *Limiter) HitAI(ctx context.Context, q *db.Queries, userID uuid.UUID) (Charge, error) {
 	if err := l.checkAICost(ctx, q); err != nil {
-		return err
+		return Charge{}, err
 	}
-	return l.Hit(ctx, q, userID, AIBurst, AIDaily, l.aiAppDaily)
+	return l.charge(ctx, q, userID, AIBurst, AIDaily, l.aiAppDaily)
 }
 
 // HitCompanyAnalysis は、AI企業分析の1回を数える。順番の理由は HitAI と同じ。
-func (l *Limiter) HitCompanyAnalysis(ctx context.Context, q *db.Queries, userID uuid.UUID) error {
+func (l *Limiter) HitCompanyAnalysis(ctx context.Context, q *db.Queries, userID uuid.UUID) (Charge, error) {
 	if err := l.checkAICost(ctx, q); err != nil {
-		return err
+		return Charge{}, err
 	}
-	return l.Hit(ctx, q, userID, CompanyAnalysisBurst, CompanyAnalysisDaily, l.companyAnalysisAppDaily)
+	return l.charge(ctx, q, userID, CompanyAnalysisBurst, CompanyAnalysisDaily, l.companyAnalysisAppDaily)
+}
+
+func (l *Limiter) charge(ctx context.Context, q *db.Queries, userID uuid.UUID, rules ...Rule) (Charge, error) {
+	now := l.now()
+	if err := hit(ctx, q, userID, now, rules); err != nil {
+		return Charge{}, err
+	}
+	return Charge{userID: userID, at: now, rules: rules}, nil
+}
+
+// Refund は、AIの呼び出しが失敗した1回を、1日の枠（本人とアプリ全体）から戻す。利用料は、かかった分なので戻さない。
+// 短時間の連打の枠を戻さないのは、AIの障害中に再試行が続いても、外部のAPIを叩き続けないようにするため。
+// 戻せなくても、元の失敗を利用者に返すのを優先してログにだけ出す。
+func (c Charge) Refund(ctx context.Context, q *db.Queries) {
+	// 利用者が待たずに画面を離れ、リクエストが取り消されていても戻す
+	ctx = context.WithoutCancel(ctx)
+	for _, r := range c.rules {
+		if !r.Daily {
+			continue
+		}
+		var err error
+		if r.AppWide {
+			err = q.RefundAppRateLimit(ctx, db.RefundAppRateLimitParams{Bucket: r.Bucket, HitAt: c.at})
+		} else {
+			err = q.RefundRateLimit(ctx, db.RefundRateLimitParams{UserID: c.userID, Bucket: r.Bucket, HitAt: c.at})
+		}
+		if err != nil {
+			platform.Logger(ctx).Error("refund rate limit", "bucket", r.Bucket, "error", err)
+		}
+	}
 }
 
 // checkAICost は、今日のAIの利用料がアプリ全体の上限に達していれば 429 のエラーを返す。
@@ -156,7 +193,10 @@ func (l *Limiter) AddAICost(ctx context.Context, q *db.Queries, usage ai.Usage) 
 // Hit は、rules を順に1つずつ数え、上限を超えたものがあればそこで止めて 429 のエラーを返す。
 // 上限を超えたリクエストも1回として数える（連打を続けると待ち時間が延びるのではなく、期間が切り替わるまで拒否され続ける）。
 func (l *Limiter) Hit(ctx context.Context, q *db.Queries, userID uuid.UUID, rules ...Rule) error {
-	now := l.now()
+	return hit(ctx, q, userID, l.now(), rules)
+}
+
+func hit(ctx context.Context, q *db.Queries, userID uuid.UUID, now time.Time, rules []Rule) error {
 	for _, r := range rules {
 		start := windowStart(r, now)
 		var count int32
