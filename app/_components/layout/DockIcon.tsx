@@ -30,7 +30,7 @@ export function DockIcon({ icon: Icon, shortLabel, mouseX, active }: DockIconPro
     const rect = ref.current?.getBoundingClientRect();
     return rect ? x - (rect.left + rect.width / 2) : Infinity;
   });
-  const size = useSpring(useTransform(distance, [-MAGNIFY_RANGE, 0, MAGNIFY_RANGE], [44, 64, 44]), {
+  const size = useSpring(useTransform(distance, [-MAGNIFY_RANGE, 0, MAGNIFY_RANGE], [40, 64, 40]), {
     stiffness: 300,
     damping: 22,
   });
@@ -39,10 +39,10 @@ export function DockIcon({ icon: Icon, shortLabel, mouseX, active }: DockIconPro
     damping: 22,
   });
   return (
-    <span className="flex w-12 flex-col items-center gap-0.5 sm:w-16">
+    <span className="flex w-10 flex-col items-center gap-0.5 sm:w-16">
       <motion.span
         ref={ref}
-        style={reduceMotion ? { width: 44, height: 44 } : { width: size, height: size, y: lift }}
+        style={reduceMotion ? { width: 40, height: 40 } : { width: size, height: size, y: lift }}
         className={cn(
           "relative grid place-items-center rounded-2xl text-muted-foreground transition-colors group-hover:text-primary",
           active && "text-primary",

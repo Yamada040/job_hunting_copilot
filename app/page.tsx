@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ChevronDoubleDownIcon } from "@heroicons/react/24/outline";
 
 import { DepthProgress } from "./_components/home/depth-progress";
@@ -8,6 +9,10 @@ import { HomeHeader } from "./_components/home/home-header";
 import { HomeHero } from "./_components/home/home-hero";
 import { HomeContexts, HomeSummaries } from "./_components/home/home-overview";
 import { LegalLinks } from "./_components/legal/legal-links";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (

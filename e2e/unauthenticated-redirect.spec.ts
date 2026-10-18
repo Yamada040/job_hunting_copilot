@@ -23,6 +23,9 @@ test.describe("未ログイン状態でのアクセス制御", () => {
   test("公開ページ(ホーム)はリダイレクトされずそのまま表示される", async ({ page }) => {
     const response = await page.goto("/");
     expect(response?.ok()).toBe(true);
+    expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+    expect(response?.headers()["x-content-type-options"]).toBe("nosniff");
+    expect(response?.headers()["x-frame-options"]).toBe("DENY");
     await expect(page).toHaveURL(/\/$/);
   });
 
