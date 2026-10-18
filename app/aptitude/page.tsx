@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { AppLayout } from "@/app/_components/layout";
 import AptitudeForm from "./_components/aptitude-form";
 import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
+
+export const metadata: Metadata = {
+  title: "適性チェック",
+};
 
 export default function AptitudePage() {
   return (
