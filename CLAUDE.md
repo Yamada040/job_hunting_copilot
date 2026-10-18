@@ -167,7 +167,7 @@ backend/
 
 **一覧は軽くする**: 一覧のAPIは長い列を返さない（企業は分析結果の冒頭200文字だけ、ESは設問・本文・メモなし、面接ログは質問と回答・振り返り結果なしで `reviewed` だけ）。全文は詳細のAPIで返す。予定は画面が期間（`from`・`to`）を渡し、カレンダーは表示している月と直近7日、ホームは直近7日を取る。
 
-企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。全テーブルが `auth.users` を `on delete cascade` で参照しており、退会（`DELETE /v1/me`）はバックエンドが `auth.users` の行を消すだけで、その人のデータをすべて消す。テーブルを足すときも `auth.users` への参照は必ず `on delete cascade` にする（`internal/profile` のテストが確かめる）。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
+企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。企業・ES・Webテストの問題への外部キーは `(id, user_id)` の組で張っており、他人の行にはDBがひも付けさせない（バックエンドの確かめの多層防御）。全テーブルが `auth.users` を `on delete cascade` で参照しており、退会（`DELETE /v1/me`）はバックエンドが `auth.users` の行を消すだけで、その人のデータをすべて消す。テーブルを足すときも `auth.users` への参照は必ず `on delete cascade` にする（`internal/profile` のテストが確かめる）。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
 
 ### APIルート
 

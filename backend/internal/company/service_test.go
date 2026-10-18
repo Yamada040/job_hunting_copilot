@@ -198,20 +198,28 @@ func TestOtherUsersCompanyIsNotFound(t *testing.T) {
 func TestDeleteRemovesLinkedEntries(t *testing.T) {
 	pool, s, userID := setup(t)
 	row := create(t, s, userID, "サンプル")
-	if _, err := pool.Exec(t.Context(), `insert into es_entries (user_id, company_id, title) values ($1, $2, 'ES')`, userID, row.ID); err != nil {
-		t.Fatalf("insert es: %v", err)
+	for _, sql := range []string{
+		`insert into es_entries (user_id, company_id, title) values ($1, $2, 'ES')`,
+		`insert into interview_logs (user_id, company_id) values ($1, $2)`,
+		`insert into calendar_events (user_id, company_id, title, date) values ($1, $2, '予定', '2026-11-01')`,
+	} {
+		if _, err := pool.Exec(t.Context(), sql, userID, row.ID); err != nil {
+			t.Fatalf("%s: %v", sql, err)
+		}
 	}
 
 	if err := s.Delete(t.Context(), userID, row.ID); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 
-	var count int
-	if err := pool.QueryRow(t.Context(), `select count(*) from es_entries where company_id = $1`, row.ID).Scan(&count); err != nil {
-		t.Fatalf("count es: %v", err)
-	}
-	if count != 0 {
-		t.Errorf("%d ES remain after deleting the company, want 0", count)
+	for _, table := range []string{"es_entries", "interview_logs", "calendar_events"} {
+		var count int
+		if err := pool.QueryRow(t.Context(), `select count(*) from `+table+` where company_id = $1`, row.ID).Scan(&count); err != nil {
+			t.Fatalf("count %s: %v", table, err)
+		}
+		if count != 0 {
+			t.Errorf("%d rows remain in %s after deleting the company, want 0", count, table)
+		}
 	}
 }
 
