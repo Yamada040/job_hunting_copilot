@@ -29,6 +29,22 @@ test.describe("未ログイン状態でのアクセス制御", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
+  test("プライバシーポリシー(/privacy)は未ログインでもそのまま表示される", async ({ page }) => {
+    const response = await page.goto("/privacy");
+
+    expect(response?.ok()).toBe(true);
+    await expect(page).toHaveURL(/\/privacy$/);
+    await expect(page.getByRole("heading", { level: 1, name: "プライバシーポリシー" })).toBeVisible();
+  });
+
+  test("利用規約(/terms)は未ログインでもそのまま表示される", async ({ page }) => {
+    const response = await page.goto("/terms");
+
+    expect(response?.ok()).toBe(true);
+    await expect(page).toHaveURL(/\/terms$/);
+    await expect(page.getByRole("heading", { level: 1, name: "利用規約" })).toBeVisible();
+  });
+
   test("robots.txt は未ログインでも取得できる", async ({ page }) => {
     const response = await page.goto("/robots.txt");
 

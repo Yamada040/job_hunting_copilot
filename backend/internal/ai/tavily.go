@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -21,10 +22,12 @@ func newTavily(cfg Config, client *http.Client) *tavily {
 	return &tavily{client: client, endpoint: endpoint, apiKey: cfg.TavilyAPIKey}
 }
 
-// search は、Webを検索する。キーが無いときは結果0件として扱い、AIには「検索結果が見つからない」として伝える。
+var errSearchNotConfigured = errors.New("tavily api key is not set")
+
+// search は、Webを検索する。
 func (t *tavily) search(ctx context.Context, query string) ([]SearchResult, error) {
 	if t.apiKey == "" {
-		return nil, nil
+		return nil, errSearchNotConfigured
 	}
 	var res struct {
 		Results []struct {

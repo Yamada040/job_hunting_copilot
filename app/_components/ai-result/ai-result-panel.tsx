@@ -5,6 +5,7 @@ import { CheckIcon, ClipboardDocumentIcon, SparklesIcon } from "@heroicons/react
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AiSendingNote } from "./ai-sending-note";
 import { sanitizeMarkdown } from "./sanitize";
 import { EmptyState } from "@/app/_components/empty-state";
 
@@ -54,6 +55,7 @@ export function AiResultPanel({
         {pending ? "AIが処理中です（数十秒かかることがあります）…" : runLabel}
       </Button>
       {blockedReason && <p className="text-xs text-muted-foreground">{blockedReason}</p>}
+      <AiSendingNote />
     </div>
   );
 

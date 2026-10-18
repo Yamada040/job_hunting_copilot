@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AppLayout } from "@/app/_components/layout";
@@ -5,6 +6,10 @@ import { WebtestList } from "./_components/webtest-list";
 import { WebtestListGuide } from "./_components/webtest-list-guide";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constants/routes";
+
+export const metadata: Metadata = {
+  title: "Webテスト",
+};
 
 export default function WebtestsPage() {
   return (

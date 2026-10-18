@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { AppLayout } from "@/app/_components/layout";
 import { NewEsForm } from "../_components/new-es-form";
 import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
+
+export const metadata: Metadata = {
+  title: "ESを作成",
+};
 
 export default function NewEsPage() {
   return (

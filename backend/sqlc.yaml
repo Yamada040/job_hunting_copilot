@@ -1,7 +1,9 @@
 version: "2"
 sql:
   - engine: postgresql
-    schema: ../supabase/migrations
+    schema:
+      - internal/db/external
+      - ../supabase/migrations
     queries: internal/db/queries
     gen:
       go:

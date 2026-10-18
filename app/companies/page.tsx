@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AppLayout } from "@/app/_components/layout";
@@ -5,6 +6,10 @@ import { CompanyList } from "./_components/company-list";
 import { CompanyListGuide } from "./_components/company-list-guide";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constants/routes";
+
+export const metadata: Metadata = {
+  title: "企業管理",
+};
 
 export default function CompaniesPage() {
   return (

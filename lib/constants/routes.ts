@@ -8,6 +8,8 @@ export const ROUTES = {
   DEVELOPER: "/developer",
   PROFILE: "/profile",
   CONTACT: "/contact",
+  PRIVACY: "/privacy",
+  TERMS: "/terms",
 
   // 企業関連
   COMPANIES: "/companies",
@@ -35,3 +37,6 @@ export const ROUTES = {
   SELF_ANALYSIS: "/self-analysis",
   APTITUDE: "/aptitude",
 } as const;
+
+/** ログインしていなくても開ける画面。ログイン後の画面のヘッダーと下のメニューも出さない */
+export const PUBLIC_PAGES: readonly string[] = [ROUTES.HOME, ROUTES.LOGIN, ROUTES.PRIVACY, ROUTES.TERMS];
