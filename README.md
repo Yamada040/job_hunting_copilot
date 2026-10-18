@@ -107,6 +107,7 @@ flowchart LR
 - [docs/database-schema.md](docs/database-schema.md) — DBスキーマのリファレンス（ER図付き）
 - [docs/testing/unit-test-plan.md](docs/testing/unit-test-plan.md) — 単体テスト（Vitest）の設計
 - [docs/testing/e2e-test-plan.md](docs/testing/e2e-test-plan.md) — E2Eテスト（Playwright）の設計
+- [docs/release-runbook.md](docs/release-runbook.md) — 本番リリース後の確認とロールバック手順
 - [CLAUDE.md](CLAUDE.md) — AIエージェント（Claude Code）向けの開発ガイド。アーキテクチャ規約の要点はこちらにも集約
 
 ## セットアップ
