@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ChevronDoubleDownIcon } from "@heroicons/react/24/outline";
 
+import { ROUTES } from "@/lib/constants/routes";
 import { DepthProgress } from "./_components/home/depth-progress";
 import { DepthScene } from "./_components/home/depth-scene";
 import { HomeCallToAction, HomeSecurity } from "./_components/home/home-closing";
@@ -55,7 +57,11 @@ export default function Home() {
           <HomeCallToAction />
           <HomeSecurity />
           <footer className="space-y-2 pb-2 text-center text-xs text-muted-foreground">
+            <Link href={ROUTES.CONTACT} className="underline-offset-4 hover:underline">
+              お問い合わせ
+            </Link>
             <LegalLinks />
+
             <p>© 2026 就活copilot. All rights reserved.</p>
           </footer>
         </DepthScene>

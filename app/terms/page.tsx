@@ -79,10 +79,14 @@ export default function TermsPage() {
       <LegalSection title="7. 退会とサービスの終了">
         <p>
           退会は
+          <Link href={ROUTES.PROFILE} className="text-primary underline underline-offset-4">
+            プロフィールの画面
+          </Link>
+          からできます。退会すると、アカウントと登録したすべての情報が消えます。ログインできないときなどは、
           <Link href={ROUTES.CONTACT} className="text-primary underline underline-offset-4">
             問い合わせフォーム
           </Link>
-          から依頼してください。運営者は、このサービスを終了することがあります。終了するときは、できるだけ前もってサービスの画面でお知らせします。
+          から退会を依頼できます。運営者は、このサービスを終了することがあります。終了するときは、できるだけ前もってサービスの画面でお知らせします。
         </p>
       </LegalSection>
 

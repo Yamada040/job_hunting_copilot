@@ -158,7 +158,7 @@ func run() error {
 			SelfAnalysis: assessment.NewSelfAnalysisService(db, xpService, aiClient, limiter),
 		},
 		webtest: webtest.NewService(db, xpService),
-		contact: contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP},
+		contact: contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP, Limiter: limiter},
 		admin:   admin.Handler{Pool: db, IsDeveloper: profiles.IsDeveloper, Now: time.Now},
 	})
 	if err != nil {

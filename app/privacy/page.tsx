@@ -37,7 +37,8 @@ const recipients = [
   {
     name: "メール送信サービス",
     purpose: "問い合わせを運営者のメールに届けるため",
-    content: "問い合わせの件名・本文と、プロフィールの氏名・ログインのメールアドレス・ユーザーID。",
+    content:
+      "問い合わせの件名・本文と返信先のメールアドレス。ログインして送ったときは、プロフィールの氏名・ログインのメールアドレス・ユーザーIDも。",
   },
 ];
 
@@ -55,7 +56,7 @@ export default function PrivacyPage() {
           <Link href={ROUTES.CONTACT} className="text-primary underline underline-offset-4">
             問い合わせフォーム
           </Link>
-          （ログインが必要です）からお願いします。
+          （ログインしなくても使えます）からお願いします。
         </p>
       </LegalSection>
 
@@ -65,15 +66,18 @@ export default function PrivacyPage() {
           <li>プロフィール: 氏名、大学、学部、志望業界、就活の軸、目標など</li>
           <li>登録した内容: 企業、ES、面接ログ、予定、自己分析・適性チェックの回答、Webテストの問題と解答</li>
           <li>AIの結果: 添削結果・振り返り結果・分析結果・診断結果と、AIの利用回数</li>
-          <li>問い合わせの内容</li>
+          <li>問い合わせの内容: 件名、本文、返信先のメールアドレス</li>
           <li>アクセスの記録: IPアドレス、ブラウザの種類など、サービスの配信で自動的に残る記録</li>
+          <li>
+            問い合わせの送信回数: ログインせずに送ったときは、IPアドレスを元に戻せない形（ハッシュ）にして数えます
+          </li>
         </ul>
       </LegalSection>
 
       <LegalSection title="3. 使い道">
         <ul>
           <li>このサービスの機能を提供するため（登録した内容の表示、AIの機能、XP・レベルの計算など）</li>
-          <li>不正な利用を防ぎ、AIの利用回数の上限を守るため</li>
+          <li>不正な利用を防ぎ、AIの利用回数と問い合わせの送信回数の上限を守るため</li>
           <li>問い合わせに答えるため</li>
           <li>不具合の調査とサービスの改善のため</li>
         </ul>
@@ -110,11 +114,17 @@ export default function PrivacyPage() {
 
       <LegalSection title="6. 退会とデータの削除">
         <p>
-          退会と、預かった情報の削除は、
+          <Link href={ROUTES.PROFILE} className="text-primary underline underline-offset-4">
+            プロフィールの画面
+          </Link>
+          から退会できます。退会すると、アカウントと預かったすべての情報が消えます。企業・ES・面接ログ・予定などは、画面から1件ずつ消すこともできます。
+        </p>
+        <p>
+          ログインできないときなどは、
           <Link href={ROUTES.CONTACT} className="text-primary underline underline-offset-4">
             問い合わせフォーム
           </Link>
-          から依頼してください。運営者が本人の依頼であることを確かめてから、アカウントと登録した内容をまとめて消します。企業・ES・面接ログ・予定などは、画面から1件ずつ消すこともできます。
+          から削除を依頼できます。登録したGoogleアカウントのメールアドレスを返信先にしてください。運営者が本人の依頼であることを確かめてから、アカウントと登録した内容をまとめて消します。
         </p>
       </LegalSection>
 

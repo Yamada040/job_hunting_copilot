@@ -1,4 +1,4 @@
-// Package ratelimit は、AIのように費用のかかる操作の回数を、ユーザーごとと、アプリ全体で制限する。
+// Package ratelimit は、AIや問い合わせのように費用や負担のかかる操作の回数を、ユーザーごとと、アプリ全体で制限する。
 package ratelimit
 
 import (
@@ -13,7 +13,7 @@ import (
 )
 
 // Rule は、1つの制限。Daily が true なら日本時間の1日ごとに、false なら Window ごとに数え直す。
-// AppWide が true なら、ユーザーごとではなく全員で1つの枠を数える。
+// AppWide が true なら、ユーザーごとではなく Bucket ごとに全員で1つの枠を数える（アプリ全体の枠や、IPごとの枠）。
 type Rule struct {
 	Bucket  string
 	Max     int
@@ -34,6 +34,21 @@ var (
 	CompanyAnalysisDaily = Rule{Bucket: "ai_company_analysis_daily", Max: 3, Daily: true,
 		Message: "企業分析を使えるのは1日3回までです。明日また使えます。"}
 )
+
+// 問い合わせの制限。送信用の Gmail のアカウントが1日の送信上限で止められないよう、アプリ全体の上限も設ける
+var (
+	ContactUserDaily = Rule{Bucket: "contact_daily", Max: 5, Daily: true,
+		Message: "お問い合わせを送れるのは1日5通までです。明日また送れます。"}
+	ContactAppDaily = Rule{Bucket: "contact_daily", Max: 50, Daily: true, AppWide: true,
+		Message: "本日はお問い合わせが多く、受付を一時的に止めています。明日以降に再度お試しください。"}
+)
+
+// ContactIPDaily は、ログインしていない人の問い合わせの、IPごとの1日の上限。ipHash ごとに別の枠を
+// アプリ全体の枠と同じ表で数える（ユーザーに属さない枠なので）。ContactAppDaily の枠と名前がぶつからないよう接頭辞を付ける
+func ContactIPDaily(ipHash string) Rule {
+	return Rule{Bucket: "contact_daily:ip:" + ipHash, Max: 3, Daily: true, AppWide: true,
+		Message: "お問い合わせを送れるのは1日3通までです。明日また送れます。"}
+}
 
 // AppLimits は、アプリ全体の1日の上限。外部のAPIの無料枠に合わせて変えられるよう、環境変数から読む（cmd/server）。
 type AppLimits struct {

@@ -85,7 +85,7 @@ flowchart LR
 
 - **ログイン**: Supabase Auth（Google OAuth）。Next.js の `proxy.ts` がページへのアクセス時にセッションを確かめ、未ログインなら `/login` へリダイレクトする
 - **バックエンドの認証**: ブラウザが Supabase のアクセストークンを `Authorization: Bearer` で送り、バックエンドが Supabase の公開鍵（JWKS）で検証する（`backend/internal/auth`）。ユーザーIDは検証したトークンからだけ取り出し、リクエストの本文やURLのIDは信用しない
-- **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける
+- **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける（稼働確認・カレンダーの購読用URL・問い合わせ）。`proxy.ts` は `/v1` を素通しし、ログインの判断はバックエンドに任せる
 - **認可**: バックエンドがすべての問い合わせを `user_id` で絞り込む。DBにアクセスする関数は `userID` を必須の引数にする。他人のデータは存在しないデータと同じく 404 にする
 - **RLS**: 全テーブルで有効だが、ポリシーは1つも作らない。Supabase が公開している Data API を塞ぐためだけに使い、バックエンドはRLSの対象外のロールで接続する
 - **Next.js の Supabase クライアント**: 認証（セッション・ログイン・ログアウト・メールアドレスの表示）にだけ使い、データの読み書きには使わない
@@ -112,7 +112,7 @@ backend/
     ├── db/                   # sqlc が internal/db/queries/*.sql から生成した問い合わせ
     ├── xp/                   # XPの付与（各機能のサービスが、元の操作と同じトランザクションで呼ぶ）
     ├── ai/                   # Gemini / GPT / Tavily とプロンプト
-    ├── ratelimit/            # AIの回数制限（短時間の連打と1日の上限）
+    ├── ratelimit/            # AI・問い合わせの回数制限（短時間の連打と1日の上限）
     ├── auth/                 # JWTの検証
     └── platform/             # エラーの形式、ミドルウェア、トランザクション、DB接続
 ```
@@ -121,6 +121,13 @@ backend/
 - **入力の検証**: 形式（必須・文字数・enum）は `openapi.yaml` で定義し、ミドルウェアが仕様と照らし合わせて弾く。ドメインのルール（空白だけの企業名など）は service で確かめる
 - **トランザクション**: 複数の書き込みは `platform.InTx` でまとめる。XPの付与は元の操作と同じトランザクションで行う
 - **企業へのひも付け**: ES・面接ログ・予定を企業にひも付けるときは、`company.EnsureOwned` で本人の企業かを確かめる
+
+### 問い合わせ
+
+- `POST /v1/contact` はログインせずに使える。ログインしていなければ返信先のメールアドレスが必須で、ログイン中はログインのメールアドレスに返信する
+- **回数制限**: ログイン中は1人1日5通、ログインしていなければIPごとに1日3通、アプリ全体で1日50通（送信用の Gmail が止められないように）。IPは `platform.ClientIP` が `X-Real-IP`（Vercel が上書きするので偽れない）から読む
+- 画面では隠した欄（`website`）に値があれば、自動送信として送ったことにして捨てる
+- SMTP の設定が無ければ 503 を返し、画面にはその旨を出す
 
 ### AI
 
@@ -152,8 +159,8 @@ backend/
 - `xp_logs`: XPの獲得履歴。`(user_id, action, ref_id)` がユニークで、同じ対象への二重付与をDBが防ぐ
 - `aptitude_results` / `self_analysis_results`: 1人1件
 - `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録（解答の記録は問題ごとに新しい20件だけを残す）
-- `api_rate_limits`: AIの回数制限の状態（1人ごと）
-- `api_app_rate_limits`: AIのアプリ全体の上限の状態（`bucket` ごとに1行）
+- `api_rate_limits`: AI・問い合わせの回数制限の状態（1人ごと）
+- `api_app_rate_limits`: ユーザーに結び付かない回数制限の状態（`bucket` ごとに1行）。AIと問い合わせのアプリ全体の上限と、ログインしていない人の問い合わせのIPごとの上限（`contact_daily:ip:<IPのハッシュ>`）
 
 **1人あたりの件数の上限**: 企業500・ES500・面接ログ500・予定2000・Webテストの問題500（各 service の定数。超えると 409）。スクリプトでの量産から無料プランのDB（500MB）と、一覧のレスポンス（Vercel の上限4.5MB）を守るため。数えてから作るので同時に作ると数件超えうるが、許容している（`platform.CheckLimit`）。
 
@@ -381,12 +388,12 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 - `/aptitude` — 適性チェック＋AI診断
 - `/webtests`, `/webtests/new`, `/webtests/[id]` — Webテスト練習
 - `/profile` — プロフィール/目標の編集、退会（成功したらこの端末からログアウトして `/` へ移る）
-- `/contact` — フィードバックフォーム（ログイン済みユーザー向け）
+- `/contact` — 問い合わせ（ログインせずに使える。LP のフッターとログイン画面からリンクする。ログインしていなければヘッダーはロゴとログインへの入口だけにし、下のメニューは出さない）
 - `/developer` — 開発者向け管理ページ（バックエンドが `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけ下のメニューにリンクが出る）
 - `/privacy` — プライバシーポリシー（預かる情報、外部のAIなどへ送る内容、削除の依頼方法）。Google の OAuth 同意画面にもこのURLを登録する
 - `/terms` — 利用規約
 
-すべての保護ページ: 未ログインなら `proxy.ts` が `/login` へリダイレクトする。ログインせずに開けるページ（`/`・`/login`・`/privacy`・`/terms`）は `lib/constants/routes.ts` の `PUBLIC_PAGES` にまとめ、ヘッダーと下のメニューも出さない。外部のAIへ送る内容を変えたら、`/privacy` も直す
+すべての保護ページ: 未ログインなら `proxy.ts` が `/login` へリダイレクトする。ログインせずに開けるページ（`/`・`/login`・`/privacy`・`/terms`・`/contact`）は `lib/constants/routes.ts` の `PUBLIC_PAGES` にまとめ、ログインしていなければヘッダー（レベル・XP）と下のメニューを出さない。自分で枠を描くページ（`/contact` 以外）は `STANDALONE_PAGES` にも入れ、ログイン中でも出さない。外部のAIへ送る内容を変えたら、`/privacy` も直す
 
 ### 型定義
 

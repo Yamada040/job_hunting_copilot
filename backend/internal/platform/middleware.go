@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"runtime/debug"
 	"time"
@@ -52,6 +53,30 @@ func Logger(ctx context.Context) *slog.Logger {
 		return slog.Default().With("request_id", id)
 	}
 	return slog.Default()
+}
+
+type clientIPKey struct{}
+
+// ClientIP は、リクエストを送ってきた端末のIPアドレスをコンテキストに入れる。
+// Vercel は X-Real-IP を接続元のIPで上書きするので、利用者が偽れない。X-Forwarded-For は、手元の next dev の転送などでは
+// 利用者が付けた値がそのまま残るので見ない。ヘッダーが無ければ（手元で直接呼んだとき）接続元のアドレスを使う。
+func ClientIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := r.Header.Get("X-Real-IP")
+		if ip == "" {
+			ip = r.RemoteAddr
+			if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+				ip = host
+			}
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), clientIPKey{}, ip)))
+	})
+}
+
+// ClientIPFrom は、ClientIP が入れたIPアドレスを返す。無ければ空文字。
+func ClientIPFrom(ctx context.Context) string {
+	ip, _ := ctx.Value(clientIPKey{}).(string)
+	return ip
 }
 
 type statusRecorder struct {

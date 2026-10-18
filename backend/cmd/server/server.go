@@ -101,6 +101,7 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 		platform.RequestID,
 		platform.AccessLog,
 		platform.Recover,
+		platform.ClientIP,
 		verifier.Authenticate,
 		platform.Validate(spec, auth.RequireUser),
 	), nil

@@ -10,18 +10,19 @@ export const metadata: Metadata = {
   title: "お問い合わせ",
 };
 
+/** ログインしなくても開ける（ログインできなくて困っている人も連絡できるように）。 */
 export default async function ContactPage() {
   // メールアドレスとアカウント名はログイン情報（Supabase Auth）のものなので、セッションから読む
   const supabase = await createSupabaseReadonlyClient();
   const { data: userData } = await supabase.auth.getUser();
-  const accountName = userData.user?.user_metadata?.full_name || userData.user?.user_metadata?.name || "";
-  const email = userData.user?.email ?? "";
+  const user = userData.user;
+  const accountName = user?.user_metadata?.full_name || user?.user_metadata?.name || "";
 
   return (
     <AppLayout
       avatar={<AvatarGuide messages={GUIDE_TIPS.contact} />}
       headerTitle="お問い合わせ"
-      headerDescription="不具合やご要望を運営に送信できます"
+      headerDescription="不具合やご要望、ログインできないときのご相談はこちらから"
       className="space-y-6"
     >
       <Card className="overflow-visible py-6">
@@ -30,11 +31,17 @@ export default async function ContactPage() {
           <CardTitle>
             <h2 className="text-lg font-semibold">お問い合わせフォーム</h2>
           </CardTitle>
-          <CardDescription>内容を入力して送信すると、そのまま運営に送信されます。</CardDescription>
+          <CardDescription>
+            送っていただいた内容は運営にメールで届きます。返信はメールで、数日以内にお送りします。
+          </CardDescription>
         </CardHeader>
         <CardContent className="px-6">
           <Card variant="muted" className="overflow-visible px-4">
-            <ContactForm accountName={accountName} email={email} />
+            {user ? (
+              <ContactForm signedIn accountName={accountName} email={user.email ?? ""} />
+            ) : (
+              <ContactForm signedIn={false} />
+            )}
           </Card>
         </CardContent>
       </Card>

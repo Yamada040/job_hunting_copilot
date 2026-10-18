@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { contactRequestSchema } from "./contact";
+import { contactRequestSchema, guestContactRequestSchema } from "./contact";
+
+describe("guestContactRequestSchema", () => {
+  const firstMessage = (email: string) => {
+    const result = guestContactRequestSchema.safeParse({ subject: "件名", message: "本文", email });
+    return result.success ? null : result.error.issues[0].message;
+  };
+
+  it("requires a reply-to email address", () => {
+    expect(firstMessage("")).toBe("返信先のメールアドレスを入力してください");
+  });
+
+  it("rejects text that is not an email address", () => {
+    expect(firstMessage("not-an-email")).toBe("メールアドレスの形式で入力してください");
+  });
+
+  it("accepts an email address with surrounding spaces trimmed", () => {
+    const result = guestContactRequestSchema.parse({ subject: "件名", message: "本文", email: " guest@example.com " });
+    expect(result.email).toBe("guest@example.com");
+  });
+});
 
 describe("contactRequestSchema", () => {
   it("accepts subject at exactly the 120 char boundary", () => {

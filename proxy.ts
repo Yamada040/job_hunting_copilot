@@ -34,7 +34,8 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/api/");
+  // /v1 はバックエンドのAPI。ログインが必要かはバックエンドが決める（手元と E2E では Next.js がここを通して転送する）
+  const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/api/") || pathname.startsWith("/v1/");
 
   // ログイン済みで /login にアクセス → ダッシュボードへ
   if (user && pathname === ROUTES.LOGIN) {

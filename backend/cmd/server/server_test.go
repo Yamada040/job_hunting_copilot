@@ -145,6 +145,16 @@ func TestMeRequiresLogin(t *testing.T) {
 	}
 }
 
+func TestContactCanBeSentWithoutLogin(t *testing.T) {
+	// SMTP の設定が無いので 503 になる。401 ではなく handler まで届いたことを確かめる
+	rec := newTestServer(t).do(http.MethodPost, "/v1/contact", uuid.Nil,
+		`{"subject":"件名","message":"本文","email":"guest@example.com"}`)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503 (reached the handler without login)", rec.Code)
+	}
+}
+
 func TestDeleteMeRequiresLogin(t *testing.T) {
 	rec := serve(t, http.MethodDelete, "/v1/me")
 
