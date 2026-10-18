@@ -32,6 +32,8 @@ func (memoryProfiles) Update(_ context.Context, userID uuid.UUID, u profile.Upda
 	return profile.Profile{ID: userID, FullName: u.FullName, Level: 1}, nil
 }
 
+func (memoryProfiles) Delete(context.Context, uuid.UUID) error { return nil }
+
 type testServer struct {
 	t       *testing.T
 	issuer  *authtest.Issuer
@@ -140,6 +142,22 @@ func TestMeRequiresLogin(t *testing.T) {
 	}
 	if p := decodeProblem(t, rec); p.Code != "unauthorized" {
 		t.Errorf("code = %q, want unauthorized", p.Code)
+	}
+}
+
+func TestDeleteMeRequiresLogin(t *testing.T) {
+	rec := serve(t, http.MethodDelete, "/v1/me")
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+}
+
+func TestDeleteMeReturnsNoContent(t *testing.T) {
+	rec := newTestServer(t).do(http.MethodDelete, "/v1/me", uuid.New(), "")
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204: %s", rec.Code, rec.Body)
 	}
 }
 

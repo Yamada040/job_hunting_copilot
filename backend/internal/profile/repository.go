@@ -58,6 +58,14 @@ func (r *Repository) Update(ctx context.Context, userID uuid.UUID, u Update) (Pr
 	return fromRow(row), nil
 }
 
+// Delete は、ユーザーを Supabase Auth から削除する。アプリのテーブルは on delete cascade で一緒に消える。
+func (r *Repository) Delete(ctx context.Context, userID uuid.UUID) error {
+	if err := r.q.DeleteUser(ctx, userID); err != nil {
+		return fmt.Errorf("delete user: %w", err)
+	}
+	return nil
+}
+
 func fromRow(row db.Profile) Profile {
 	return Profile{
 		ID:             row.ID,

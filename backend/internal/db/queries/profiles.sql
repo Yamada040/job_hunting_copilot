@@ -17,3 +17,7 @@ update profiles set
   goal_state      = case when @set_goal_state::boolean      then sqlc.narg(goal_state)      else goal_state end
 where id = @id
 returning *;
+
+-- name: DeleteUser :exec
+-- アプリのテーブルはすべて auth.users を on delete cascade で参照しているので、この1行でその人のデータがすべて消える
+delete from auth.users where id = @id;
