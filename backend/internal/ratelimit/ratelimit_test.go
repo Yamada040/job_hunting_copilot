@@ -89,6 +89,11 @@ func TestHitAllowsExactlyMaxUnderConcurrentRequests(t *testing.T) {
 	}
 }
 
+// unlimitedLimiter は、アプリ全体の回数と利用料の上限では止まらない Limiter を返す。確かめたい枠だけを appRule で差し替えて使う。
+func unlimitedLimiter() *Limiter {
+	return NewLimiter(AppLimits{AIDaily: 1 << 30, CompanyAnalysisDaily: 1 << 30, AIDailyBudget: 1 << 20})
+}
+
 // appRule は、アプリ全体の枠を、ほかのテストや手元の過去の実行と混ざらないよう、このテストだけの名前で作る。
 func appRule(t *testing.T, pool *pgxpool.Pool, max int) Rule {
 	t.Helper()
@@ -105,7 +110,8 @@ func TestHitAIRejectsOtherUsersAfterAppLimit(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userA := dbtest.CreateUser(t, pool)
 	userB := dbtest.CreateUser(t, pool)
-	l := &Limiter{now: time.Now, aiAppDaily: appRule(t, pool, 1)}
+	l := unlimitedLimiter()
+	l.aiAppDaily = appRule(t, pool, 1)
 	q := db.New(pool)
 
 	if err := l.HitAI(t.Context(), q, userA); err != nil {
@@ -123,7 +129,8 @@ func TestUserRejectedByOwnLimitDoesNotUseAppLimit(t *testing.T) {
 	heavyUser := dbtest.CreateUser(t, pool)
 	otherUser := dbtest.CreateUser(t, pool)
 	// 連打した本人が通った回数（AIBurst.Max）と、ほかの人の1回で、ちょうど埋まる枠
-	l := &Limiter{now: time.Now, aiAppDaily: appRule(t, pool, AIBurst.Max+1)}
+	l := unlimitedLimiter()
+	l.aiAppDaily = appRule(t, pool, AIBurst.Max+1)
 	q := db.New(pool)
 
 	for range AIBurst.Max + 5 {
@@ -136,7 +143,8 @@ func TestUserRejectedByOwnLimitDoesNotUseAppLimit(t *testing.T) {
 
 func TestAppLimitAllowsExactlyMaxUnderConcurrentRequestsFromManyUsers(t *testing.T) {
 	pool := dbtest.Connect(t)
-	l := &Limiter{now: time.Now, companyAnalysisAppDaily: appRule(t, pool, 12)}
+	l := unlimitedLimiter()
+	l.companyAnalysisAppDaily = appRule(t, pool, 12)
 	users := make([]uuid.UUID, 20)
 	for i := range users {
 		users[i] = dbtest.CreateUser(t, pool)
