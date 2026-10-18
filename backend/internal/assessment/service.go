@@ -113,7 +113,7 @@ func (s *Service[A]) Diagnose(ctx context.Context, userID uuid.UUID) (Result[A],
 	if result.AIResult != nil {
 		return Result[A]{}, s.alreadyDone()
 	}
-	if err := s.limiter.Hit(ctx, q, userID, ratelimit.AIBurst, ratelimit.AIDaily); err != nil {
+	if err := s.limiter.HitAI(ctx, q, userID); err != nil {
 		return Result[A]{}, err
 	}
 	text, usage, err := s.ai.Generate(ctx, s.kind.aiKind, s.kind.aiInput(result.Answers))

@@ -134,7 +134,8 @@ backend/
 | AI適性診断                | `POST /v1/aptitude-result/diagnosis`     | 1回                      |
 | AI自己分析                | `POST /v1/self-analysis-result/analysis` | 1回                      |
 
-- **回数制限**（`internal/ratelimit`）: 汎用のAIは1分12回・1日20回、企業分析は10分5回・1日3回（1人あたり、1日は日本時間）
+- **回数制限**（`internal/ratelimit`）: 汎用のAIは1分12回・1日20回、企業分析は10分5回・1日3回（1人あたり、1日は日本時間）。それとは別に、アプリ全体の1日の上限（既定は汎用のAI 300回・企業分析10回。Tavily の月1,000回に収まる値）を全員で共有し、環境変数で変えられる。本人の上限で断ったリクエストは全体の枠を減らさない
+- **Web検索**: 企業分析の検索は1回の分析で最大3回（実際に Tavily を呼んだ回数で数える）。検索が使えないとき（キーが無い・無料枠が尽きた・失敗した）は検索なしで分析を続け、結果の先頭にその旨を書く
 - **プロバイダー**: `AI_PROVIDER=gemini|gpt`。キーが無いときはAI機能だけが 503 を返す（仮の文章は保存されてしまうので返さない）
 - **用語**: 添削結果・振り返り結果・分析結果・診断結果。「サマリー」「要約」「AI回答」は使わない。DBの列名はすべて `ai_result`
 
@@ -151,7 +152,8 @@ backend/
 - `xp_logs`: XPの獲得履歴。`(user_id, action, ref_id)` がユニークで、同じ対象への二重付与をDBが防ぐ
 - `aptitude_results` / `self_analysis_results`: 1人1件
 - `webtest_questions` / `webtest_attempts`: ユーザーが自分で作る問題と解答の記録
-- `api_rate_limits`: AIの回数制限の状態
+- `api_rate_limits`: AIの回数制限の状態（1人ごと）
+- `api_app_rate_limits`: AIのアプリ全体の上限の状態（`bucket` ごとに1行）
 
 企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
 
@@ -339,6 +341,8 @@ AI_MODEL=gemini-2.5-flash (Geminiの場合) または gpt-4o-mini (GPTの場合)
 AI_ENDPOINT=https://api.openai.com/v1/chat/completions (カスタムOpenAIエンドポイントを使う場合)
 AI_API_VERSION=v1beta (Geminiの場合)
 TAVILY_API_KEY=...          # AI企業分析のWeb検索
+AI_APP_DAILY_LIMIT=300               # 汎用のAIのアプリ全体の1日の上限（無ければ300）
+COMPANY_ANALYSIS_APP_DAILY_LIMIT=10  # 企業分析のアプリ全体の1日の上限（無ければ10）
 SMTP_HOST=smtp.gmail.com    # 問い合わせ（ポート465は最初からTLS、それ以外はSTARTTLS）
 SMTP_PORT=465
 SMTP_USER=your-mail@example.com

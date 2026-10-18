@@ -184,7 +184,7 @@ func (s *Service) Analyze(ctx context.Context, userID, id uuid.UUID) (db.Company
 	if row.AiResult != nil {
 		return db.Company{}, alreadyAnalyzed()
 	}
-	if err := s.limiter.Hit(ctx, q, userID, ratelimit.CompanyAnalysisBurst, ratelimit.CompanyAnalysisDaily); err != nil {
+	if err := s.limiter.HitCompanyAnalysis(ctx, q, userID); err != nil {
 		return db.Company{}, err
 	}
 	text, usage, err := s.ai.AnalyzeCompany(ctx, analysisInput(row))
