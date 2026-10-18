@@ -106,8 +106,8 @@ func TestGeminiAnalyzeCompanySearchesThenAnswers(t *testing.T) {
 	if len(*tavBodies) != 1 || !strings.Contains((*tavBodies)[0], "サンプル 採用") {
 		t.Errorf("tavily requests = %v, want one search with the query from the model", *tavBodies)
 	}
-	if !strings.Contains((*gemBodies)[1], "新卒採用") {
-		t.Errorf("second gemini request = %s, want the search result passed back", (*gemBodies)[1])
+	if !strings.Contains((*gemBodies)[1], "新卒採用") || !strings.Contains((*gemBodies)[1], "search_result") {
+		t.Errorf("second gemini request = %s, want the search result passed back inside the search_result marks", (*gemBodies)[1])
 	}
 }
 
@@ -159,6 +159,9 @@ func TestGPTAnalyzeCompanySearchesAtMostMaxSearchesEvenWhenAskedManyAtOnce(t *te
 	second := (*gptBodies)[1]
 	if !strings.Contains(second, `"content":"`+searchLimitReply+`","tool_call_id":"call-4"`) || strings.Contains(second, `"tools"`) {
 		t.Errorf("second request = %s, want the 4th call answered without searching and no more search tool", second)
+	}
+	if !strings.Contains(second, "search_result") || !strings.Contains(second, "新卒採用") {
+		t.Errorf("second request = %s, want the search results passed back inside the search_result marks", second)
 	}
 }
 
