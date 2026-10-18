@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,6 +13,11 @@ const LOGIN_ERRORS: Record<string, string> = {
   auth: "ログインに失敗しました。もう一度お試しください。",
   session: "ログインの有効期限が切れました。もう一度ログインしてください。",
   logout: "ほかの端末からのログアウトに失敗しました。この端末からはログアウトしています。",
+};
+
+export const metadata: Metadata = {
+  title: "ログイン",
+  alternates: { canonical: "/login" },
 };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {

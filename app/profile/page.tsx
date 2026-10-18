@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
 import { AppLayout } from "@/app/_components/layout";
 import { ProfileForm } from "./_components/profile-form";
 import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
+
+export const metadata: Metadata = {
+  title: "プロフィール",
+};
 
 export default async function ProfilePage() {
   // メールアドレスはログイン情報（Supabase Auth）のものなので、プロフィールのAPIではなくセッションから読む
