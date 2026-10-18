@@ -115,7 +115,8 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 
 - 適性診断・自己分析は何度もやるものではなく、AIの費用も抑えたいため1回だけとする
 - 企業分析の上限が厳しいのは、Tavilyの無料枠（月1,000クレジット程度）に対し、1回で最大3回検索するため
-- サービス全体の上限は、利用者が増えてから検討する
+- 1人ごとの上限とは別に、アプリ全体の1日の上限を全員で共有する（汎用AI 300回・企業分析10回。環境変数 `AI_APP_DAILY_LIMIT`・`COMPANY_ANALYSIS_APP_DAILY_LIMIT` で変えられる）。企業分析の10回は、10回 × 3検索 × 31日 = 930回で Tavily の月1,000回に収まる値
+- Web検索が使えないとき（無料枠が尽きた・失敗した）は、企業分析を止めずに検索なしで続け、結果の先頭にその旨を書く
 - 再実行の可否と上限は、画面ではなくバックエンドで強制する
 
 ## 4. データ
@@ -141,18 +142,19 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 
 共通: すべての `user_id` は `not null`。`updated_at` を持つテーブルは `moddatetime` トリガーで自動更新する。
 
-| テーブル                                     | 列                                                                                                                                             | 備考                                                                                   |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `profiles`                                   | id, full_name, university, faculty, avatar_id, target_industry, career_axis, goal_state, xp, level, created_at, updated_at                     | XPとレベルは保存する（下記）                                                           |
-| `companies`                                  | id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at | `(user_id, normalized_name)` がユニーク。`preference` は1〜5                           |
-| `es_entries`                                 | id, user_id, company_id, position, title, status, content_md, questions, tags, deadline, memo, ai_result, created_at, updated_at               | `position` は職種・募集枠（自由入力）。企業のURLは `companies.url` に一本化            |
-| `es_reviews`                                 | id, user_id, es_entry_id, ai_result, created_at                                                                                                | ESのAI添削の履歴（点数の推移を見せるため上書きしない）                                 |
-| `interview_logs`                             | id, user_id, company_id, format, round, interview_date, questions, improvement, unexpected, ai_result, created_at, updated_at                  | `round` は面接の回次（自由入力）。`questions` は質問と回答の一覧だけを持つ             |
-| `calendar_events`                            | id, user_id, company_id（任意）, title, type, date, time, created_at, updated_at                                                               | `time` は `time` 型                                                                    |
-| `xp_logs`                                    | id, user_id, xp, action, ref_id, created_at                                                                                                    | `(user_id, action, ref_id)` がユニーク。`(user_id, action, created_at)` にインデックス |
-| `aptitude_results` / `self_analysis_results` | id, user_id, answers, ai_result, created_at                                                                                                    | `user_id` がユニーク                                                                   |
-| `webtest_questions` / `webtest_attempts`     | 現行どおり                                                                                                                                     |                                                                                        |
-| `api_rate_limits`                            | user_id, bucket, window_start, count                                                                                                           | AIの1日の上限も `bucket` を分けてここで管理する                                        |
+| テーブル                                     | 列                                                                                                                                             | 備考                                                                                                                                       |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `profiles`                                   | id, full_name, university, faculty, avatar_id, target_industry, career_axis, goal_state, xp, level, created_at, updated_at                     | XPとレベルは保存する（下記）                                                                                                               |
+| `companies`                                  | id, user_id, name, normalized_name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite, ai_result, created_at, updated_at | `(user_id, normalized_name)` がユニーク。`preference` は1〜5                                                                               |
+| `es_entries`                                 | id, user_id, company_id, position, title, status, content_md, questions, tags, deadline, memo, ai_result, created_at, updated_at               | `position` は職種・募集枠（自由入力）。企業のURLは `companies.url` に一本化                                                                |
+| `es_reviews`                                 | id, user_id, es_entry_id, ai_result, created_at                                                                                                | ESのAI添削の履歴（点数の推移を見せるため上書きしない）                                                                                     |
+| `interview_logs`                             | id, user_id, company_id, format, round, interview_date, questions, improvement, unexpected, ai_result, created_at, updated_at                  | `round` は面接の回次（自由入力）。`questions` は質問と回答の一覧だけを持つ                                                                 |
+| `calendar_events`                            | id, user_id, company_id（任意）, title, type, date, time, created_at, updated_at                                                               | `time` は `time` 型                                                                                                                        |
+| `xp_logs`                                    | id, user_id, xp, action, ref_id, created_at                                                                                                    | `(user_id, action, ref_id)` がユニーク。`(user_id, action, created_at)` にインデックス                                                     |
+| `aptitude_results` / `self_analysis_results` | id, user_id, answers, ai_result, created_at                                                                                                    | `user_id` がユニーク                                                                                                                       |
+| `webtest_questions` / `webtest_attempts`     | 現行どおり                                                                                                                                     |                                                                                                                                            |
+| `api_rate_limits`                            | user_id, bucket, window_start, count                                                                                                           | AIの1日の上限も `bucket` を分けてここで管理する                                                                                            |
+| `api_app_rate_limits`                        | bucket, window_start, count                                                                                                                    | アプリ全体で共有する1日の上限（AI・問い合わせ）と、未ログインの問い合わせのIPごとの上限。`api_rate_limits` の `user_id` は必須のため分ける |
 
 `company_id` の外部キーはすべて `on delete cascade`。
 
@@ -335,7 +337,7 @@ backend/
 | エラーの変換       | service はドメインのエラーを返し、Problem Details への変換は1か所で行う。想定外のエラーは利用者に詳細を返さずログにだけ出す。リプレイス後のSlack通知はここに差し込む       |
 | CORS               | 不要。Next.js と同じドメインで動くため（7章）                                                                                                                              |
 | 設定               | すべて環境変数。足りなければ起動しない                                                                                                                                     |
-| タイムアウト       | 通常10秒、AIは60秒、企業分析はより長く（Vercelの上限300秒以内）                                                                                                            |
+| タイムアウト       | 通常10秒、AIは1回90秒。企業分析は全体で250秒（Vercelの上限300秒より手前で止め、時間切れのエラーを返す。回数制限の1回分は戻さない）                                         |
 | AIキーがないとき   | 仮の応答を返し、サーバーは止めない                                                                                                                                         |
 
 ## 7. インフラ
@@ -343,7 +345,7 @@ backend/
 - **バックエンドは Vercel で動かす**。管理するサービスを増やさず、運用の手間を減らすため
   - 採らなかった案: Google Cloud Run（設計どおりに動くが、サービスとカード登録が増える）、Render の無料プラン（停止からの再開が遅い）
 - Vercel の Go ランタイムは `http.Flusher` に対応しておらずSSEが使えないため、**企業分析はストリーミングをやめ、完成してからJSONで返す**。画面は「分析中」の表示にする。進み具合の表示は、必要になってから検討する
-- Hobby プランの関数の実行時間の上限は300秒
+- Hobby プランの関数の実行時間の上限は300秒。`vercel.json` のバックエンドの `functions` で `maxDuration: 300` を明示している
 - Next.js と同じプロジェクトに置くには Vercel の **Services**（ベータ）を使う。ルートの `/api` にGoのファイルを置くと、Next.js のAPIルートが404になる不具合が報告されているため
   - `vercel.json` で、`/v1/...` をバックエンド（`backend/`）に、それ以外を Next.js に振り分ける。バックエンドにはパスがそのまま届く（`/v1/health` はバックエンドでも `/v1/health`）
   - Next.js と同じドメインで動くので、CORSは不要

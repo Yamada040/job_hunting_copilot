@@ -11,6 +11,7 @@ import { ApiErrorMessage } from "@/app/_components/api-error-message";
 import { noticeWhenDone } from "@/app/_components/avatar/avatar-notice-store";
 import { EsReviewItemCard } from "./es-review-item";
 import { EmptyState } from "@/app/_components/empty-state";
+import { AiSendingNote } from "@/app/_components/ai-result/ai-sending-note";
 
 /** AI添削の実行と、最新の添削結果・総合点の推移の表示。 */
 export function EsReviewPanel({ entryId, companyId }: { entryId: string; companyId: string }) {
@@ -32,24 +33,27 @@ export function EsReviewPanel({ entryId, companyId }: { entryId: string; company
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 px-6">
-        <Button
-          type="button"
-          variant="default"
-          onClick={() =>
-            void noticeWhenDone(reviewEsEntry.mutateAsync(), {
-              action: "AI添削",
-              done: "AI添削が終わりました",
-              link: { href: ROUTES.ES_DETAIL(entryId), label: "結果を見る" },
-            })
-          }
-          disabled={reviewEsEntry.isPending}
-        >
-          {reviewEsEntry.isPending
-            ? "AIが処理中です（数十秒かかることがあります）…"
-            : latest
-              ? "もう一度添削する"
-              : "AI添削する"}
-        </Button>
+        <div className="space-y-1">
+          <Button
+            type="button"
+            variant="default"
+            onClick={() =>
+              void noticeWhenDone(reviewEsEntry.mutateAsync(), {
+                action: "AI添削",
+                done: "AI添削が終わりました",
+                link: { href: ROUTES.ES_DETAIL(entryId), label: "結果を見る" },
+              })
+            }
+            disabled={reviewEsEntry.isPending}
+          >
+            {reviewEsEntry.isPending
+              ? "AIが処理中です（数十秒かかることがあります）…"
+              : latest
+                ? "もう一度添削する"
+                : "AI添削する"}
+          </Button>
+          <AiSendingNote />
+        </div>
         <ApiErrorMessage error={loadError} />
 
         {reviews && reviews.length === 0 && (

@@ -237,15 +237,14 @@ func (ns NullXpAction) Value() (driver.Value, error) {
 	return string(ns.XpAction), nil
 }
 
-type ApiRateLimit struct {
-	UserID      uuid.UUID
+type ApiAppRateLimit struct {
 	Bucket      string
 	WindowStart time.Time
 	Count       int32
 }
 
-type ApiRateLimitsByKey struct {
-	Key         string
+type ApiRateLimit struct {
+	UserID      uuid.UUID
 	Bucket      string
 	WindowStart time.Time
 	Count       int32

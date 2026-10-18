@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-
 import { AppLayout } from "@/app/_components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
@@ -7,7 +6,9 @@ import { ContactForm } from "./_components/contact-form";
 import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
 
-export const metadata: Metadata = { title: "お問い合わせ" };
+export const metadata: Metadata = {
+  title: "お問い合わせ",
+};
 
 /** ログインしなくても開ける（ログインできなくて困っている人も連絡できるように）。 */
 export default async function ContactPage() {

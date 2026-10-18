@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { AppLayout } from "@/app/_components/layout";
 import { WebtestDetail } from "../_components/webtest-detail";
 import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
+
+export const metadata: Metadata = {
+  title: "Webテストの問題",
+};
 
 export default async function WebtestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

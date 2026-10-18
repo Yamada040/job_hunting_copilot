@@ -18,7 +18,7 @@ import {
 import { useMotionValue, type MotionValue } from "framer-motion";
 
 import { useMe } from "@/lib/api/me";
-import { ROUTES } from "@/lib/constants/routes";
+import { PUBLIC_PAGES, ROUTES, STANDALONE_PAGES } from "@/lib/constants/routes";
 import { useSignedIn } from "@/lib/supabase/use-signed-in";
 import { QuickAdd } from "../quick-add/quick-add";
 import { DockIcon, isActive, type DockItem } from "./DockIcon";
@@ -61,10 +61,10 @@ const LEFT_COUNT = 3;
 export function Dock() {
   const pathname = usePathname();
   const signedIn = useSignedIn();
-  // ログインとホームはログイン前の画面なので出さない
-  if (pathname === ROUTES.HOME || pathname === ROUTES.LOGIN) return null;
-  // 問い合わせはログインしなくても開ける。ログインしていなければ、どの画面にも移れないので出さない
-  if (pathname === ROUTES.CONTACT && signedIn !== true) return null;
+  // 自分で枠を描く画面では出さない
+  if (STANDALONE_PAGES.includes(pathname)) return null;
+  // ログインしなくても開ける画面（問い合わせ）では、ログインしていなければどの画面にも移れないので出さない
+  if (PUBLIC_PAGES.includes(pathname) && signedIn !== true) return null;
   return <DockBar pathname={pathname} />;
 }
 

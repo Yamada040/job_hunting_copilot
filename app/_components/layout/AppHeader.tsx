@@ -6,7 +6,7 @@ import { ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
 
-import { ROUTES } from "@/lib/constants/routes";
+import { PUBLIC_PAGES, ROUTES, STANDALONE_PAGES } from "@/lib/constants/routes";
 import { useSignedIn } from "@/lib/supabase/use-signed-in";
 import { XpBadge } from "../xp-badge";
 import { Header } from "./Header";
@@ -18,11 +18,11 @@ import { Header } from "./Header";
 export function AppHeader() {
   const pathname = usePathname();
   const signedIn = useSignedIn();
-  // ログインとホームはログイン前の画面なので出さない
-  if (pathname === ROUTES.HOME || pathname === ROUTES.LOGIN) return null;
-  // 問い合わせはログインしなくても開ける。ログインしているかが分かるまではレベル・XPを出さない
+  // 自分で枠を描く画面では出さない
+  if (STANDALONE_PAGES.includes(pathname)) return null;
+  // ログインしなくても開ける画面（問い合わせ）では、ログインしているかが分かるまでレベル・XPを出さない
   // （ログインしていないのに読みに行くと、エラーになるだけなので）
-  if (pathname === ROUTES.CONTACT && signedIn !== true) {
+  if (PUBLIC_PAGES.includes(pathname) && signedIn !== true) {
     return <Header rightContent={signedIn === false ? <GuestLinks /> : null} showBrand />;
   }
   return (

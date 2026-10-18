@@ -52,9 +52,6 @@ type Handler struct {
 	Limiter *ratelimit.Limiter
 }
 
-// アプリ全体の送信数を数えるときの key
-const allSendersKey = "contact:all"
-
 func (h Handler) SendContact(ctx context.Context, req openapi.SendContactRequestObject) (openapi.SendContactResponseObject, error) {
 	// 隠した欄に値があるのは、画面を使わない自動送信。送れたと思わせて、何度も試されないようにする
 	if req.Body.Website != nil && *req.Body.Website != "" {
@@ -85,19 +82,13 @@ func (h Handler) SendContact(ctx context.Context, req openapi.SendContactRequest
 	}
 
 	q := db.New(h.Pool)
+	// 本人（またはIP）の枠を先に数え、1人の連打がアプリ全体の枠を減らさないようにする。
 	// 送れなかったときも数える。数えずに送ると、送信の失敗を繰り返させてSMTPに負担をかけられるため
-	if signedIn {
-		err := h.Limiter.Hit(ctx, q, userID, ratelimit.ContactUserDaily)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		err := h.Limiter.HitByKey(ctx, q, ipKey(platform.ClientIPFrom(ctx)), ratelimit.ContactIPDaily)
-		if err != nil {
-			return nil, err
-		}
+	own := ratelimit.ContactUserDaily
+	if !signedIn {
+		own = ratelimit.ContactIPDaily(ipHash(platform.ClientIPFrom(ctx)))
 	}
-	if err := h.Limiter.HitByKey(ctx, q, allSendersKey, ratelimit.ContactAllDaily); err != nil {
+	if err := h.Limiter.Hit(ctx, q, userID, own, ratelimit.ContactAppDaily); err != nil {
 		return nil, err
 	}
 
@@ -143,10 +134,10 @@ func isEmailAddress(s string) bool {
 	return err == nil && a.Address == s
 }
 
-// ipKey は、IPアドレスごとの回数を数える key を作る。IPアドレスそのものはDBに残さないよう、ハッシュにする。
-func ipKey(ip string) string {
+// ipHash は、IPアドレスごとの回数の枠の名前に使う値。IPアドレスそのものはDBに残さないよう、ハッシュにする。
+func ipHash(ip string) string {
 	sum := sha256.Sum256([]byte(ip))
-	return "contact:ip:" + hex.EncodeToString(sum[:])
+	return hex.EncodeToString(sum[:])
 }
 
 // SendSMTP は、SMTPでメールを送る。ポート465は最初からTLSで、それ以外はSTARTTLSでつなぐ。

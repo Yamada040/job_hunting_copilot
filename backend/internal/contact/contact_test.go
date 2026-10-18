@@ -35,10 +35,10 @@ func (m *mailbox) send(_ context.Context, _ SMTPConfig, msg Message) error {
 // アプリ全体の回数は実行をまたいで同じ行に貯まるので、消さないと何度か実行するうちに上限に達する。
 func newHandler(t *testing.T, pool *pgxpool.Pool, box *mailbox) Handler {
 	t.Helper()
-	if _, err := pool.Exec(t.Context(), `delete from api_rate_limits_by_key where key like 'contact:%'`); err != nil {
+	if _, err := pool.Exec(t.Context(), `delete from api_app_rate_limits where bucket like 'contact_daily%'`); err != nil {
 		t.Fatalf("reset contact rate limits: %v", err)
 	}
-	return Handler{Pool: pool, Config: config, Send: box.send, Limiter: ratelimit.NewLimiter()}
+	return Handler{Pool: pool, Config: config, Send: box.send, Limiter: ratelimit.NewLimiter(ratelimit.DefaultAppLimits)}
 }
 
 // loggedIn は、ログイン済みのユーザーとしてハンドラーを呼べるコンテキストを作る（auth.Authenticate を通す）。
@@ -172,7 +172,7 @@ func TestSendContactWithoutLoginIsLimitedPerIP(t *testing.T) {
 	box := &mailbox{}
 	h := newHandler(t, pool, box)
 
-	for i := range ratelimit.ContactIPDaily.Max {
+	for i := range ratelimit.ContactIPDaily("").Max {
 		if _, err := h.SendContact(anonymous("203.0.113.1"), body("guest@example.com")); err != nil {
 			t.Fatalf("send %d: %v, want allowed", i+1, err)
 		}
@@ -183,8 +183,8 @@ func TestSendContactWithoutLoginIsLimitedPerIP(t *testing.T) {
 	if _, err := h.SendContact(anonymous("203.0.113.2"), body("guest@example.com")); err != nil {
 		t.Errorf("send from another IP: %v, want allowed", err)
 	}
-	if len(box.sent) != ratelimit.ContactIPDaily.Max+1 {
-		t.Errorf("sent %d mails, want %d", len(box.sent), ratelimit.ContactIPDaily.Max+1)
+	if len(box.sent) != ratelimit.ContactIPDaily("").Max+1 {
+		t.Errorf("sent %d mails, want %d", len(box.sent), ratelimit.ContactIPDaily("").Max+1)
 	}
 }
 
@@ -209,8 +209,8 @@ func TestSendContactStopsWhenTheWholeAppReachesTheDailyLimit(t *testing.T) {
 	box := &mailbox{}
 	h := newHandler(t, pool, box)
 	if _, err := pool.Exec(t.Context(),
-		`insert into api_rate_limits_by_key (key, bucket, window_start, count) values ($1, $2, now(), $3)`,
-		allSendersKey, ratelimit.ContactAllDaily.Bucket, ratelimit.ContactAllDaily.Max); err != nil {
+		`insert into api_app_rate_limits (bucket, window_start, count) values ($1, now(), $2)`,
+		ratelimit.ContactAppDaily.Bucket, ratelimit.ContactAppDaily.Max); err != nil {
 		t.Fatalf("fill the app-wide count: %v", err)
 	}
 

@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
@@ -15,25 +17,6 @@ import (
 )
 
 var testRule = Rule{Bucket: "test", Max: 3, Window: time.Minute, Message: "多すぎます"}
-
-func TestHitByKeyCountsEachKeySeparately(t *testing.T) {
-	pool := dbtest.Connect(t)
-	l := NewLimiter()
-	q := db.New(pool)
-	rule := Rule{Bucket: "test_by_key", Max: 1, Window: time.Minute, Message: "多すぎます"}
-	// 実行のたびに別の key にして、前の実行の回数を持ち越さない
-	key := "test:" + uuid.NewString()
-
-	if err := l.HitByKey(t.Context(), q, key, rule); err != nil {
-		t.Fatalf("first hit: %v", err)
-	}
-	if err := l.HitByKey(t.Context(), q, key, rule); !isRateLimited(err) {
-		t.Fatalf("second hit with the same key: %v, want rate limited", err)
-	}
-	if err := l.HitByKey(t.Context(), q, key+":other", rule); err != nil {
-		t.Errorf("hit with another key: %v, want allowed", err)
-	}
-}
 
 func isRateLimited(err error) bool {
 	var appErr *platform.Error
@@ -87,7 +70,7 @@ func TestDailyRuleResetsAtMidnightInJST(t *testing.T) {
 func TestHitAllowsExactlyMaxUnderConcurrentRequests(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
-	l := NewLimiter()
+	l := NewLimiter(DefaultAppLimits)
 	rule := Rule{Bucket: "test_concurrent", Max: 12, Window: time.Minute, Message: "多すぎます"}
 
 	var allowed atomic.Int32
@@ -103,5 +86,74 @@ func TestHitAllowsExactlyMaxUnderConcurrentRequests(t *testing.T) {
 
 	if allowed.Load() != 12 {
 		t.Errorf("%d of 20 concurrent requests were allowed, want exactly 12", allowed.Load())
+	}
+}
+
+// appRule は、アプリ全体の枠を、ほかのテストや手元の過去の実行と混ざらないよう、このテストだけの名前で作る。
+func appRule(t *testing.T, pool *pgxpool.Pool, max int) Rule {
+	t.Helper()
+	bucket := "test_app_" + uuid.NewString()
+	t.Cleanup(func() {
+		if _, err := pool.Exec(context.Background(), `delete from api_app_rate_limits where bucket = $1`, bucket); err != nil {
+			t.Errorf("delete app rate limit: %v", err)
+		}
+	})
+	return Rule{Bucket: bucket, Max: max, Daily: true, AppWide: true, Message: "アプリ全体の上限です"}
+}
+
+func TestHitAIRejectsOtherUsersAfterAppLimit(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userA := dbtest.CreateUser(t, pool)
+	userB := dbtest.CreateUser(t, pool)
+	l := &Limiter{now: time.Now, aiAppDaily: appRule(t, pool, 1)}
+	q := db.New(pool)
+
+	if err := l.HitAI(t.Context(), q, userA); err != nil {
+		t.Fatalf("user A: %v, want allowed", err)
+	}
+	err := l.HitAI(t.Context(), q, userB)
+	var appErr *platform.Error
+	if !errors.As(err, &appErr) || appErr.Kind != platform.KindRateLimited || appErr.Message != "アプリ全体の上限です" {
+		t.Errorf("user B: %v, want rejected by the app-wide limit", err)
+	}
+}
+
+func TestUserRejectedByOwnLimitDoesNotUseAppLimit(t *testing.T) {
+	pool := dbtest.Connect(t)
+	heavyUser := dbtest.CreateUser(t, pool)
+	otherUser := dbtest.CreateUser(t, pool)
+	// 連打した本人が通った回数（AIBurst.Max）と、ほかの人の1回で、ちょうど埋まる枠
+	l := &Limiter{now: time.Now, aiAppDaily: appRule(t, pool, AIBurst.Max+1)}
+	q := db.New(pool)
+
+	for range AIBurst.Max + 5 {
+		_ = l.HitAI(t.Context(), q, heavyUser)
+	}
+	if err := l.HitAI(t.Context(), q, otherUser); err != nil {
+		t.Errorf("other user: %v, want allowed because rejected requests do not use the app-wide limit", err)
+	}
+}
+
+func TestAppLimitAllowsExactlyMaxUnderConcurrentRequestsFromManyUsers(t *testing.T) {
+	pool := dbtest.Connect(t)
+	l := &Limiter{now: time.Now, companyAnalysisAppDaily: appRule(t, pool, 12)}
+	users := make([]uuid.UUID, 20)
+	for i := range users {
+		users[i] = dbtest.CreateUser(t, pool)
+	}
+
+	var allowed atomic.Int32
+	var wg sync.WaitGroup
+	for _, userID := range users {
+		wg.Go(func() {
+			if err := l.HitCompanyAnalysis(t.Context(), db.New(pool), userID); err == nil {
+				allowed.Add(1)
+			}
+		})
+	}
+	wg.Wait()
+
+	if allowed.Load() != 12 {
+		t.Errorf("%d of 20 concurrent requests from different users were allowed, want exactly 12", allowed.Load())
 	}
 }

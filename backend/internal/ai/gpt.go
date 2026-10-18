@@ -107,45 +107,46 @@ var gptSearchTool = map[string]any{
 	},
 }
 
+// generateWithSearch は、1回の応答に複数の検索の依頼が来ることがあるため、往復の回数ではなく実際に検索した回数で maxSearches を数える。
 func (g *gpt) generateWithSearch(ctx context.Context, instructions, input string, search searchFunc) (string, Usage, error) {
 	messages := []gptMessage{{Role: "system", Content: instructions}, {Role: "user", Content: input}}
 	var total Usage
+	searches := 0
 
-	for range maxSearches {
-		msg, usage, err := g.call(ctx, gptRequest{Messages: messages, Tools: []map[string]any{gptSearchTool}})
+	for {
+		req := gptRequest{Messages: messages}
+		// 検索の上限に達したら、ツールを渡さずに、ここまでの検索結果で回答させる
+		if searches < maxSearches {
+			req.Tools = []map[string]any{gptSearchTool}
+		}
+		msg, usage, err := g.call(ctx, req)
 		total = total.add(usage)
 		if err != nil {
 			return "", total, err
 		}
-		if len(msg.ToolCalls) == 0 {
+		if len(msg.ToolCalls) == 0 || req.Tools == nil {
 			if msg.Content == "" {
 				return "", total, fmt.Errorf("gpt: %w", errEmptyResponse)
 			}
 			return msg.Content, total, nil
 		}
 		messages = append(messages, msg)
+		// OpenAI は、依頼されたすべての tool_call に返事が無いとエラーにするので、上限を超えた分にも返事をする
 		for _, call := range msg.ToolCalls {
-			var args struct {
-				Query string `json:"query"`
+			reply := searchLimitReply
+			if searches < maxSearches {
+				var args struct {
+					Query string `json:"query"`
+				}
+				if err := json.Unmarshal([]byte(call.Function.Arguments), &args); err != nil {
+					return "", total, fmt.Errorf("gpt: decode tool arguments: %w", err)
+				}
+				reply = search(ctx, args.Query)
+				searches++
 			}
-			if err := json.Unmarshal([]byte(call.Function.Arguments), &args); err != nil {
-				return "", total, fmt.Errorf("gpt: decode tool arguments: %w", err)
-			}
-			results, err := search(ctx, args.Query)
-			if err != nil {
-				return "", total, err
-			}
-			messages = append(messages, gptMessage{Role: "tool", ToolCallID: call.ID, Content: formatSearchResults(results)})
+			messages = append(messages, gptMessage{Role: "tool", ToolCallID: call.ID, Content: reply})
 		}
 	}
-	// 検索の上限に達したら、ツールを渡さずに、ここまでの検索結果で回答させる
-	msg, usage, err := g.call(ctx, gptRequest{Messages: messages})
-	total = total.add(usage)
-	if err != nil {
-		return "", total, err
-	}
-	if msg.Content == "" {
-		return "", total, fmt.Errorf("gpt: %w", errEmptyResponse)
-	}
-	return msg.Content, total, nil
 }
+
+const searchLimitReply = "検索の回数の上限に達したため、この検索は行いませんでした。ここまでの検索結果で回答してください。"
