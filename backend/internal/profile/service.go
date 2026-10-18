@@ -11,6 +11,7 @@ import (
 type store interface {
 	Get(ctx context.Context, userID uuid.UUID) (Profile, error)
 	Update(ctx context.Context, userID uuid.UUID, u Update) (Profile, error)
+	Delete(ctx context.Context, userID uuid.UUID) error
 }
 
 type Service struct {
@@ -46,6 +47,11 @@ func (s *Service) Update(ctx context.Context, userID uuid.UUID, u Update) (Profi
 		return Profile{}, platform.Required("fullName", "氏名")
 	}
 	return s.store.Update(ctx, userID, u)
+}
+
+// Delete は、退会としてユーザーとそのすべてのデータを削除する。
+func (s *Service) Delete(ctx context.Context, userID uuid.UUID) error {
+	return s.store.Delete(ctx, userID)
 }
 
 // IsDeveloper は、ユーザーが開発者向けの画面を使えるかを返す。

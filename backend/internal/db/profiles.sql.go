@@ -21,6 +21,16 @@ func (q *Queries) CreateProfileIfMissing(ctx context.Context, id uuid.UUID) erro
 	return err
 }
 
+const deleteUser = `-- name: DeleteUser :exec
+delete from auth.users where id = $1
+`
+
+// アプリのテーブルはすべて auth.users を on delete cascade で参照しているので、この1行でその人のデータがすべて消える
+func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUser, id)
+	return err
+}
+
 const getProfile = `-- name: GetProfile :one
 select id, full_name, university, faculty, avatar_id, target_industry, career_axis, goal_state, xp, level, created_at, updated_at from profiles where id = $1
 `

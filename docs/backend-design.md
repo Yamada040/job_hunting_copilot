@@ -156,6 +156,10 @@ ESの提出に日次上限を設けたのは、「提出 → 削除 → 作り�
 
 `company_id` の外部キーはすべて `on delete cascade`。
 
+- **退会**（`DELETE /v1/me`）は、バックエンドが `auth.users` の行を1つ消すだけで行う。アプリのテーブルはすべて `auth.users` を `on delete cascade` で参照しているので、その人のデータもまとめて消える（新しいテーブルも同じにする。`internal/profile` のテストで確かめている）
+  - 採らなかった案: Supabase Auth の管理API（`auth.admin.deleteUser`）。全権限の secret キーが必要になり、発行しない方針と合わないため
+  - 採らなかった案: `security definer` の関数や、権限を足すマイグレーション。バックエンドがつなぐ `postgres` ロールは、元から `auth.users` を削除できるため
+
 ### 個別の判断
 
 - **AI結果の列名は全テーブルで `ai_result`**。用語集の名前（添削結果など）はGoの型と画面で使い、DBは共通の名前にする

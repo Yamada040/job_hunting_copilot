@@ -254,6 +254,10 @@ type AptitudeResult struct {
 	AiOutputTokens *int32
 }
 
+type AuthUser struct {
+	ID uuid.UUID
+}
+
 type CalendarEvent struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
