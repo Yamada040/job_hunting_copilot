@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, unwrap } from "./client";
 import type { components } from "./schema";
@@ -7,16 +7,38 @@ export type CalendarItem = components["schemas"]["CalendarItem"];
 export type CalendarEventCreate = components["schemas"]["CalendarEventCreate"];
 export type CalendarEventUpdate = components["schemas"]["CalendarEventUpdate"];
 
+/** 期間（YYYY-MM-DD、どちらも含む）。何日か続く予定は、期間に少しでも重なれば含まれる。 */
+export type CalendarPeriod = { from: string; to: string };
+
 export const calendarKeys = {
   all: ["calendar"] as const,
+  period: (period: CalendarPeriod) => ["calendar", period] as const,
 };
 
-/** カレンダーの予定とESの締切（バックエンドが日付順にまとめて返す）。 */
-export function useCalendarItems() {
+/**
+ * 期間内の予定とESの締切（バックエンドが日付順にまとめて返す）。予定は年をまたいでたまっていくので、全件ではなく見ている期間だけを取る。
+ * 期間を変えたときに表が空になってちらつかないよう、読み込むまでは前の期間の値を見せる。
+ */
+export function useCalendarItems(period: CalendarPeriod) {
   return useQuery({
-    queryKey: calendarKeys.all,
-    queryFn: () => unwrap(api.GET("/v1/calendar-events")),
+    queryKey: calendarKeys.period(period),
+    queryFn: () => unwrap(api.GET("/v1/calendar-events", { params: { query: period } })),
+    placeholderData: keepPreviousData,
   });
+}
+
+/** 直近の予定として取る日数。ホーム・カレンダーの今日と今週の予定・アバターが同じ期間を使い、キャッシュを共有する。 */
+export const UPCOMING_DAYS = 7;
+
+/** 今日（YYYY-MM-DD）から UPCOMING_DAYS 日後までの予定とESの締切。 */
+export function useUpcomingCalendarItems(today: string) {
+  return useCalendarItems({ from: today, to: addDays(today, UPCOMING_DAYS) });
+}
+
+function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
 export function createCalendarEvent(body: CalendarEventCreate) {

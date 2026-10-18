@@ -1,9 +1,15 @@
 -- name: ListCompanies :many
 -- query を渡すと、正規化した企業名の部分一致で絞り込む（企業の候補の表示に使う）
-select * from companies
+-- 分析結果は長いので、一覧では冒頭だけを返す（全文は詳細で返す）。sqlc は left() の結果を null にならない型にするため、未分析は空文字で返す
+select id, name, industry, url, mypage_id, mypage_url, memo, stage, preference, favorite,
+  coalesce(left(ai_result, 200), '')::text as ai_result_preview, created_at, updated_at
+from companies
 where user_id = @user_id
   and (sqlc.narg(query)::text is null or normalized_name like '%' || sqlc.narg(query)::text || '%')
 order by updated_at desc;
+
+-- name: CountCompanies :one
+select count(*) from companies where user_id = @user_id;
 
 -- name: GetCompany :one
 select * from companies where id = @id and user_id = @user_id;

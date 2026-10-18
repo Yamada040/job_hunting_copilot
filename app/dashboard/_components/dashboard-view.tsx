@@ -1,6 +1,6 @@
 "use client";
 
-import { useCalendarItems } from "@/lib/api/calendar";
+import { useUpcomingCalendarItems } from "@/lib/api/calendar";
 import { useEsEntries } from "@/lib/api/es";
 import { useInterviewLogs } from "@/lib/api/interviews";
 import { useXpLogs } from "@/lib/api/xp";
@@ -23,7 +23,7 @@ export function DashboardView() {
   // 一覧の取得は各画面・カルーセルと同じキャッシュを使うので、通信は増えない
   const { data: es } = useEsEntries();
   const { data: interviews } = useInterviewLogs();
-  const { data: calendar } = useCalendarItems();
+  const { data: calendar } = useUpcomingCalendarItems(today);
   const messages = avatarMessages({
     today,
     upcoming: calendar ? upcomingEvents(calendar, today) : [],

@@ -13,7 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { useAptitudeResult, useSelfAnalysisResult } from "@/lib/api/assessments";
-import { useCalendarItems } from "@/lib/api/calendar";
+import { useUpcomingCalendarItems } from "@/lib/api/calendar";
 import { useCompanies } from "@/lib/api/companies";
 import { useEsEntries } from "@/lib/api/es";
 import { useInterviewLogs } from "@/lib/api/interviews";
@@ -50,7 +50,7 @@ export function useMenuItems(today: string): CarouselItem[] {
   const { data: es, error: esError } = useEsEntries();
   const { data: companies, error: companiesError } = useCompanies();
   const { data: interviews, error: interviewsError } = useInterviewLogs();
-  const { data: calendar, error: calendarError } = useCalendarItems();
+  const { data: calendar, error: calendarError } = useUpcomingCalendarItems(today);
   const { data: webtests, error: webtestsError } = useWebtestQuestions();
   const { data: selfAnalysis, error: selfAnalysisError } = useSelfAnalysisResult();
   const { data: aptitude, error: aptitudeError } = useAptitudeResult();

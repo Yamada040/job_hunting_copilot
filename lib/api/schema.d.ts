@@ -64,7 +64,7 @@ export interface paths {
     put?: never;
     /**
      * 企業を登録する
-     * @description 正規化した企業名が同じ企業がすでにあれば 409 を返す。登録でXPが付く（1日5回まで）。
+     * @description 正規化した企業名が同じ企業がすでにあれば 409 を返す。1人500社まで（超えると 409）。登録でXPが付く（1日5回まで）。
      */
     post: operations["createCompany"];
     delete?: never;
@@ -135,7 +135,10 @@ export interface paths {
      */
     get: operations["listEsEntries"];
     put?: never;
-    /** ESを作成する（常に下書き） */
+    /**
+     * ESを作成する（常に下書き）
+     * @description 1人500件まで（超えると 409）。
+     */
     post: operations["createEsEntry"];
     delete?: never;
     options?: never;
@@ -200,7 +203,7 @@ export interface paths {
     };
     /**
      * ESのAI添削の履歴を取得する
-     * @description 新しい順。点数の推移を見せるため、添削のたびに1件ずつ残している。
+     * @description 新しい順に10件まで。点数の推移を見せるため、添削のたびに1件ずつ残している。
      */
     get: operations["listEsReviews"];
     put?: never;
@@ -230,7 +233,7 @@ export interface paths {
     put?: never;
     /**
      * 面接ログを作成する
-     * @description XPが付く（同じ面接ログには1回、1日5回まで）。
+     * @description 1人500件まで（超えると 409）。XPが付く（同じ面接ログには1回、1日5回まで）。
      */
     post: operations["createInterviewLog"];
     delete?: never;
@@ -294,11 +297,14 @@ export interface paths {
     };
     /**
      * カレンダーに表示する予定を取得する
-     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる。
+     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。
      */
     get: operations["listCalendarItems"];
     put?: never;
-    /** 予定を登録する */
+    /**
+     * 予定を登録する
+     * @description 1人2000件まで（超えると 409）。
+     */
     post: operations["createCalendarEvent"];
     delete?: never;
     options?: never;
@@ -497,7 +503,7 @@ export interface paths {
     put?: never;
     /**
      * Webテストの問題を作る
-     * @description XPが付く（1日3回まで）。
+     * @description 1人500問まで（超えると 409）。XPが付く（1日3回まで）。
      */
     post: operations["createWebtestQuestion"];
     delete?: never;
@@ -538,7 +544,7 @@ export interface paths {
     put?: never;
     /**
      * 問題に解答する
-     * @description 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。XPが付く（1日2回まで）。
+     * @description 正誤はバックエンドが判定する（前後の空白と英字の大文字・小文字は無視）。解答の記録は問題ごとに新しい20件だけを残す。XPが付く（1日2回まで）。
      */
     post: operations["answerWebtestQuestion"];
     delete?: never;
@@ -664,6 +670,27 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    /** @description 一覧の企業。分析結果は長いので、全文ではなく冒頭だけを返す（全文は企業の取得で返す） */
+    CompanyListItem: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      industry: string | null;
+      url: string | null;
+      mypageId: string | null;
+      mypageUrl: string | null;
+      memo: string | null;
+      stage: components["schemas"]["CompanyStage"];
+      /** @description 志望度（1〜5） */
+      preference: number | null;
+      favorite: boolean;
+      /** @description AI企業分析の分析結果の冒頭（200文字まで）。まだ分析していなければ null */
+      aiResultPreview: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
     CompanyCreate: {
       name: string;
       industry?: string;
@@ -772,6 +799,26 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    /** @description 一覧のES。設問・本文・メモは長いので返さない（ESの取得で返す） */
+    EsEntrySummary: {
+      /** Format: uuid */
+      id: string;
+      company: components["schemas"]["CompanySummary"];
+      /** @description 職種・募集枠 */
+      position: string | null;
+      title: string;
+      status: components["schemas"]["EsStatus"];
+      tags: string[];
+      /**
+       * Format: date
+       * @description 締切日。カレンダーにも表示される
+       */
+      deadline: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
     EsEntryCreate: {
       /** Format: uuid */
       companyId: string;
@@ -831,6 +878,25 @@ export interface components {
       unexpected: string | null;
       /** @description AI振り返りの振り返り結果 */
       aiResult: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    /** @description 一覧の面接ログ。質問と答え・想定外だった点・振り返り結果は長いので返さず、振り返り済みかだけを返す（面接ログの取得で返す） */
+    InterviewLogSummary: {
+      /** Format: uuid */
+      id: string;
+      company: components["schemas"]["CompanySummary"];
+      format: components["schemas"]["InterviewFormat"] | null;
+      /** @description 面接の回次（一次・二次・最終など） */
+      round: string | null;
+      /** Format: date */
+      interviewDate: string | null;
+      /** @description 次回改善したい点 */
+      improvement: string | null;
+      /** @description AI振り返りをしたか */
+      reviewed: boolean;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -1043,7 +1109,7 @@ export interface components {
       choices: string[];
       answer: string;
       explanation: string | null;
-      /** @description 解答の記録（新しい順） */
+      /** @description 解答の記録（新しい順。問題ごとに20件まで） */
       attempts: components["schemas"]["WebtestAttempt"][];
     };
     WebtestQuestionCreate: {
@@ -1278,7 +1344,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Company"][];
+          "application/json": components["schemas"]["CompanyListItem"][];
         };
       };
       default: components["responses"]["Problem"];
@@ -1421,7 +1487,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["EsEntry"][];
+          "application/json": components["schemas"]["EsEntrySummary"][];
         };
       };
       default: components["responses"]["Problem"];
@@ -1610,7 +1676,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["InterviewLog"][];
+          "application/json": components["schemas"]["InterviewLogSummary"][];
         };
       };
       default: components["responses"]["Problem"];

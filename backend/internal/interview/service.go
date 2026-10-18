@@ -21,8 +21,11 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
-// 一覧で件数の指定がないときの上限。1人の面接ログは多くても数百件なので、実質的に全件を返す
-const defaultListLimit = 1000
+const (
+	maxLogs = 500
+	// 一覧で件数の指定がないときの上限。1人の面接ログは maxLogs 件までなので、全件を返す
+	defaultListLimit = maxLogs
+)
 
 // Question は、面接で聞かれた質問と自分の回答。Rating は受け答えの手応え（good / average / bad、未入力なら空）。
 type Question struct {
@@ -69,7 +72,8 @@ var (
 )
 
 // List は、ユーザーの面接ログを面接日の新しい順に返す。companyID を渡すとその企業の面接ログだけに絞る。
-func (s *Service) List(ctx context.Context, userID uuid.UUID, companyID *uuid.UUID, limit int) ([]Log, error) {
+// 質問と回答・想定外だった点・振り返り結果は含まず、振り返り済みかだけを返す。
+func (s *Service) List(ctx context.Context, userID uuid.UUID, companyID *uuid.UUID, limit int) ([]db.ListInterviewLogsRow, error) {
 	if limit <= 0 {
 		limit = defaultListLimit
 	}
@@ -77,13 +81,7 @@ func (s *Service) List(ctx context.Context, userID uuid.UUID, companyID *uuid.UU
 	if err != nil {
 		return nil, fmt.Errorf("list interview logs: %w", err)
 	}
-	logs := make([]Log, len(rows))
-	for i, row := range rows {
-		if logs[i], err = toLog(row.InterviewLog, row.CompanyName); err != nil {
-			return nil, err
-		}
-	}
-	return logs, nil
+	return rows, nil
 }
 
 func (s *Service) Get(ctx context.Context, userID, id uuid.UUID) (Log, error) {
@@ -112,6 +110,13 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (Log, 
 	)
 	err = platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
+		count, err := q.CountInterviewLogs(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("count interview logs: %w", err)
+		}
+		if err := platform.CheckLimit(count, maxLogs, fmt.Sprintf("作成できる面接ログは%d件までです。不要な面接ログを削除してから作成してください", maxLogs)); err != nil {
+			return err
+		}
 		if err := company.EnsureOwned(ctx, q, userID, *f.CompanyID); err != nil {
 			return err
 		}

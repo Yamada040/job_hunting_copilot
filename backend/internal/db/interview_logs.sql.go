@@ -13,6 +13,17 @@ import (
 	"github.com/google/uuid"
 )
 
+const countInterviewLogs = `-- name: CountInterviewLogs :one
+select count(*) from interview_logs where user_id = $1
+`
+
+func (q *Queries) CountInterviewLogs(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countInterviewLogs, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createInterviewLog = `-- name: CreateInterviewLog :one
 insert into interview_logs (user_id, company_id, format, round, interview_date, questions, improvement, unexpected)
 values ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -104,7 +115,9 @@ func (q *Queries) GetInterviewLog(ctx context.Context, arg GetInterviewLogParams
 }
 
 const listInterviewLogs = `-- name: ListInterviewLogs :many
-select interview_logs.id, interview_logs.user_id, interview_logs.company_id, interview_logs.format, interview_logs.round, interview_logs.interview_date, interview_logs.questions, interview_logs.improvement, interview_logs.unexpected, interview_logs.ai_result, interview_logs.created_at, interview_logs.updated_at, interview_logs.ai_input_tokens, interview_logs.ai_output_tokens, companies.name as company_name
+select interview_logs.id, interview_logs.company_id, interview_logs.format, interview_logs.round, interview_logs.interview_date,
+  interview_logs.improvement, (interview_logs.ai_result is not null)::boolean as reviewed,
+  interview_logs.created_at, interview_logs.updated_at, companies.name as company_name
 from interview_logs
 join companies on companies.id = interview_logs.company_id
 where interview_logs.user_id = $1
@@ -120,11 +133,19 @@ type ListInterviewLogsParams struct {
 }
 
 type ListInterviewLogsRow struct {
-	InterviewLog InterviewLog
-	CompanyName  string
+	ID            uuid.UUID
+	CompanyID     uuid.UUID
+	Format        *InterviewFormat
+	Round         *string
+	InterviewDate *time.Time
+	Improvement   *string
+	Reviewed      bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	CompanyName   string
 }
 
-// company_id を渡すと、その企業の面接ログだけに絞り込む
+// company_id を渡すと、その企業の面接ログだけに絞り込む。質問と答え・振り返り結果は長いので、一覧では振り返り済みかだけを返す（詳細で返す）
 func (q *Queries) ListInterviewLogs(ctx context.Context, arg ListInterviewLogsParams) ([]ListInterviewLogsRow, error) {
 	rows, err := q.db.Query(ctx, listInterviewLogs, arg.UserID, arg.CompanyID, arg.MaxRows)
 	if err != nil {
@@ -135,20 +156,15 @@ func (q *Queries) ListInterviewLogs(ctx context.Context, arg ListInterviewLogsPa
 	for rows.Next() {
 		var i ListInterviewLogsRow
 		if err := rows.Scan(
-			&i.InterviewLog.ID,
-			&i.InterviewLog.UserID,
-			&i.InterviewLog.CompanyID,
-			&i.InterviewLog.Format,
-			&i.InterviewLog.Round,
-			&i.InterviewLog.InterviewDate,
-			&i.InterviewLog.Questions,
-			&i.InterviewLog.Improvement,
-			&i.InterviewLog.Unexpected,
-			&i.InterviewLog.AiResult,
-			&i.InterviewLog.CreatedAt,
-			&i.InterviewLog.UpdatedAt,
-			&i.InterviewLog.AiInputTokens,
-			&i.InterviewLog.AiOutputTokens,
+			&i.ID,
+			&i.CompanyID,
+			&i.Format,
+			&i.Round,
+			&i.InterviewDate,
+			&i.Improvement,
+			&i.Reviewed,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.CompanyName,
 		); err != nil {
 			return nil, err

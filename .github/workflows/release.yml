@@ -15,6 +15,7 @@ concurrency:
 
 permissions:
   contents: write # タグと GitHub Release を作る
+  issues: write # リリース後のヘルスチェック失敗をIssueとして通知する
 
 jobs:
   release:
@@ -26,6 +27,7 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      PRODUCTION_URL: https://job-seeker-gray.vercel.app
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
@@ -41,6 +43,16 @@ jobs:
         run: |
           npm install --global vercel@63.1.2
           vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+      - name: 本番のヘルスチェック
+        run: curl --fail --silent --show-error --max-time 30 --retry 3 --retry-all-errors "$PRODUCTION_URL/v1/health"
+      - name: リリース失敗を通知する
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "[release] $GITHUB_SHA のリリースに失敗しました" \
+            --body "リリースワークフローが失敗しました。実行ログ: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
       # 同じ日の2回目からは末尾に回数を付ける（v2026.10.12.2）
       - name: 日付のタグを付け、GitHub Release を作る
         env:

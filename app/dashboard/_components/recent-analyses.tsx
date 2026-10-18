@@ -47,7 +47,7 @@ export function RecentAnalyses({ className }: { className?: string }) {
                     <ArrowRightIcon className="ml-auto size-3.5 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary" />
                   </span>
                   <span className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                    {analysisPreview(company.aiResult ?? "", PREVIEW_LENGTH)}
+                    {analysisPreview(company.aiResultPreview ?? "", PREVIEW_LENGTH)}
                   </span>
                 </Link>
               </StaggerItem>

@@ -5,6 +5,8 @@ import type { components } from "./schema";
 import { applyXpResult } from "./xp";
 
 export type InterviewLog = components["schemas"]["InterviewLog"];
+/** 一覧の面接ログ。質問と回答・振り返り結果は持たず、振り返り済みか（reviewed）だけを持つ。 */
+export type InterviewLogSummary = components["schemas"]["InterviewLogSummary"];
 export type InterviewQuestion = components["schemas"]["InterviewQuestion"];
 export type InterviewFormat = components["schemas"]["InterviewFormat"];
 export type InterviewRating = components["schemas"]["InterviewRating"];
