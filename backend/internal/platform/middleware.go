@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -124,7 +123,7 @@ func Recover(next http.Handler) http.Handler {
 				if v == http.ErrAbortHandler {
 					panic(v)
 				}
-				WriteError(w, r, fmt.Errorf("panic: %v\n%s", v, debug.Stack()))
+				WriteError(w, r, &panicError{value: v, stack: debug.Stack()})
 			}
 		}()
 		next.ServeHTTP(w, r)

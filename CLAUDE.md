@@ -20,6 +20,8 @@
 - **アニメーション**: Framer Motion
 - **ホスティング**: Vercel（無料プラン）。Next.js と バックエンドを同じプロジェクトの Services で動かす（`vercel.json`）
 
+- **エラーの通知**: Google Cloud の Error Reporting（バックエンドの想定外のエラーだけ。`backend/internal/errorreport`）
+
 すべての依存サービスは**無料プラン**で運用している（有料インフラなし）。設計の詳細と、各判断で採らなかった案は [docs/backend-design.md](./docs/backend-design.md) を参照。
 
 ## 開発コマンド
@@ -114,10 +116,11 @@ backend/
     ├── ai/                   # Gemini / GPT / Tavily とプロンプト
     ├── ratelimit/            # AI・問い合わせの回数制限（短時間の連打と1日の上限）と、AIの1日の利用料の上限
     ├── auth/                 # JWTの検証
+    ├── errorreport/          # 想定外のエラーを Google Cloud の Error Reporting に送る
     └── platform/             # エラーの形式、ミドルウェア、トランザクション、DB接続
 ```
 
-- **エラー**: service は `platform.Error`（`Kind` と日本語のメッセージ）を返し、RFC 9457（Problem Details）への変換は `platform.WriteError` の1か所で行う。想定外のエラーは利用者に詳細を見せずログにだけ出す
+- **エラー**: service は `platform.Error`（`Kind` と日本語のメッセージ）を返し、RFC 9457（Problem Details）への変換は `platform.WriteError` の1か所で行う。想定外のエラー（500。panic を含む）は利用者に詳細を見せずログに出し、応答を書く前に Error Reporting にも送る（締め切り2秒。送るのはエラーの文言・スタックトレース・メソッド・伏せたパス・版だけで、本文・クエリ・ヘッダー・ユーザーIDは送らない）。`platform.Error` の想定内のもの（4xx・503）は送らない
 - **入力の検証**: 形式（必須・文字数・enum）は `openapi.yaml` で定義し、ミドルウェアが仕様と照らし合わせて弾く。ドメインのルール（空白だけの企業名など）は service で確かめる
 - **トランザクション**: 複数の書き込みは `platform.InTx` でまとめる。XPの付与は元の操作と同じトランザクションで行う
 - **企業へのひも付け**: ES・面接ログ・予定を企業にひも付けるときは、`company.EnsureOwned` で本人の企業かを確かめる
@@ -364,6 +367,7 @@ SMTP_USER=your-mail@example.com
 SMTP_PASS=your-app-password
 CONTACT_TO_EMAIL=contact-destination@example.com
 DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザー
+GOOGLE_ERROR_REPORTING_CREDENTIALS={...}   # Error Reporting に書き込むサービスアカウントの鍵（JSON。送り先は鍵のプロジェクト）。無ければエラーを送らない。プレビューには置かない（本番だけ）
 ```
 
 E2Eテストの値（テストユーザーなど）は、手元の Supabase 専用の固定値として `e2e/support/local-supabase.ts` に置いている。
