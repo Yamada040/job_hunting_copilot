@@ -53,7 +53,15 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           {/* ログインしていないとダッシュボードは開けない（ログイン画面へ戻される）ので、そこへのボタンは置かない */}
           <CardFooter>
             <p className="text-xs text-muted-foreground">
-              サインイン後は、アカウントに紐づくデータが自動で読み込まれます。
+              ログインすると、
+              <Link href={ROUTES.TERMS} className="text-primary underline underline-offset-4">
+                利用規約
+              </Link>
+              と
+              <Link href={ROUTES.PRIVACY} className="text-primary underline underline-offset-4">
+                プライバシーポリシー
+              </Link>
+              に同意したものとします。サインイン後は、アカウントに紐づくデータが自動で読み込まれます。
             </p>
           </CardFooter>
         </Card>

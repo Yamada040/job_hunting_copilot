@@ -189,7 +189,7 @@ backend/
 - ページレベルのレイアウト: `app/_components/layout/`（`AppLayout`）。ヘッダー（`AppHeader`、レベル・XPの表示）と下のメニュー（`Dock`）は、画面を移っても動きや演出が途切れないよう、各画面ではなくルートのレイアウト（`app/layout.tsx`）に置く
 - レベル・XPの表示: `app/_components/xp-badge.tsx` と `app/_components/xp/`（紋章・ゲージ・レベルアップの演出）。ゲージの繰り上がりの順番は `lib/xp/gauge.ts`
 - 機能単位: `_components/` サブディレクトリにコンポーネントをコロケーションする（例: `app/dashboard/_components/`）
-- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示、`ConfirmDialog`）
+- 共通部品: `app/_components/`（`CompanyPicker`: 企業の候補表示とその場での登録、`ApiErrorMessage`: バックエンドのエラーの表示、`ai-result/`: AIの結果の表示と、実行ボタンの近くに置く外部のAIへ送ることの説明（`AiSendingNote`）、`ConfirmDialog`、`legal/`: プライバシーポリシー・利用規約の枠とリンク）
 - 操作の結果は、画面の右下に飛び出すアバター（`AvatarNotice`）が話す。成功は `showSuccessNotice("ESを提出しました")`、失敗は操作の名前を渡して `showFailureNotice("AI添削", error)`、AIの実行のように時間がかかるものは `noticeWhenDone(mutation.mutateAsync(), { action, done, link })` で呼ぶ（待つ間に画面を移っても届く）。話す成功は、AIの実行が終わったとき・取り消せない操作（提出・削除）・フォームの保存。結果がその場に出る操作（Webテストの解答など）では話さない。入力欄ごとのエラーと、フォームの保存・読み込みの失敗は、直す場所が分かるよう欄の下に出す（`ApiErrorMessage`）。ダイアログの中のエラーも、アバターが暗い幕に隠れるので欄の下に出す
 - 画面の見出し: `AppLayout` の `headerTitle`・`headerDescription`・`headerActions`（主な操作）・`avatar`（見出しの横で話す `AvatarGuide`。話す一言は `app/_components/avatar/guide-messages.ts`）
 - フォーム: `app/_components/form/`。保存のボタンは `FormActions`（画面の下に付いてくる帯）に置き、`useFormEditing` で変更の有無と ⌘/Ctrl + Enter の送信、`LeaveGuard` で保存せずに離れる前の確認をする。項目は `FormSection` で区切る
@@ -379,8 +379,10 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 - `/profile` — プロフィール/目標の編集
 - `/contact` — フィードバックフォーム（ログイン済みユーザー向け）
 - `/developer` — 開発者向け管理ページ（バックエンドが `DEV_ADMIN_USER_IDS` で判定し、開発者以外には403。開発者にだけ下のメニューにリンクが出る）
+- `/privacy` — プライバシーポリシー（預かる情報、外部のAIなどへ送る内容、削除の依頼方法）。Google の OAuth 同意画面にもこのURLを登録する
+- `/terms` — 利用規約
 
-すべての保護ページ: 未ログインなら `proxy.ts` が `/login` へリダイレクトする。
+すべての保護ページ: 未ログインなら `proxy.ts` が `/login` へリダイレクトする。ログインせずに開けるページ（`/`・`/login`・`/privacy`・`/terms`）は `lib/constants/routes.ts` の `PUBLIC_PAGES` にまとめ、ヘッダーと下のメニューも出さない。外部のAIへ送る内容を変えたら、`/privacy` も直す
 
 ### 型定義
 
