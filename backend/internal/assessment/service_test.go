@@ -9,7 +9,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
-	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit/ratelimittest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -25,7 +25,7 @@ func TestAptitudeFlow(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
 	fake := &aitest.Fake{Reply: "診断結果"}
-	s := NewAptitudeService(pool, xp.NewService(), fake, ratelimit.NewLimiter())
+	s := NewAptitudeService(pool, xp.NewService(), fake, ratelimittest.NewLimiter())
 
 	if before, err := s.Get(t.Context(), userID); err != nil || before != nil {
 		t.Fatalf("Get before answering = %v, %v; want nil without an error", before, err)
@@ -72,8 +72,8 @@ func TestSelfAnalysisIsSeparateFromAptitude(t *testing.T) {
 	userID := dbtest.CreateUser(t, pool)
 	x := xp.NewService()
 	fake := &aitest.Fake{Reply: "分析結果"}
-	aptitude := NewAptitudeService(pool, x, fake, ratelimit.NewLimiter())
-	self := NewSelfAnalysisService(pool, x, fake, ratelimit.NewLimiter())
+	aptitude := NewAptitudeService(pool, x, fake, ratelimittest.NewLimiter())
+	self := NewSelfAnalysisService(pool, x, fake, ratelimittest.NewLimiter())
 	if _, _, err := aptitude.Submit(t.Context(), userID, openapi.AptitudeAnswers{Interests: []string{}, Strengths: []string{}, Values: []string{}}); err != nil {
 		t.Fatalf("aptitude Submit: %v", err)
 	}

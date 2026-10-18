@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ChevronDoubleDownIcon } from "@heroicons/react/24/outline";
 
 import { DepthProgress } from "./_components/home/depth-progress";
@@ -7,6 +8,11 @@ import { HomeFeatures, HomeSteps } from "./_components/home/home-features";
 import { HomeHeader } from "./_components/home/home-header";
 import { HomeHero } from "./_components/home/home-hero";
 import { HomeContexts, HomeSummaries } from "./_components/home/home-overview";
+import { LegalLinks } from "./_components/legal/legal-links";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (
@@ -48,8 +54,9 @@ export default function Home() {
         <DepthScene index={5} id="start">
           <HomeCallToAction />
           <HomeSecurity />
-          <footer className="pb-2 text-center text-xs text-muted-foreground">
-            © 2026 就活copilot. All rights reserved.
+          <footer className="space-y-2 pb-2 text-center text-xs text-muted-foreground">
+            <LegalLinks />
+            <p>© 2026 就活copilot. All rights reserved.</p>
           </footer>
         </DepthScene>
       </main>

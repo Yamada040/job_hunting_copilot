@@ -1,9 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { ROUTES } from "@/lib/constants/routes";
+import { PUBLIC_PAGES, ROUTES } from "@/lib/constants/routes";
 
 // 認証不要のパス
-const PUBLIC_PATHS = [ROUTES.HOME, ROUTES.LOGIN, "/auth/callback", "/robots.txt", "/sitemap.xml"];
+const PUBLIC_PATHS = [...PUBLIC_PAGES, "/auth/callback", "/robots.txt", "/sitemap.xml"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -127,14 +127,11 @@ func (g *gemini) generateWithSearch(ctx context.Context, instructions, input str
 			text, err := joinText(parts)
 			return text, total, err
 		}
-		results, err := search(ctx, call.Args["query"])
-		if err != nil {
-			return "", total, err
-		}
+		result := search(ctx, call.Args["query"])
 		contents = append(contents,
 			geminiContent{Role: "model", Parts: []geminiPart{{FunctionCall: call}}},
 			geminiContent{Role: "user", Parts: []geminiPart{{FunctionResponse: &geminiFunctionResponse{
-				Name: "search_web", Response: map[string]string{"result": formatSearchResults(results)},
+				Name: "search_web", Response: map[string]string{"result": result},
 			}}}},
 		)
 	}
