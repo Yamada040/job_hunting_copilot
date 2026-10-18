@@ -244,6 +244,13 @@ type ApiRateLimit struct {
 	Count       int32
 }
 
+type ApiRateLimitsByKey struct {
+	Key         string
+	Bucket      string
+	WindowStart time.Time
+	Count       int32
+}
+
 type AptitudeResult struct {
 	ID             uuid.UUID
 	UserID         uuid.UUID

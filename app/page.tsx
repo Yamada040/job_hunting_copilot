@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { ChevronDoubleDownIcon } from "@heroicons/react/24/outline";
 
+import { ROUTES } from "@/lib/constants/routes";
 import { DepthProgress } from "./_components/home/depth-progress";
 import { DepthScene } from "./_components/home/depth-scene";
 import { HomeCallToAction, HomeSecurity } from "./_components/home/home-closing";
@@ -48,8 +50,11 @@ export default function Home() {
         <DepthScene index={5} id="start">
           <HomeCallToAction />
           <HomeSecurity />
-          <footer className="pb-2 text-center text-xs text-muted-foreground">
-            © 2026 就活copilot. All rights reserved.
+          <footer className="flex flex-col items-center gap-2 pb-2 text-center text-xs text-muted-foreground">
+            <Link href={ROUTES.CONTACT} className="underline underline-offset-4 hover:text-foreground">
+              お問い合わせ
+            </Link>
+            <p>© 2026 就活copilot. All rights reserved.</p>
           </footer>
         </DepthScene>
       </main>

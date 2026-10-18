@@ -7,12 +7,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 )
 
 var testRule = Rule{Bucket: "test", Max: 3, Window: time.Minute, Message: "多すぎます"}
+
+func TestHitByKeyCountsEachKeySeparately(t *testing.T) {
+	pool := dbtest.Connect(t)
+	l := NewLimiter()
+	q := db.New(pool)
+	rule := Rule{Bucket: "test_by_key", Max: 1, Window: time.Minute, Message: "多すぎます"}
+	// 実行のたびに別の key にして、前の実行の回数を持ち越さない
+	key := "test:" + uuid.NewString()
+
+	if err := l.HitByKey(t.Context(), q, key, rule); err != nil {
+		t.Fatalf("first hit: %v", err)
+	}
+	if err := l.HitByKey(t.Context(), q, key, rule); !isRateLimited(err) {
+		t.Fatalf("second hit with the same key: %v, want rate limited", err)
+	}
+	if err := l.HitByKey(t.Context(), q, key+":other", rule); err != nil {
+		t.Errorf("hit with another key: %v, want allowed", err)
+	}
+}
 
 func isRateLimited(err error) bool {
 	var appErr *platform.Error

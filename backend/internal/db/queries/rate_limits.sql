@@ -7,3 +7,12 @@ on conflict (user_id, bucket) do update set
   count        = case when api_rate_limits.window_start < @window_start then 1 else api_rate_limits.count + 1 end,
   window_start = case when api_rate_limits.window_start < @window_start then @now else api_rate_limits.window_start end
 returning count;
+
+-- name: HitRateLimitByKey :one
+-- HitRateLimit と同じことを、ユーザーではなく任意の文字列（IPのハッシュや全体）ごとに行う。
+insert into api_rate_limits_by_key (key, bucket, window_start, count)
+values (@key, @bucket, @now, 1)
+on conflict (key, bucket) do update set
+  count        = case when api_rate_limits_by_key.window_start < @window_start then 1 else api_rate_limits_by_key.count + 1 end,
+  window_start = case when api_rate_limits_by_key.window_start < @window_start then @now else api_rate_limits_by_key.window_start end
+returning count;

@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
 
 import { ROUTES } from "@/lib/constants/routes";
+import { useSignedIn } from "@/lib/supabase/use-signed-in";
 import { XpBadge } from "../xp-badge";
 import { Header } from "./Header";
 
@@ -15,8 +17,14 @@ import { Header } from "./Header";
  */
 export function AppHeader() {
   const pathname = usePathname();
+  const signedIn = useSignedIn();
   // ログインとホームはログイン前の画面なので出さない
   if (pathname === ROUTES.HOME || pathname === ROUTES.LOGIN) return null;
+  // 問い合わせはログインしなくても開ける。ログインしているかが分かるまではレベル・XPを出さない
+  // （ログインしていないのに読みに行くと、エラーになるだけなので）
+  if (pathname === ROUTES.CONTACT && signedIn !== true) {
+    return <Header rightContent={signedIn === false ? <GuestLinks /> : null} showBrand />;
+  }
   return (
     <Header
       leftContent={<XpBadge />}
@@ -30,5 +38,18 @@ export function AppHeader() {
       }
       showBrand
     />
+  );
+}
+
+function GuestLinks() {
+  return (
+    <div className="flex items-center gap-1">
+      <Button asChild variant="ghost" size="sm">
+        <Link href={ROUTES.HOME}>ホーム</Link>
+      </Button>
+      <Button asChild variant="outline" size="sm">
+        <Link href={ROUTES.LOGIN}>ログイン</Link>
+      </Button>
+    </div>
   );
 }

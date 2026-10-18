@@ -552,7 +552,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** 問い合わせを運営にメールで送る */
+    /**
+     * 問い合わせを運営にメールで送る
+     * @description ログインできない人も連絡できるよう、ログインせずに使える。ログイン中ならユーザーIDとログインのメールアドレスを添える。 送れるのは、ログイン中は1人1日5通、ログインしていなければIPごとに1日3通、アプリ全体で1日50通まで（超えると 429）。 メールの送信の設定が無ければ 503。
+     */
     post: operations["sendContact"];
     delete?: never;
     options?: never;
@@ -1075,6 +1078,10 @@ export interface components {
     ContactRequest: {
       subject: string;
       message: string;
+      /** @description 返信先のメールアドレス。ログインしていなければ必須。ログイン中に省くと、ログインのメールアドレスに返信する */
+      email?: string;
+      /** @description 迷惑な自動送信を見分けるための欄。画面では隠しており、人は入力しない。値があれば送ったことにして何も送らない */
+      website?: string;
     };
     AdminStats: {
       totalUsers: number;

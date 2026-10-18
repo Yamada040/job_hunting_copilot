@@ -41,3 +41,32 @@ func (q *Queries) HitRateLimit(ctx context.Context, arg HitRateLimitParams) (int
 	err := row.Scan(&count)
 	return count, err
 }
+
+const hitRateLimitByKey = `-- name: HitRateLimitByKey :one
+insert into api_rate_limits_by_key (key, bucket, window_start, count)
+values ($1, $2, $3, 1)
+on conflict (key, bucket) do update set
+  count        = case when api_rate_limits_by_key.window_start < $4 then 1 else api_rate_limits_by_key.count + 1 end,
+  window_start = case when api_rate_limits_by_key.window_start < $4 then $3 else api_rate_limits_by_key.window_start end
+returning count
+`
+
+type HitRateLimitByKeyParams struct {
+	Key         string
+	Bucket      string
+	Now         time.Time
+	WindowStart time.Time
+}
+
+// HitRateLimit と同じことを、ユーザーではなく任意の文字列（IPのハッシュや全体）ごとに行う。
+func (q *Queries) HitRateLimitByKey(ctx context.Context, arg HitRateLimitByKeyParams) (int32, error) {
+	row := q.db.QueryRow(ctx, hitRateLimitByKey,
+		arg.Key,
+		arg.Bucket,
+		arg.Now,
+		arg.WindowStart,
+	)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
+}

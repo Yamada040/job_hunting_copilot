@@ -247,7 +247,7 @@ flowchart LR
 | GET / POST           | `/webtest-questions`                | 一覧／作成（XP）                                 |
 | GET                  | `/webtest-questions/{id}`           | 問題と解答記録                                   |
 | POST                 | `/webtest-questions/{id}/attempts`  | 解答。正誤はバックエンドが判定（XP）             |
-| POST                 | `/contact`                          | 問い合わせメール送信                             |
+| POST                 | `/contact`                          | 問い合わせメール送信（ログイン不要）             |
 | GET                  | `/admin/stats`                      | 開発者向けの件数集計                             |
 | GET                  | `/health`                           | 稼働確認。DBへの疎通も確かめる（ログイン不要）   |
 
