@@ -5,7 +5,7 @@ import { ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
 
-import { ROUTES } from "@/lib/constants/routes";
+import { PUBLIC_PAGES } from "@/lib/constants/routes";
 import { XpBadge } from "../xp-badge";
 import { Header } from "./Header";
 
@@ -15,8 +15,8 @@ import { Header } from "./Header";
  */
 export function AppHeader() {
   const pathname = usePathname();
-  // ログインとホームはログイン前の画面なので出さない
-  if (pathname === ROUTES.HOME || pathname === ROUTES.LOGIN) return null;
+  // ログインしていなくても開ける画面では出さない
+  if (PUBLIC_PAGES.includes(pathname)) return null;
   return (
     <Header
       leftContent={<XpBadge />}
