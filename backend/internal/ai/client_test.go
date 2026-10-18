@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 )
@@ -129,6 +130,25 @@ func TestGPTAnalyzeCompanyAnswersToolCalls(t *testing.T) {
 
 	if text != "分析結果" || !strings.Contains((*gptBodies)[1], `"tool_call_id":"call-1"`) {
 		t.Errorf("text = %q, second request = %s; want the tool result answered to call-1", text, (*gptBodies)[1])
+	}
+}
+
+func TestAnalyzeCompanyStopsAtDeadlineWithTimeoutMessage(t *testing.T) {
+	// 応答を返さず、呼び出し側が諦めるまで待ち続けるAI
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 本文を読み切らないと、サーバーが接続の切断に気付かず r.Context() が終わらない
+		_, _ = io.ReadAll(r.Body)
+		<-r.Context().Done()
+	}))
+	t.Cleanup(srv.Close)
+	c := NewClient(Config{Provider: "gemini", APIKey: "k", GeminiBaseURL: srv.URL}, srv.Client())
+	c.analysisDeadline = 50 * time.Millisecond
+
+	_, _, err := c.AnalyzeCompany(t.Context(), "企業名: サンプル")
+
+	var appErr *platform.Error
+	if !errors.As(err, &appErr) || appErr.Kind != platform.KindUnavailable || !strings.Contains(appErr.Message, "時間がかかりすぎた") {
+		t.Errorf("error = %v, want unavailable with the timeout message", err)
 	}
 }
 
