@@ -13,7 +13,12 @@
     },
     "api": {
       "root": "backend/",
-      "framework": "go"
+      "framework": "go",
+      "functions": {
+        "cmd/server/main.go": {
+          "maxDuration": 300
+        }
+      }
     }
   },
   "rewrites": [

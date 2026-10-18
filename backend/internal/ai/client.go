@@ -19,6 +19,10 @@ import (
 // 企業分析で、AIにWeb検索をさせる回数の上限。Tavily の無料枠を使い切らないため
 const maxSearches = 3
 
+// 企業分析の全体の締め切り。AIと検索を最大7回続けて呼ぶので、1回ごとのタイムアウトだけでは Vercel の関数の上限
+// （vercel.json の maxDuration: 300秒）を超えうる。上限で打ち切られると何も返せないため、手前で止めて保存と応答の時間を残す
+const analysisDeadline = 250 * time.Second
+
 // Config は、AIの設定。環境変数から読む（cmd/server）。
 type Config struct {
 	// Provider は "gemini" か "gpt"（"openai" は "gpt" の別名）
@@ -71,8 +75,9 @@ type provider interface {
 }
 
 type Client struct {
-	provider provider
-	search   searchFunc
+	provider         provider
+	search           searchFunc
+	analysisDeadline time.Duration
 }
 
 func NewClient(cfg Config, httpClient *http.Client) *Client {
@@ -86,7 +91,7 @@ func NewClient(cfg Config, httpClient *http.Client) *Client {
 	default:
 		p = newGemini(cfg, httpClient)
 	}
-	return &Client{provider: p, search: newTavily(cfg, httpClient).search}
+	return &Client{provider: p, search: newTavily(cfg, httpClient).search, analysisDeadline: analysisDeadline}
 }
 
 // Generate は、kind の指示で input を処理した結果の文章と、使ったトークン数を返す。
@@ -119,8 +124,20 @@ func (c *Client) AnalyzeCompany(ctx context.Context, input string) (string, Usag
 	if c.provider == nil {
 		return "", Usage{}, notConfigured()
 	}
-	text, usage, err := c.provider.generateWithSearch(ctx, instructionsFor(KindCompanyAnalysis), prompts[KindCompanyAnalysis].inputLabel+"\n"+input, c.search)
+	deadlineCtx, cancel := context.WithTimeout(ctx, c.analysisDeadline)
+	defer cancel()
+	text, usage, err := c.provider.generateWithSearch(deadlineCtx, instructionsFor(KindCompanyAnalysis), prompts[KindCompanyAnalysis].inputLabel+"\n"+input, c.search)
+	if err != nil && errors.Is(deadlineCtx.Err(), context.DeadlineExceeded) {
+		platform.Logger(ctx).Error("company analysis exceeded deadline", "deadline", c.analysisDeadline, "error", err)
+		return "", usage, analysisTimedOut()
+	}
 	return text, usage, upstream(ctx, err)
+}
+
+// 回数制限の消費を締め切り超過で取り消さないのは、それまでのAIと検索の費用はすでにかかっており、
+// 取り消すと遅い応答が続いたときに上限を超えて費用をかけられてしまうため
+func analysisTimedOut() error {
+	return &platform.Error{Kind: platform.KindUnavailable, Message: "企業分析に時間がかかりすぎたため中断しました。この1回も1日の回数に含まれます。しばらく経ってから再試行してください。"}
 }
 
 // キーが無いときに仮の文章を返さないのは、結果を保存する機能（1回しか実行できない適性診断など）で、仮の文章が保存されてしまうため
