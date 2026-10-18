@@ -72,6 +72,16 @@ func assertKind(t *testing.T, err error, kind platform.Kind) {
 	}
 }
 
+func assertCompanyNotFound(t *testing.T, err error) {
+	t.Helper()
+	assertKind(t, err, platform.KindInvalid)
+	var appErr *platform.Error
+	errors.As(err, &appErr)
+	if len(appErr.Fields) != 1 || appErr.Fields[0].Field != "companyId" || appErr.Fields[0].Message != "企業が見つかりません" {
+		t.Errorf("fields = %+v, want companyId: 企業が見つかりません", appErr.Fields)
+	}
+}
+
 func TestCreateSavesLogAndAwardsXP(t *testing.T) {
 	f := setup(t)
 	userID := dbtest.CreateUser(t, f.pool)
@@ -109,6 +119,25 @@ func TestCreateRejectsOtherUsersCompany(t *testing.T) {
 	_, _, err := f.interviews.Create(t.Context(), bob, validFields(f.newCompany(t, alice, "サンプル"), "2026-10-01"))
 
 	assertKind(t, err, platform.KindInvalid)
+}
+
+func TestUpdateRejectsOtherUsersCompany(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	alicesCompany := f.newCompany(t, alice, "サンプル")
+	bobsCompany := f.newCompany(t, bob, "サンプル")
+	log, _, err := f.interviews.Create(t.Context(), bob, validFields(bobsCompany, "2026-10-01"))
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	_, err = f.interviews.Update(t.Context(), bob, log.ID, Fields{CompanyID: &alicesCompany})
+
+	assertCompanyNotFound(t, err)
+	if got, err := f.interviews.Get(t.Context(), bob, log.ID); err != nil || got.CompanyID != bobsCompany {
+		t.Errorf("Get = %+v, %v; want the log still linked to bob's company", got, err)
+	}
 }
 
 func TestUpdateChangesOnlyGivenFields(t *testing.T) {
