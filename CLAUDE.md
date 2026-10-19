@@ -368,7 +368,7 @@ SMTP_USER=your-mail@example.com
 SMTP_PASS=your-app-password
 CONTACT_TO_EMAIL=contact-destination@example.com
 DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザー
-GOOGLE_ERROR_REPORTING_CREDENTIALS={...}   # Error Reporting に書き込むサービスアカウントの鍵（JSON。送り先は鍵のプロジェクト）。無ければエラーを送らない。プレビューには置かない（本番だけ）
+GOOGLE_ERROR_REPORTING_CREDENTIALS={...}   # Error Reporting に書き込むサービスアカウントの鍵（JSON。送り先は鍵のプロジェクト）。無ければエラーを送らない
 ```
 
 E2Eテストの値（テストユーザーなど）は、手元の Supabase 専用の固定値として `e2e/support/local-supabase.ts` に置いている。
@@ -413,9 +413,9 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 ### デプロイ
 
 - **Vercel**（無料のHobbyプラン）でホスティング。`vercel.json` の Services で、`/v1/*` を Go、それ以外を Next.js に振り分ける。関数のリージョンは東京（`hnd1`、Supabase と同じ）
-- 本番へのデプロイはリリース（下記）でだけ行う。Vercel の Git 連携は master をデプロイしない（`vercel.json` の `git.deploymentEnabled`）。マイグレーションとの順番を保証するため、`release.yml` が Vercel CLI でデプロイする
+- 本番へのデプロイはリリース（下記）でだけ行う。Vercel の Git 連携はどのブランチもデプロイしない（`vercel.json` の `git.deploymentEnabled`）。マイグレーションとの順番を保証するため、`release.yml` が Vercel CLI でデプロイする
 - 環境変数は `infra/vercel.tf`（Terraform）で設定する。変えたら Vercel で再デプロイするまで反映されない
-- ブランチごとにプレビューデプロイが作成される。プレビューは本番と同じ Supabase につながるので、本番のデータに触れることに注意する。マイグレーションを含む変更は、リリースまでプレビューでは動かない
+- プレビューのデプロイは作らない（`vercel.json` の `git.deploymentEnabled: false`）。プレビューが本番の Supabase・AI のキーにつながると、レビュー前のコードが利用者のデータに届くため。秘密の環境変数も production にだけ置く。変更は手元（`mise run dev`）と CI の E2E で確かめる
 
 ### リリース
 
