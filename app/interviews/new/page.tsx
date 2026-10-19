@@ -12,8 +12,8 @@ export default function InterviewNewPage() {
   return (
     <AppLayout
       avatar={<AvatarGuide messages={GUIDE_TIPS.interviewNew} />}
-      headerTitle="面接終了後のログを追加"
-      headerDescription="面接後の質問・回答・自己評価を記録し、次回改善に備えます。"
+      headerTitle="面接ログを追加"
+      headerDescription="面接で聞かれたこと・答えたこと・手応えを記録し、次の面接に備えます"
       className="space-y-6"
     >
       <NewInterviewForm />
