@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { ArrowTopRightOnSquareIcon, StarIcon } from "@heroicons/react/24/outline";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCompanies, type CompanyListItem, type CompanyStage } from "@/lib/api/companies";
@@ -42,8 +43,12 @@ export function CompanyList() {
     return (
       <EmptyState
         title="まだ企業がありません"
-        description="気になる企業を登録すると、選考状況やES・面接ログをまとめて管理できます。"
-      />
+        description="気になる企業を登録すると、選考状況と、その企業のES・面接ログ・予定を企業の画面でまとめて確かめられます。"
+      >
+        <Button asChild>
+          <Link href={ROUTES.COMPANIES_NEW}>企業を登録する</Link>
+        </Button>
+      </EmptyState>
     );
   }
 
