@@ -304,6 +304,7 @@ backend/
 - **本番ではなく、手元・CIで起動した Supabase（`supabase start`）につなぐ**。`playwright.config.ts` が `supabase status` からURLとキーを読み、バックエンド（ポート8180）と本番ビルドの Next.js（ポート3100）を起動する
 - 手元の Supabase は、本番と同じ ES256 でトークンに署名する（`npm run supabase:signing-key`。バックエンドは HS256 を受け付けない）
 - `e2e/global-setup.ts` が、手元の Supabase の管理APIでテストユーザーA/Bを作り、`POST /api/test-support/login` でログインして `storageState` を保存する。このルートは `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致のときだけ動く
+- AIは、`playwright.config.ts` が起動する偽の OpenAI 互換サーバー（`e2e/fake-ai/server.mjs`）が答える。バックエンドに E2E 専用の切り替えは足さず、`AI_ENDPOINT` でそこを向ける。AIを使うテストは、1回だけの機能と回数制限に当たらないよう、テストごとに新しいユーザーで行う（`e2e/support/new-user.ts`）
 - 本番の Supabase はメールアドレスでのログインを止めているので、本番ではテストユーザーでログインできない
 - 本番Vercel環境変数には **`E2E_TEST_MODE` を絶対に設定しない**
 - 詳細な設計・セキュリティ上の注意点は `docs/testing/e2e-test-plan.md` を参照

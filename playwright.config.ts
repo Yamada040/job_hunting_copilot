@@ -4,6 +4,7 @@ import { E2E_TEST_SECRET, readLocalSupabase, TEST_USERS } from "./e2e/support/lo
 // 手元で npm run dev しているサーバーとぶつからないよう、E2E 専用のポートで起動する
 const WEB_PORT = 3100;
 const API_PORT = 8180;
+const FAKE_AI_PORT = 8190;
 const baseURL = `http://localhost:${WEB_PORT}`;
 
 const supabase = readLocalSupabase();
@@ -42,10 +43,28 @@ export default defineConfig({
   ],
   webServer: [
     {
+      // AIの代わりに応答する偽の OpenAI 互換サーバー（e2e/fake-ai/server.mjs）
+      command: "node e2e/fake-ai/server.mjs",
+      url: `http://127.0.0.1:${FAKE_AI_PORT}/health`,
+      env: { PORT: String(FAKE_AI_PORT) },
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       command: "go run ./cmd/server",
       cwd: "backend",
       url: `http://localhost:${API_PORT}/v1/health`,
-      env: { PORT: String(API_PORT), SUPABASE_URL: supabase.API_URL, DATABASE_URL: supabase.DB_URL },
+      env: {
+        PORT: String(API_PORT),
+        SUPABASE_URL: supabase.API_URL,
+        DATABASE_URL: supabase.DB_URL,
+        AI_PROVIDER: "gpt",
+        AI_ENDPOINT: `http://127.0.0.1:${FAKE_AI_PORT}/v1/chat/completions`,
+        AI_PROVIDER_API_KEY: "e2e-dummy-key",
+        // アプリ全体の1日の上限は、手元の Supabase に残り続け、ほかの作業の分も数えるので、E2E では当たらない値にする
+        AI_APP_DAILY_LIMIT: "100000",
+        COMPANY_ANALYSIS_APP_DAILY_LIMIT: "100000",
+        AI_DAILY_BUDGET_USD: "1000",
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },
