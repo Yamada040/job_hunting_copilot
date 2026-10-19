@@ -46,10 +46,12 @@ type Props = {
   pending: boolean;
   error: unknown;
   onSubmit: (values: InterviewFormValues) => void;
+  /** 新規作成のときに最初から選んでおく企業 */
+  defaultCompany?: CompanySummary;
 };
 
-export function InterviewForm({ initial, submitLabel, pending, error, onSubmit }: Props) {
-  const [company, setCompany] = useState<CompanySummary | null>(initial?.company ?? null);
+export function InterviewForm({ initial, submitLabel, pending, error, onSubmit, defaultCompany }: Props) {
+  const [company, setCompany] = useState<CompanySummary | null>(initial?.company ?? defaultCompany ?? null);
   const [questions, setQuestions] = useState<InterviewQuestion[]>(initial?.questions ?? [emptyQuestion]);
   const { dirty, markDirty, formProps } = useFormEditing();
 

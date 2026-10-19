@@ -143,16 +143,11 @@ mise run dev   # 手元の Supabase・バックエンド（localhost:8080）・N
 
 ## 認証設定 (Supabase)
 
-Supabase Dashboard → Authentication → URL Configuration
+本番の Site URL・Redirect URL は `infra/supabase.tf`（Terraform）で設定し、Supabase Dashboard からは変えない。
 
-- Site URL:
-  - Local: `http://localhost:3000`
-  - Production: `https://job-seeker-gray.vercel.app`（本番確認時）
-- Redirect URLs:
-  - `http://localhost:3000/auth/callback`
-  - `http://localhost:3000/dashboard`
-  - `https://job-seeker-gray.vercel.app/auth/callback`
-  - `https://job-seeker-gray.vercel.app/dashboard`
+- Site URL: `https://job-seeker-gray.vercel.app`
+- Redirect URLs: `https://job-seeker-gray.vercel.app/auth/callback`・`/dashboard`（localhost は入れない）
+- 手元の Supabase は `supabase/config.toml` の `http://localhost:3000` を使う
 
 Next.js 認証コールバック: `app/auth/callback/route.ts` で `exchangeCodeForSession` を実行。
 

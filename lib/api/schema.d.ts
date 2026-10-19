@@ -297,7 +297,7 @@ export interface paths {
     };
     /**
      * カレンダーに表示する予定を取得する
-     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。
+     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。companyId を渡すとその企業の予定とESの締切だけに絞る。
      */
     get: operations["listCalendarItems"];
     put?: never;
@@ -1813,6 +1813,7 @@ export interface operations {
   listCalendarItems: {
     parameters: {
       query?: {
+        companyId?: string;
         from?: string;
         to?: string;
       };

@@ -1,9 +1,10 @@
 -- name: ListCalendarEvents :many
--- 期間（from 〜 to、どちらも含む）で絞り込む。どちらも省略できる。何日か続く予定は、期間に少しでも重なれば含める
+-- 期間（from 〜 to、どちらも含む）で絞り込む。どちらも省略できる。何日か続く予定は、期間に少しでも重なれば含める。company_id を渡すと、その企業の予定だけに絞る
 select sqlc.embed(calendar_events), companies.name as company_name
 from calendar_events
 left join companies on companies.id = calendar_events.company_id
 where calendar_events.user_id = @user_id
+  and (sqlc.narg(company_id)::uuid is null or calendar_events.company_id = sqlc.narg(company_id)::uuid)
   and (sqlc.narg(from_date)::date is null or coalesce(calendar_events.end_date, calendar_events.date) >= sqlc.narg(from_date)::date)
   and (sqlc.narg(to_date)::date is null or calendar_events.date <= sqlc.narg(to_date)::date)
 order by calendar_events.date, calendar_events.time nulls last;
@@ -15,6 +16,7 @@ from es_entries
 join companies on companies.id = es_entries.company_id
 where es_entries.user_id = @user_id
   and es_entries.deadline is not null
+  and (sqlc.narg(company_id)::uuid is null or es_entries.company_id = sqlc.narg(company_id)::uuid)
   and (sqlc.narg(from_date)::date is null or es_entries.deadline >= sqlc.narg(from_date)::date)
   and (sqlc.narg(to_date)::date is null or es_entries.deadline <= sqlc.narg(to_date)::date)
 order by es_entries.deadline;

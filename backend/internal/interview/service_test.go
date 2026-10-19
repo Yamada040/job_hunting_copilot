@@ -206,6 +206,35 @@ func TestListReturnsWhetherReviewed(t *testing.T) {
 	}
 }
 
+func TestListFiltersByCompanyWithinUser(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	a := f.newCompany(t, alice, "A社")
+	b := f.newCompany(t, alice, "B社")
+	for _, companyID := range []uuid.UUID{a, a, b} {
+		if _, _, err := f.interviews.Create(t.Context(), alice, validFields(companyID, "2026-10-01")); err != nil {
+			t.Fatalf("Create: %v", err)
+		}
+	}
+
+	byCompany, err := f.interviews.List(t.Context(), alice, &a, 0)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	bobsList, err := f.interviews.List(t.Context(), bob, &a, 0)
+	if err != nil {
+		t.Fatalf("List for bob: %v", err)
+	}
+
+	if len(byCompany) != 2 || byCompany[0].CompanyName != "A社" {
+		t.Errorf("by company = %d logs, want 2 logs of A社", len(byCompany))
+	}
+	if len(bobsList) != 0 {
+		t.Errorf("bob sees %d logs of alice's company, want none", len(bobsList))
+	}
+}
+
 func TestCreateStopsAtLimitPerUser(t *testing.T) {
 	f := setup(t)
 	alice := dbtest.CreateUser(t, f.pool)

@@ -21,7 +21,7 @@ export default function CompaniesPage() {
         </Button>
       }
       headerTitle="企業管理"
-      headerDescription="業界・選考状況・志望度を一覧で把握し、編集ページへ遷移できます"
+      headerDescription="選考状況・志望度を一覧で確かめ、企業を開くと情報を更新できます"
     >
       <CompanyList />
     </AppLayout>

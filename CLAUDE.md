@@ -216,7 +216,7 @@ backend/
 ### ゲーミフィケーション（XPシステム）
 
 - レベル = XP ÷ 25（切り捨て）＋ 1。合計XPとレベルは `profiles` に保存する
-- 付与のルールは `backend/internal/xp`（画面ではなく操作に結び付ける）
+- 付与のルールは `backend/internal/xp`（画面ではなく操作に結び付ける）。ヘッダーのレベル・XPを押すと開く説明（`app/_components/xp/xp-rules-dialog.tsx`）は `lib/xp/rules.ts` の値を出すので、ルールを変えたら両方をそろえる
 
 | 操作                         | XP  | 制限                        |
 | ---------------------------- | --- | --------------------------- |
@@ -252,6 +252,7 @@ backend/
 - マイページID・URLを保存し、一覧からマイページを開ける
 - 志望度・お気に入り（一覧で絞り込める）
 - AI企業分析（企業ごとに1回）
+- 詳細に、その企業のES・面接ログ・予定を出す（各一覧のAPIに `companyId` を渡して絞る。予定は期間を渡さない）。作成のボタンは、その企業を選んだ状態で開く（`/es/new?companyId=...` など）
 - 削除すると、ひも付くES・面接ログ・予定も消える
 
 **ログイン（`/login`）**:
@@ -313,7 +314,7 @@ backend/
 - `.github/workflows/ci.yml`: PR ごとに、変わった場所に関係するジョブだけを走らせる（`changes` ジョブで判定し、関係ないジョブは `if:` でスキップ。スキップは必須チェックで成功扱い）
   - `checks`（lint/type-check/format:check/APIの型の鮮度）: 常に
   - `build`（本番ビルド確認）・`unit`（Vitest）: フロント・依存・ワークフローの変更
-  - `backend`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）: `backend/`・`supabase/`・ワークフローの変更
+  - `backend`（生成コードの鮮度・golangci-lint・govulncheck・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）: `backend/`・`supabase/`・ワークフローの変更
   - `e2e`（Playwright。CIの中で Supabase を起動する）: `backend/`・`supabase/`・`e2e/`・依存・ワークフローの変更。フロントだけの変更では走らせない
   - `migrations`: リリース PR（dev → master）でだけ、本番に当たるマイグレーションを `supabase db push --dry-run` で表示する
 - `.github/workflows/cache.yml`: dev への push で、Go のモジュールとビルド結果・npm・Playwright のブラウザのキャッシュを dev に置く（PR は自分のキャッシュと dev のキャッシュしか読めないため）
@@ -368,7 +369,7 @@ SMTP_USER=your-mail@example.com
 SMTP_PASS=your-app-password
 CONTACT_TO_EMAIL=contact-destination@example.com
 DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザー
-GOOGLE_ERROR_REPORTING_CREDENTIALS={...}   # Error Reporting に書き込むサービスアカウントの鍵（JSON。送り先は鍵のプロジェクト）。無ければエラーを送らない。プレビューには置かない（本番だけ）
+GOOGLE_ERROR_REPORTING_CREDENTIALS={...}   # Error Reporting に書き込むサービスアカウントの鍵（JSON。送り先は鍵のプロジェクト）。無ければエラーを送らない
 ```
 
 E2Eテストの値（テストユーザーなど）は、手元の Supabase 専用の固定値として `e2e/support/local-supabase.ts` に置いている。
@@ -377,7 +378,7 @@ E2Eテストの値（テストユーザーなど）は、手元の Supabase 専�
 
 ### Supabase Auth設定
 
-`infra/supabase.tf` で管理する。Site URL は本番のURL、Redirect URL は本番と `http://localhost:3000` の `/auth/callback`・`/dashboard`。Google ログインの OAuth クライアントも同じファイルで設定する。
+`infra/supabase.tf` で管理する。Site URL は本番のURL、Redirect URL は本番の `/auth/callback`・`/dashboard` だけ（localhost は手元の Supabase の `supabase/config.toml` で許可する）。Google ログインの OAuth クライアントも同じファイルで設定する。
 
 Data API（PostgREST）は使わないため、公開するスキーマを `graphql_public` だけにして `public` を外している。
 
@@ -413,9 +414,9 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 ### デプロイ
 
 - **Vercel**（無料のHobbyプラン）でホスティング。`vercel.json` の Services で、`/v1/*` を Go、それ以外を Next.js に振り分ける。関数のリージョンは東京（`hnd1`、Supabase と同じ）
-- 本番へのデプロイはリリース（下記）でだけ行う。Vercel の Git 連携は master をデプロイしない（`vercel.json` の `git.deploymentEnabled`）。マイグレーションとの順番を保証するため、`release.yml` が Vercel CLI でデプロイする
+- 本番へのデプロイはリリース（下記）でだけ行う。Vercel の Git 連携はどのブランチもデプロイしない（`vercel.json` の `git.deploymentEnabled`）。マイグレーションとの順番を保証するため、`release.yml` が Vercel CLI でデプロイする
 - 環境変数は `infra/vercel.tf`（Terraform）で設定する。変えたら Vercel で再デプロイするまで反映されない
-- ブランチごとにプレビューデプロイが作成される。プレビューは本番と同じ Supabase につながるので、本番のデータに触れることに注意する。マイグレーションを含む変更は、リリースまでプレビューでは動かない
+- プレビューのデプロイは作らない（`vercel.json` の `git.deploymentEnabled: false`）。プレビューが本番の Supabase・AI のキーにつながると、レビュー前のコードが利用者のデータに届くため。秘密の環境変数も production にだけ置く。変更は手元（`mise run dev`）と CI の E2E で確かめる
 
 ### リリース
 
