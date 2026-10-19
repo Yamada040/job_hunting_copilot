@@ -22,7 +22,7 @@ func (h Handler) ListCalendarItems(ctx context.Context, req openapi.ListCalendar
 	if err != nil {
 		return nil, err
 	}
-	items, err := h.Service.List(ctx, userID, dateOrNil(req.Params.From), dateOrNil(req.Params.To))
+	items, err := h.Service.List(ctx, userID, req.Params.CompanyId, dateOrNil(req.Params.From), dateOrNil(req.Params.To))
 	if err != nil {
 		return nil, err
 	}

@@ -12,6 +12,7 @@ import { useStartCompanyAnalysis } from "./use-start-company-analysis";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { CompanyForm } from "./company-form";
+import { CompanyRelated } from "./company-related";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
 import { LoadError } from "@/app/_components/load-error";
 
@@ -73,6 +74,8 @@ function CompanyDetailLoaded({ company }: { company: Company }) {
         pending={analysis?.status === "pending"}
         done={company.aiResult !== null}
       />
+
+      <CompanyRelated company={{ id: company.id, name: company.name }} />
 
       <div className="space-y-2">
         <ConfirmDialog

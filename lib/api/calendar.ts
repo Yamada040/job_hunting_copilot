@@ -13,6 +13,7 @@ export type CalendarPeriod = { from: string; to: string };
 export const calendarKeys = {
   all: ["calendar"] as const,
   period: (period: CalendarPeriod) => ["calendar", period] as const,
+  company: (companyId: string) => ["calendar", "company", companyId] as const,
 };
 
 /**
@@ -24,6 +25,15 @@ export function useCalendarItems(period: CalendarPeriod) {
     queryKey: calendarKeys.period(period),
     queryFn: () => unwrap(api.GET("/v1/calendar-events", { params: { query: period } })),
     placeholderData: keepPreviousData,
+  });
+}
+
+/** 企業にひも付く予定とESの締切。 */
+// ほかと違って期間を渡さないのは、1社の予定は数が限られ、終わった面接も含めて選考の流れを見返したいため
+export function useCompanyCalendarItems(companyId: string) {
+  return useQuery({
+    queryKey: calendarKeys.company(companyId),
+    queryFn: () => unwrap(api.GET("/v1/calendar-events", { params: { query: { companyId } } })),
   });
 }
 
