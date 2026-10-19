@@ -74,14 +74,15 @@ function DockBar({ pathname }: { pathname: string }) {
   const visibleMoreItems = me?.isDeveloper ? [...moreItems, developerItem] : moreItems;
 
   return (
+    // 帯を真ん中に置くため nav は画面の幅いっぱいに広げるが、帯の左右の透明な部分は下の画面のボタンを押せるよう、クリックを素通しする
     <nav
       aria-label="メインメニュー"
-      className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)]"
     >
       <div
         onMouseMove={(e) => mouseX.set(e.clientX)}
         onMouseLeave={() => mouseX.set(Infinity)}
-        className="grid grid-cols-[1fr_auto_1fr] items-end gap-0.5 rounded-3xl border bg-card/90 px-2 pt-2 pb-1.5 sm:gap-1 sm:px-3 shadow-window backdrop-blur"
+        className="pointer-events-auto grid grid-cols-[1fr_auto_1fr] items-end gap-0.5 rounded-3xl border bg-card/90 px-2 pt-2 pb-1.5 sm:gap-1 sm:px-3 shadow-window backdrop-blur"
       >
         {/* 「＋」が真ん中に来るよう、左右のアイコンを同じ幅の列（1fr）に入れる。アイコンの数が左右で違っても真ん中にそろう */}
         <div className="flex justify-end gap-1">
