@@ -6,6 +6,8 @@ import type { components } from "./schema";
 import { applyXpResult } from "./xp";
 
 export type EsEntry = components["schemas"]["EsEntry"];
+/** 一覧のES。設問・本文・メモは持たない。 */
+export type EsEntrySummary = components["schemas"]["EsEntrySummary"];
 export type EsQuestion = components["schemas"]["EsQuestion"];
 export type EsEntryCreate = components["schemas"]["EsEntryCreate"];
 export type EsEntryUpdate = components["schemas"]["EsEntryUpdate"];
@@ -91,7 +93,10 @@ export function useDeleteEsEntry(id: string) {
   });
 }
 
-/** ESのAI添削の履歴（新しい順）。 */
+/** バックエンドが返す添削の履歴の件数。 */
+const REVIEW_HISTORY_LIMIT = 10;
+
+/** ESのAI添削の履歴（新しい順に10件まで）。 */
 export function useEsReviews(id: string) {
   return useQuery({
     queryKey: esKeys.reviews(id),
@@ -105,6 +110,8 @@ export function useReviewEsEntry(id: string) {
   return useMutation({
     mutationFn: () => unwrap(api.POST("/v1/es-entries/{esEntryId}/reviews", { params: { path: { esEntryId: id } } })),
     onSuccess: (review) =>
-      queryClient.setQueryData<EsReview[]>(esKeys.reviews(id), (reviews = []) => [review, ...reviews]),
+      queryClient.setQueryData<EsReview[]>(esKeys.reviews(id), (reviews = []) =>
+        [review, ...reviews].slice(0, REVIEW_HISTORY_LIMIT),
+      ),
   });
 }

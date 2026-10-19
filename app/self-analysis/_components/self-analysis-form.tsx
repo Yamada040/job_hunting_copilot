@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 
 import {
   useAnalyzeSelf,
@@ -10,11 +10,12 @@ import {
   type SelfAnalysisResult,
 } from "@/lib/api/assessments";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { noticeWhenDone, showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { ROUTES } from "@/lib/constants/routes";
 import { AiResultPanel } from "@/app/_components/ai-result/ai-result-panel";
 import { ConfirmDialog } from "@/app/_components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FormSkeleton } from "@/app/_components/loading-skeletons";
 import { LeaveGuard } from "@/app/_components/form/leave-guard";
@@ -76,7 +77,7 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
   const [answers, setAnswers] = useState<Answers>(result?.answers ?? defaultAnswers);
   const submit = useSubmitSelfAnalysis();
   const analyze = useAnalyzeSelf();
-  // 回答は1人1回だけ。保存済みなら回答を表示するだけにする（docs/backend-design.md 3章）
+  // 保存済みなら、変更できない回答の一覧を表示する（docs/backend-design.md 3章）
   const locked = result !== null;
   // 回答を変えたか。保存すると result が届いて locked になるので、そのときは確かめない
   const [touched, setTouched] = useState(false);
@@ -99,13 +100,10 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
         </CardHeader>
         <CardContent className="space-y-3">
           <Card variant="muted" size="sm" className="px-3 text-xs font-semibold text-primary">
-            ※ 現在は一回しかできません。
+            回答は保存後に変更できません。
           </Card>
           {locked ? (
-            // 答え終わったあとは、全部の答えを見返せるよう1つの画面に並べる
-            QUESTIONS.map((q) => (
-              <TextArea key={q.key} label={q.title} value={answers[q.key]} onChange={(v) => handleChange(q.key, v)} />
-            ))
+            <AnswerSummary answers={answers} />
           ) : (
             <QuestionStepper
               dirty={dirty}
@@ -132,9 +130,9 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
                     </Button>
                   }
                   title="回答を保存しますか？"
-                  description={`回答は1回だけ保存できます。${unanswered > 0 ? `まだ答えていない質問が${unanswered}問あります。` : ""}この内容で保存しますか？`}
+                  description={`保存後は回答を変更できません。${unanswered > 0 ? `まだ答えていない質問が${unanswered}問あります。` : ""}この内容で保存しますか？`}
                   confirmLabel="保存する"
-                  onConfirm={() => submit.mutate(answers)}
+                  onConfirm={() => submit.mutate(answers, { onSuccess: () => showSuccessNotice("回答を保存しました") })}
                 />
               )}
             />
@@ -146,12 +144,17 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
 
       <AiResultPanel
         title="AI自己分析"
-        description="保存した回答をもとに、強み・価値観・モチベーションの源泉と自己PRの骨子をAIがまとめます。1回だけ実行できます。"
+        description="保存した回答をもとに、強み・価値観・モチベーションの源泉と自己PRの骨子をAIがまとめます。保存後に1回実行できます。"
         result={result?.aiResult ?? null}
         runLabel="AI自己分析を行う"
-        onRun={() => analyze.mutate()}
+        onRun={() =>
+          void noticeWhenDone(analyze.mutateAsync(), {
+            action: "AI自己分析",
+            done: "AI自己分析が終わりました",
+            link: { href: ROUTES.SELF_ANALYSIS, label: "結果を見る" },
+          })
+        }
         pending={analyze.isPending}
-        error={analyze.error}
         done={!!result?.aiResult}
         blockedReason={locked ? undefined : "回答を保存すると実行できます"}
       />
@@ -159,12 +162,15 @@ function SelfAnalysisFormLoaded({ result }: { result: SelfAnalysisResult | null 
   );
 }
 
-function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  const id = useId();
+function AnswerSummary({ answers }: { answers: Answers }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} rows={3} />
-    </div>
+    <dl className="space-y-3">
+      {QUESTIONS.map((question) => (
+        <div key={question.key} className="space-y-1 rounded-lg border bg-secondary/40 px-3 py-2">
+          <dt className="text-sm font-semibold">{question.title}</dt>
+          <dd className="whitespace-pre-line text-sm text-muted-foreground">{answers[question.key] || "未回答"}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

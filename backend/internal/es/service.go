@@ -21,8 +21,11 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
-// 一覧で件数の指定がないときの上限。1人のESは多くても数百件なので、実質的に全件を返す
-const defaultListLimit = 1000
+const (
+	maxEntries = 500
+	// 一覧で件数の指定がないときの上限。1人のESは maxEntries 件までなので、全件を返す
+	defaultListLimit = maxEntries
+)
 
 // Question は、ESの設問と回答。
 type Question struct {
@@ -64,8 +67,8 @@ func NewService(pool *pgxpool.Pool, xp *xp.Service, ai ai.Generator, limiter *ra
 	return &Service{pool: pool, xp: xp, ai: ai, limiter: limiter}
 }
 
-// List は、ユーザーのESを更新日時の新しい順に返す。companyID を渡すとその企業のESだけに絞る。
-func (s *Service) List(ctx context.Context, userID uuid.UUID, companyID *uuid.UUID, limit int) ([]Entry, error) {
+// List は、ユーザーのESを更新日時の新しい順に返す。companyID を渡すとその企業のESだけに絞る。設問・本文・メモは含まない。
+func (s *Service) List(ctx context.Context, userID uuid.UUID, companyID *uuid.UUID, limit int) ([]db.ListEsEntriesRow, error) {
 	if limit <= 0 {
 		limit = defaultListLimit
 	}
@@ -73,13 +76,7 @@ func (s *Service) List(ctx context.Context, userID uuid.UUID, companyID *uuid.UU
 	if err != nil {
 		return nil, fmt.Errorf("list es entries: %w", err)
 	}
-	entries := make([]Entry, len(rows))
-	for i, row := range rows {
-		if entries[i], err = toEntry(row.EsEntry, row.CompanyName); err != nil {
-			return nil, err
-		}
-	}
-	return entries, nil
+	return rows, nil
 }
 
 func (s *Service) Get(ctx context.Context, userID, id uuid.UUID) (Entry, error) {
@@ -103,6 +100,13 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (Entry
 	var entry Entry
 	err = platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
+		count, err := q.CountEsEntries(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("count es entries: %w", err)
+		}
+		if err := platform.CheckLimit(count, maxEntries, fmt.Sprintf("作成できるESは%d件までです。不要なESを削除してから作成してください", maxEntries)); err != nil {
+			return err
+		}
 		if err := company.EnsureOwned(ctx, q, userID, *f.CompanyID); err != nil {
 			return err
 		}

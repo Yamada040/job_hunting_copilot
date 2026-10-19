@@ -38,15 +38,15 @@ export const COMPANY_FIELD_LABELS: Record<string, string> = {
   preference: "志望度",
 };
 
-// maxLength は backend/api/openapi.yaml の CompanyCreate / CompanyUpdate と同じ値（超えた入力はバックエンドが400で拒否する）
+// maxLength と、link の欄が http(s) のURLに限ることは、backend/api/openapi.yaml の CompanyCreate / CompanyUpdate と同じ（違う入力はバックエンドが400で拒否する）
 const basicFields = [
   { name: "name", maxLength: 100, placeholder: "例）株式会社サンプル", required: true },
   { name: "industry", maxLength: 100, placeholder: "例）IT / コンサル / メーカー" },
-  { name: "url", maxLength: 500, placeholder: "https://example.com" },
+  { name: "url", maxLength: 500, placeholder: "https://example.com", link: true },
 ] as const;
 const mypageFields = [
   { name: "mypageId", maxLength: 100, placeholder: "ログインID" },
-  { name: "mypageUrl", maxLength: 500, placeholder: "https://mypage.example.com" },
+  { name: "mypageUrl", maxLength: 500, placeholder: "https://mypage.example.com", link: true },
 ] as const;
 
 type Props = {
@@ -54,12 +54,10 @@ type Props = {
   submitLabel: string;
   pending: boolean;
   error: unknown;
-  /** 直前の保存がうまくいったか（保存の帯に「保存しました」を出す） */
-  saved?: boolean;
   onSubmit: (values: CompanyFormValues) => void;
 };
 
-export function CompanyForm({ initial, submitLabel, pending, error, saved, onSubmit }: Props) {
+export function CompanyForm({ initial, submitLabel, pending, error, onSubmit }: Props) {
   const { dirty, formProps } = useFormEditing();
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -153,7 +151,7 @@ export function CompanyForm({ initial, submitLabel, pending, error, saved, onSub
 
         <ApiErrorMessage error={error} labels={COMPANY_FIELD_LABELS} />
 
-        <FormActions dirty={dirty} saved={saved}>
+        <FormActions dirty={dirty}>
           <Button type="submit" variant="default" disabled={pending}>
             {pending ? "保存中…" : submitLabel}
           </Button>
@@ -180,6 +178,7 @@ function TextField({
         defaultValue={initial?.[field.name] ?? ""}
         maxLength={field.maxLength}
         required={"required" in field}
+        {...("link" in field && { type: "url", pattern: "https?://.*" })}
         placeholder={field.placeholder}
       />
     </div>

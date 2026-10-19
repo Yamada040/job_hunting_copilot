@@ -46,12 +46,12 @@ export function XpBadge() {
   }, [reachedLevel, reduceMotion]);
 
   // 届く前に描くと XP 0・Lv 1 から始まり、届いた瞬間に大きく増えたように動いてしまうので、届くまでは場所だけ取る
-  if (!data) return <div className="h-16 w-[28rem]" />;
+  if (!data) return <div className="h-11 w-40 sm:h-16 sm:w-[28rem]" />;
 
   return (
     <>
-      <div className="relative flex w-[28rem] items-center gap-3">
-        <LevelEmblem level={level} className="h-16 w-14 shrink-0 text-base" />
+      <div className="relative flex w-40 min-w-0 items-center gap-1 sm:w-[28rem] sm:gap-3">
+        <LevelEmblem level={level} className="h-11 w-10 shrink-0 text-xs sm:h-16 sm:w-14 sm:text-base" />
         <XpGauge xp={xp} level={level} />
         {/* 獲得したXPが、ゲージの上へ浮かんで消える */}
         <AnimatePresence>

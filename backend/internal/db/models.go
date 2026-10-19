@@ -237,6 +237,12 @@ func (ns NullXpAction) Value() (driver.Value, error) {
 	return string(ns.XpAction), nil
 }
 
+type ApiAppRateLimit struct {
+	Bucket      string
+	WindowStart time.Time
+	Count       int32
+}
+
 type ApiRateLimit struct {
 	UserID      uuid.UUID
 	Bucket      string
@@ -252,6 +258,10 @@ type AptitudeResult struct {
 	CreatedAt      time.Time
 	AiInputTokens  *int32
 	AiOutputTokens *int32
+}
+
+type AuthUser struct {
+	ID uuid.UUID
 }
 
 type CalendarEvent struct {

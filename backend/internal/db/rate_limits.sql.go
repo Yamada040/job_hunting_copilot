@@ -12,6 +12,55 @@ import (
 	"github.com/google/uuid"
 )
 
+const addAppRateLimit = `-- name: AddAppRateLimit :one
+insert into api_app_rate_limits (bucket, window_start, count)
+values ($1, $2, $3::integer)
+on conflict (bucket) do update set
+  count        = case when api_app_rate_limits.window_start < $4 then $3::integer else api_app_rate_limits.count + $3::integer end,
+  window_start = case when api_app_rate_limits.window_start < $4 then $2 else api_app_rate_limits.window_start end
+returning count
+`
+
+type AddAppRateLimitParams struct {
+	Bucket      string
+	Now         time.Time
+	Amount      int32
+	WindowStart time.Time
+}
+
+// アプリ全体で共有する枠に amount を足し、HitRateLimit と同じく1つの文で数える。回数の枠は1ずつ、AIの利用料の枠はマイクロドルを足す
+func (q *Queries) AddAppRateLimit(ctx context.Context, arg AddAppRateLimitParams) (int32, error) {
+	row := q.db.QueryRow(ctx, addAppRateLimit,
+		arg.Bucket,
+		arg.Now,
+		arg.Amount,
+		arg.WindowStart,
+	)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getAppRateLimit = `-- name: GetAppRateLimit :one
+select coalesce((
+  select count from api_app_rate_limits
+  where bucket = $1 and window_start >= $2
+), 0)::integer as count
+`
+
+type GetAppRateLimitParams struct {
+	Bucket      string
+	WindowStart time.Time
+}
+
+// アプリ全体で共有する枠の、今の期間の量を返す。期間が切り替わっていれば（行が無ければ）0
+func (q *Queries) GetAppRateLimit(ctx context.Context, arg GetAppRateLimitParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getAppRateLimit, arg.Bucket, arg.WindowStart)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
+}
+
 const hitRateLimit = `-- name: HitRateLimit :one
 insert into api_rate_limits (user_id, bucket, window_start, count)
 values ($1, $2, $3, 1)
@@ -40,4 +89,37 @@ func (q *Queries) HitRateLimit(ctx context.Context, arg HitRateLimitParams) (int
 	var count int32
 	err := row.Scan(&count)
 	return count, err
+}
+
+const refundAppRateLimit = `-- name: RefundAppRateLimit :exec
+update api_app_rate_limits set count = count - 1
+where bucket = $1 and window_start <= $2 and count > 0
+`
+
+type RefundAppRateLimitParams struct {
+	Bucket string
+	HitAt  time.Time
+}
+
+// HitAppRateLimit で数えた1回を、RefundRateLimit と同じ条件で戻す
+func (q *Queries) RefundAppRateLimit(ctx context.Context, arg RefundAppRateLimitParams) error {
+	_, err := q.db.Exec(ctx, refundAppRateLimit, arg.Bucket, arg.HitAt)
+	return err
+}
+
+const refundRateLimit = `-- name: RefundRateLimit :exec
+update api_rate_limits set count = count - 1
+where user_id = $1 and bucket = $2 and window_start <= $3 and count > 0
+`
+
+type RefundRateLimitParams struct {
+	UserID uuid.UUID
+	Bucket string
+	HitAt  time.Time
+}
+
+// HitRateLimit で数えた1回を戻す。数えた後に期間が切り替わって数え直していれば（window_start が数えた時刻より後）、新しい期間の回数なので戻さない
+func (q *Queries) RefundRateLimit(ctx context.Context, arg RefundRateLimitParams) error {
+	_, err := q.db.Exec(ctx, refundRateLimit, arg.UserID, arg.Bucket, arg.HitAt)
+	return err
 }

@@ -4,10 +4,11 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -54,6 +55,30 @@ func Logger(ctx context.Context) *slog.Logger {
 	return slog.Default()
 }
 
+type clientIPKey struct{}
+
+// ClientIP は、リクエストを送ってきた端末のIPアドレスをコンテキストに入れる。
+// Vercel は X-Real-IP を接続元のIPで上書きするので、利用者が偽れない。X-Forwarded-For は、手元の next dev の転送などでは
+// 利用者が付けた値がそのまま残るので見ない。ヘッダーが無ければ（手元で直接呼んだとき）接続元のアドレスを使う。
+func ClientIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := r.Header.Get("X-Real-IP")
+		if ip == "" {
+			ip = r.RemoteAddr
+			if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+				ip = host
+			}
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), clientIPKey{}, ip)))
+	})
+}
+
+// ClientIPFrom は、ClientIP が入れたIPアドレスを返す。無ければ空文字。
+func ClientIPFrom(ctx context.Context) string {
+	ip, _ := ctx.Value(clientIPKey{}).(string)
+	return ip
+}
+
 type statusRecorder struct {
 	http.ResponseWriter
 	status int
@@ -72,11 +97,21 @@ func AccessLog(next http.Handler) http.Handler {
 		next.ServeHTTP(rec, r)
 		Logger(r.Context()).Info("request",
 			"method", r.Method,
-			"path", r.URL.Path,
+			"path", maskPath(r.URL.Path),
 			"status", rec.status,
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
 	})
+}
+
+const calendarFeedPrefix = "/v1/calendar-feed/"
+
+// maskPath は、ログに出すパスから秘密の値を伏せる。購読用URLはトークンだけで本人と見なすので、ログを読める人が予定を読めてしまう。
+func maskPath(path string) string {
+	if strings.HasPrefix(path, calendarFeedPrefix) {
+		return calendarFeedPrefix + "***"
+	}
+	return path
 }
 
 // Recover は、panic を 500 のエラーレスポンスに変え、サーバーを止めずに処理を続ける。
@@ -88,7 +123,7 @@ func Recover(next http.Handler) http.Handler {
 				if v == http.ErrAbortHandler {
 					panic(v)
 				}
-				WriteError(w, r, fmt.Errorf("panic: %v\n%s", v, debug.Stack()))
+				WriteError(w, r, &panicError{value: v, stack: debug.Stack()})
 			}
 		}()
 		next.ServeHTTP(w, r)

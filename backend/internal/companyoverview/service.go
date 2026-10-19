@@ -17,13 +17,14 @@ import (
 
 // CompanyReader は、overview の作成に必要な企業の読み取り操作。
 type CompanyReader interface {
-	List(context.Context, uuid.UUID, string) ([]db.Company, error)
+	List(context.Context, uuid.UUID, string) ([]db.ListCompaniesRow, error)
 	Get(context.Context, uuid.UUID, uuid.UUID) (db.Company, error)
 }
 
 // ESReader は、overview の作成に必要なESの読み取り操作。
 type ESReader interface {
-	List(context.Context, uuid.UUID, *uuid.UUID, int) ([]es.Entry, error)
+	List(context.Context, uuid.UUID, *uuid.UUID, int) ([]db.ListEsEntriesRow, error)
+	Get(context.Context, uuid.UUID, uuid.UUID) (es.Entry, error)
 }
 
 // CalendarReader は、overview の作成に必要な予定の読み取り操作。
@@ -108,7 +109,7 @@ func (s *Service) GetByName(ctx context.Context, userID uuid.UUID, name string) 
 	}
 	for _, c := range companies {
 		if company.Normalize(c.Name) == company.Normalize(name) {
-			return s.get(ctx, userID, c)
+			return s.Get(ctx, userID, c.ID)
 		}
 	}
 	return Overview{}, &platform.Error{Kind: platform.KindNotFound, Message: "企業が見つかりません"}
@@ -124,9 +125,18 @@ func (s *Service) Get(ctx context.Context, userID, companyID uuid.UUID) (Overvie
 }
 
 func (s *Service) get(ctx context.Context, userID uuid.UUID, c db.Company) (Overview, error) {
-	entries, err := s.es.List(ctx, userID, &c.ID, 0)
+	// 一覧は設問・本文・メモを返さないので、1件ずつ詳細を読む。
+	// overview 専用の問い合わせを足さないのは、1社あたりのESは数件で、ESの読み方を es パッケージに1つに保てるため
+	rows, err := s.es.List(ctx, userID, &c.ID, 0)
 	if err != nil {
 		return Overview{}, fmt.Errorf("list es entries for overview: %w", err)
+	}
+	entries := make([]es.Entry, len(rows))
+	for i, row := range rows {
+		entries[i], err = s.es.Get(ctx, userID, row.ID)
+		if err != nil {
+			return Overview{}, fmt.Errorf("get es entry for overview: %w", err)
+		}
 	}
 	today := tokyoDate(s.now())
 	items, err := s.calendar.List(ctx, userID, &today, nil)

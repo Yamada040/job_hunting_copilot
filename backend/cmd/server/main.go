@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +22,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/companyoverview"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/contact"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/errorreport"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/es"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/interview"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/mcpserver"
@@ -37,7 +40,12 @@ type config struct {
 	databaseURL string
 	developers  []uuid.UUID
 	ai          ai.Config
+	aiAppLimits ratelimit.AppLimits
 	smtp        contact.SMTPConfig
+	// errorReportingCredentials は、Error Reporting に書き込めるサービスアカウントの鍵（JSON）。空ならエラーを送らない
+	errorReportingCredentials string
+	// version は、エラーをどの版で起きたかで分けるための値。Vercel がデプロイしたコミットを入れる
+	version string
 }
 
 // loadConfig は、環境変数から設定を読む。必須の値が無ければ、誤った状態で動き出さないようエラーにする。
@@ -64,6 +72,8 @@ func loadConfig() (config, error) {
 			Pass: os.Getenv("SMTP_PASS"),
 			To:   os.Getenv("CONTACT_TO_EMAIL"),
 		},
+		errorReportingCredentials: os.Getenv("GOOGLE_ERROR_REPORTING_CREDENTIALS"),
+		version:                   os.Getenv("VERCEL_GIT_COMMIT_SHA"),
 	}
 	if cfg.port == "" {
 		cfg.port = "8080"
@@ -82,7 +92,49 @@ func loadConfig() (config, error) {
 		return config{}, fmt.Errorf("DEV_ADMIN_USER_IDS: %w", err)
 	}
 	cfg.developers = developers
+	cfg.aiAppLimits = ratelimit.DefaultAppLimits
+	if cfg.aiAppLimits.AIDaily, err = parseLimit("AI_APP_DAILY_LIMIT", cfg.aiAppLimits.AIDaily); err != nil {
+		return config{}, err
+	}
+	if cfg.aiAppLimits.CompanyAnalysisDaily, err = parseLimit("COMPANY_ANALYSIS_APP_DAILY_LIMIT", cfg.aiAppLimits.CompanyAnalysisDaily); err != nil {
+		return config{}, err
+	}
+	if cfg.aiAppLimits.AIDailyBudget, err = parseDollars("AI_DAILY_BUDGET_USD", cfg.aiAppLimits.AIDailyBudget); err != nil {
+		return config{}, err
+	}
+	if cfg.aiAppLimits.AIPrices.Input, err = parseDollars("AI_INPUT_PRICE_PER_MILLION_TOKENS", cfg.aiAppLimits.AIPrices.Input); err != nil {
+		return config{}, err
+	}
+	if cfg.aiAppLimits.AIPrices.Output, err = parseDollars("AI_OUTPUT_PRICE_PER_MILLION_TOKENS", cfg.aiAppLimits.AIPrices.Output); err != nil {
+		return config{}, err
+	}
 	return cfg, nil
+}
+
+// parseLimit は、環境変数 name の上限を読む。空なら fallback を使う。
+func parseLimit(name string, fallback int) (int, error) {
+	raw := os.Getenv(name)
+	if raw == "" {
+		return fallback, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("%s must be a non-negative integer: %q", name, raw)
+	}
+	return n, nil
+}
+
+// parseDollars は、環境変数 name の金額（ドル。小数も可）を読む。空なら fallback を使う。
+func parseDollars(name string, fallback float64) (float64, error) {
+	raw := os.Getenv(name)
+	if raw == "" {
+		return fallback, nil
+	}
+	n, err := strconv.ParseFloat(raw, 64)
+	if err != nil || n < 0 || math.IsInf(n, 0) || math.IsNaN(n) {
+		return 0, fmt.Errorf("%s must be a non-negative number: %q", name, raw)
+	}
+	return n, nil
 }
 
 // parseUserIDs は、カンマ区切りのユーザーIDを読む。空なら開発者はいない。
@@ -115,6 +167,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// 鍵が壊れていても、エラーを送れないだけでほかの機能は動くので、ログに出して起動を続ける
+	errorReporter, err := errorreport.New(cfg.errorReportingCredentials, "backend", cfg.version)
+	if err != nil {
+		slog.Error("error reporting disabled", "error", err)
+	}
 	ctx := context.Background()
 	verifier, err := auth.NewVerifier(ctx, cfg.supabaseURL)
 	if err != nil {
@@ -127,8 +184,8 @@ func run() error {
 	defer db.Close()
 	xpService := xp.NewService()
 	// 企業分析はWeb検索を挟んで数十秒かかるため、1回の呼び出しの上限は長めにとる（Vercelの関数の上限300秒以内）
-	aiClient := ai.NewClient(cfg.ai, &http.Client{Timeout: 90 * time.Second})
-	limiter := ratelimit.NewLimiter()
+	limiter := ratelimit.NewLimiter(cfg.aiAppLimits)
+	aiClient := limiter.TrackCost(ai.NewClient(cfg.ai, &http.Client{Timeout: 90 * time.Second}), db)
 	profiles := profile.NewService(profile.NewRepository(db), cfg.developers)
 	companyService := company.NewService(db, xpService, aiClient, limiter)
 	esService := es.NewService(db, xpService, aiClient, limiter)
@@ -150,9 +207,10 @@ func run() error {
 			Aptitude:     assessment.NewAptitudeService(db, xpService, aiClient, limiter),
 			SelfAnalysis: assessment.NewSelfAnalysisService(db, xpService, aiClient, limiter),
 		},
-		webtest: webtest.NewService(db, xpService),
-		contact: contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP},
-		admin:   admin.Handler{Pool: db, IsDeveloper: profiles.IsDeveloper, Now: time.Now},
+		webtest:       webtest.NewService(db, xpService),
+		contact:       contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP, Limiter: limiter},
+		admin:         admin.Handler{Pool: db, IsDeveloper: profiles.IsDeveloper, Now: time.Now},
+		errorReporter: errorReporter,
 	})
 	if err != nil {
 		return err

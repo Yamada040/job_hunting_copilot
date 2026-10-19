@@ -66,6 +66,8 @@ type deps struct {
 	webtest    *webtest.Service
 	contact    contact.Handler
 	admin      admin.Handler
+	// errorReporter は、想定外のエラーの送り先。nil なら送らない
+	errorReporter platform.ErrorReporter
 }
 
 var _ openapi.StrictServerInterface = server{}
@@ -112,9 +114,11 @@ func newHandler(verifier *auth.Verifier, mcpOAuth mcpserver.OAuthConfig, d deps)
 	mux.Handle("/", apiHandler)
 
 	return platform.Chain(mux,
+		platform.ReportErrors(d.errorReporter),
 		platform.RequestID,
 		platform.AccessLog,
 		platform.Recover,
+		platform.ClientIP,
 	), nil
 }
 

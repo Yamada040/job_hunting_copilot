@@ -8,6 +8,13 @@ test.describe.configure({ mode: "serial" });
 const stamp = Date.now();
 const company = `主要操作商事-${stamp}`;
 
+// XPでレベルが上がると演出のダイアログが画面を覆い、どの操作の後に出るかは積み重なったXPで変わるので、出たら閉じて続ける
+test.beforeEach(async ({ page }) => {
+  await page.addLocatorHandler(page.getByRole("dialog").filter({ hasText: "LEVEL UP" }), async (dialog) => {
+    await dialog.getByRole("button", { name: "閉じる" }).click();
+  });
+});
+
 test("企業を登録して編集する", async ({ page }) => {
   await page.goto("/companies/new");
   await page.getByLabel("企業名").fill(company);
@@ -15,7 +22,7 @@ test("企業を登録して編集する", async ({ page }) => {
   await expect(page).toHaveURL(/\/companies\/[0-9a-f-]{36}$/);
   await page.getByLabel("業界").fill("IT");
   await page.getByRole("button", { name: "保存する" }).click();
-  await expect(page.getByText("保存しました")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "企業の情報を保存しました" })).toBeAttached();
   await page.goto("/companies");
   await expect(page.getByText(company)).toBeVisible();
 });
@@ -43,19 +50,32 @@ test("面接ログを記録する", async ({ page }) => {
   await expect(page).toHaveURL(/\/interviews\/[0-9a-f-]{36}$/);
 });
 
-test("Webテストの問題を作って解答する", async ({ page }) => {
+test("Webテストの問題を作って解答し、直して削除する", async ({ page }) => {
   await page.goto("/webtests/new");
   await page.getByLabel("タイトル").fill(`問題-${stamp}`);
   await page.getByLabel("問題文").fill("1+1は？");
   await page.getByLabel("選択肢（改行区切り）").fill("1\n2\n3");
   await page.getByLabel("正解").fill("2");
+  await page.getByLabel("解説（任意）").fill("1に1を足す");
   await page.getByRole("button", { name: "保存する" }).click();
   await expect(page).toHaveURL(/\/webtests$/);
   await page.getByRole("link", { name: `問題-${stamp}` }).click();
   await expect(page).toHaveURL(/\/webtests\/[0-9a-f-]{36}$/);
+  await expect(page.getByText("1に1を足す")).toBeHidden();
   await page.getByLabel("解答", { exact: true }).selectOption("2");
   await page.getByRole("button", { name: "解答を送信" }).click();
-  await expect(page.getByText("正解").first()).toBeVisible();
+  await expect(page.getByText("正解です！")).toBeVisible();
+  await expect(page.getByText("1に1を足す")).toBeVisible();
+
+  await page.getByRole("link", { name: "編集する" }).click();
+  await page.getByLabel("タイトル").fill(`直した問題-${stamp}`);
+  await page.getByRole("button", { name: "保存する" }).click();
+  await expect(page.getByRole("heading", { name: `直した問題-${stamp}` })).toBeVisible();
+
+  await page.getByRole("button", { name: "この問題を削除する" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "削除する" }).click();
+  await expect(page).toHaveURL(/\/webtests$/);
+  await expect(page.getByRole("link", { name: `直した問題-${stamp}` })).toBeHidden();
 });
 
 test("カレンダーに予定を追加する", async ({ page }) => {
@@ -81,7 +101,7 @@ test("プロフィールを保存する", async ({ page }) => {
   await page.getByLabel("氏名").fill("テスト 太郎");
   await page.getByLabel("就活で達成したい状態（短文）").fill(`目標-${stamp}`);
   await page.getByRole("button", { name: "保存する" }).click();
-  await expect(page.getByText("保存しました")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "プロフィールを保存しました" })).toBeAttached();
   await page.goto("/dashboard");
   await expect(page.getByText(`目標-${stamp}`)).toBeVisible();
 });
@@ -116,5 +136,6 @@ test("企業を削除する", async ({ page }) => {
   await page.getByRole("button", { name: /削除/ }).first().click();
   await page.getByRole("alertdialog").getByRole("button", { name: "削除する" }).click();
   await expect(page).toHaveURL(/\/companies$/);
-  await expect(page.getByText(company)).toHaveCount(0);
+  // 削除したことをアバターが企業名入りで話すので、画面全体ではなく一覧のリンクが消えたことを確かめる
+  await expect(page.getByRole("link", { name: company })).toHaveCount(0);
 });

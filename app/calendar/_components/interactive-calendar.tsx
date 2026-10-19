@@ -1,10 +1,11 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useActionState, useMemo, useOptimistic, useReducer, useState, useTransition } from "react";
+import { useActionState, useMemo, useOptimistic, useReducer, useTransition } from "react";
 
 import { calendarKeys, createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from "@/lib/api/calendar";
 import { TYPE_LABEL } from "./calendar/constants";
+import { showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
 import { EventDialog } from "./calendar/event-dialog";
 import { eventLink, eventTiming } from "./calendar/event-fields";
 import { EventSummary } from "./calendar/event-summary";
@@ -15,14 +16,13 @@ import { formatDateKey, groupByDate, monthCells, overlaps, sortByTime } from "./
 
 type Props = {
   events: CalendarEvent[];
+  /** 表示している月の1日 */
+  currentMonth: Date;
+  onMonthChange: (month: Date) => void;
 };
 
-export function InteractiveCalendar({ events }: Props) {
+export function InteractiveCalendar({ events, currentMonth, onMonthChange }: Props) {
   const queryClient = useQueryClient();
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
   // 保存・削除を楽観的に即時反映し、API失敗時はeventsへ自動ロールバックする
   const [optimisticEvents, applyOptimisticEvents] = useOptimistic(events, optimisticEventsReducer);
   const [, startDeleteTransition] = useTransition();
@@ -57,19 +57,8 @@ export function InteractiveCalendar({ events }: Props) {
       .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
   }, [optimisticEvents, todayKey]);
 
-  const handlePrevMonth = () => {
-    setCurrentMonth((prev) => {
-      const base = prev instanceof Date ? prev : new Date();
-      return new Date(base.getFullYear(), base.getMonth() - 1, 1);
-    });
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth((prev) => {
-      const base = prev instanceof Date ? prev : new Date();
-      return new Date(base.getFullYear(), base.getMonth() + 1, 1);
-    });
-  };
+  const handlePrevMonth = () => onMonthChange(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  const handleNextMonth = () => onMonthChange(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
 
   const [, submitAction, saving] = useActionState<null, FormData>(async () => {
     const url = eventLink(formState);
@@ -117,6 +106,7 @@ export function InteractiveCalendar({ events }: Props) {
       }
       await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
       dispatch({ type: "saveSuccess" });
+      showSuccessNotice(editingId ? "予定を保存しました" : "予定を追加しました");
     } catch (err) {
       console.error(err);
       dispatch({ type: "saveFailed", message: "保存に失敗しました。時間をおいてもう一度お試しください。" });
@@ -137,6 +127,7 @@ export function InteractiveCalendar({ events }: Props) {
         await deleteCalendarEvent(evt.id);
         await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
         dispatch({ type: "deleteSuccess" });
+        showSuccessNotice("予定を削除しました");
       } catch (err) {
         console.error(err);
         dispatch({ type: "deleteFailed", message: "削除に失敗しました。時間をおいてもう一度お試しください。" });

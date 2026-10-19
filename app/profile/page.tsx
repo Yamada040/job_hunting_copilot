@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
 import { AppLayout } from "@/app/_components/layout";
 import { ProfileForm } from "./_components/profile-form";
 import { ConnectedApps } from "./_components/connected-apps";
+import { DeleteAccount } from "./_components/delete-account";
 import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
+
+export const metadata: Metadata = {
+  title: "プロフィール",
+};
 
 export default async function ProfilePage() {
   // メールアドレスはログイン情報（Supabase Auth）のものなので、プロフィールのAPIではなくセッションから読む
@@ -19,6 +25,7 @@ export default async function ProfilePage() {
     >
       <ProfileForm email={userData.user?.email ?? ""} />
       <ConnectedApps />
+      <DeleteAccount />
     </AppLayout>
   );
 }

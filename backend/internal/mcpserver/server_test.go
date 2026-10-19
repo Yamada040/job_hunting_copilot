@@ -20,8 +20,8 @@ import (
 
 type testCompanies struct{ company db.Company }
 
-func (t testCompanies) List(_ context.Context, _ uuid.UUID, _ string) ([]db.Company, error) {
-	return []db.Company{t.company}, nil
+func (t testCompanies) List(_ context.Context, _ uuid.UUID, _ string) ([]db.ListCompaniesRow, error) {
+	return []db.ListCompaniesRow{{ID: t.company.ID, Name: t.company.Name}}, nil
 }
 
 func (t testCompanies) Get(_ context.Context, _ uuid.UUID, _ uuid.UUID) (db.Company, error) {
@@ -30,8 +30,12 @@ func (t testCompanies) Get(_ context.Context, _ uuid.UUID, _ uuid.UUID) (db.Comp
 
 type testES struct{}
 
-func (testES) List(_ context.Context, _ uuid.UUID, _ *uuid.UUID, _ int) ([]es.Entry, error) {
-	return []es.Entry{}, nil
+func (testES) List(_ context.Context, _ uuid.UUID, _ *uuid.UUID, _ int) ([]db.ListEsEntriesRow, error) {
+	return []db.ListEsEntriesRow{}, nil
+}
+
+func (testES) Get(_ context.Context, _ uuid.UUID, _ uuid.UUID) (es.Entry, error) {
+	return es.Entry{}, nil
 }
 
 type testCalendar struct{}

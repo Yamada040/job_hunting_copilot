@@ -5,7 +5,7 @@ vi.mock("@/lib/supabase/supabase-browser", () => ({
   createSupabaseBrowserClient: () => ({ auth: { getSession } }),
 }));
 
-import { api, ApiError, unwrap, type Problem } from "./client";
+import { api, ApiError, apiErrorText, unwrap, type Problem } from "./client";
 
 const problem: Problem = {
   type: "about:blank",
@@ -60,5 +60,21 @@ describe("unwrap", () => {
 
     expect(error).toBeInstanceOf(Error);
     expect(error).not.toBeInstanceOf(ApiError);
+  });
+});
+
+describe("apiErrorText", () => {
+  it("joins the problem title and the reasons for each field", () => {
+    const error = new ApiError({
+      ...problem,
+      title: "入力内容に誤りがあります",
+      status: 400,
+      errors: [{ field: "name", message: "100文字以内で入力してください" }],
+    });
+    expect(apiErrorText(error)).toBe("入力内容に誤りがあります 100文字以内で入力してください");
+  });
+
+  it("falls back to a connection message for errors that did not come from the backend", () => {
+    expect(apiErrorText(new Error("fetch failed"))).toBe("通信に失敗しました。時間をおいて再度お試しください。");
   });
 });

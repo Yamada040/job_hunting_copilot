@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { useEsEntries, type EsEntry } from "@/lib/api/es";
+import { useEsEntries, type EsEntrySummary } from "@/lib/api/es";
 import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/app/_components/empty-state";
@@ -14,9 +14,9 @@ import { formatDateKey } from "@/app/calendar/_components/calendar/utils";
 import { daysFrom } from "@/app/dashboard/_components/menu-summaries";
 import { LoadError } from "@/app/_components/load-error";
 
-type StatusFilter = "all" | EsEntry["status"];
+type StatusFilter = "all" | EsEntrySummary["status"];
 
-const STATUS_LABEL_MAP: Record<EsEntry["status"], string> = {
+const STATUS_LABEL_MAP: Record<EsEntrySummary["status"], string> = {
   draft: "下書き",
   submitted: "提出済み",
 };
@@ -98,7 +98,7 @@ export function EsListClient() {
 }
 
 /** 締切。下書きで締切が近いものは赤く「あと○日」と出す。 */
-function Deadline({ entry, today }: { entry: EsEntry; today: string }) {
+function Deadline({ entry, today }: { entry: EsEntrySummary; today: string }) {
   if (!entry.deadline) return <p className="mt-auto text-xs text-muted-foreground">締切なし</p>;
   const days = daysFrom(today, entry.deadline);
   const urgent = entry.status === "draft" && days >= 0 && days <= URGENT_DAYS;

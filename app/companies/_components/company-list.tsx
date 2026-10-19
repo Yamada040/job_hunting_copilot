@@ -7,7 +7,7 @@ import { ArrowTopRightOnSquareIcon, StarIcon } from "@heroicons/react/24/outline
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useCompanies, type Company, type CompanyStage } from "@/lib/api/companies";
+import { useCompanies, type CompanyListItem, type CompanyStage } from "@/lib/api/companies";
 import { COMPANY_STAGES, COMPANY_STAGE_LABELS } from "@/lib/companies/stages";
 import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
@@ -94,7 +94,7 @@ export function CompanyList() {
   );
 }
 
-function CompanyTable({ companies }: { companies: Company[] }) {
+function CompanyTable({ companies }: { companies: CompanyListItem[] }) {
   return (
     <Card className="py-0">
       <Table className="table-fixed">

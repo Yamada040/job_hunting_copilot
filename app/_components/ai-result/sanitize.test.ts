@@ -17,6 +17,10 @@ describe("sanitizeMarkdown", () => {
     expect(sanitizeMarkdown("これは**強調**テキストです")).toBe("これは強調テキストです");
   });
 
+  it("does not mistake a line starting with bold text for a bullet", () => {
+    expect(sanitizeMarkdown("**強み**は技術力")).toBe("強みは技術力");
+  });
+
   it("trims surrounding whitespace", () => {
     expect(sanitizeMarkdown("  text  ")).toBe("text");
   });

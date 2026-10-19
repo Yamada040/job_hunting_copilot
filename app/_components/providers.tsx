@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api/client";
 import { ROUTES } from "@/lib/constants/routes";
 import { createSupabaseBrowserClient } from "@/lib/supabase/supabase-browser";
+import { isControlledByServiceWorkerInDev } from "./dev-service-worker-reset";
 
 let redirectingToLogin = false;
 
@@ -16,6 +17,8 @@ let redirectingToLogin = false;
  */
 function handleUnauthorized(error: unknown) {
   if (!(error instanceof ApiError) || error.problem.status !== 401 || redirectingToLogin) return;
+  // ほかのアプリの Service Worker がトークンを書き換えた 401 なので、ログアウトせずに解除と読み込み直しを待つ
+  if (isControlledByServiceWorkerInDev()) return;
   redirectingToLogin = true;
   void createSupabaseBrowserClient()
     .auth.signOut({ scope: "local" })

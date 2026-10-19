@@ -28,6 +28,11 @@ locals {
     SMTP_PASS           = var.smtp.pass
     CONTACT_TO_EMAIL    = var.smtp.to
   } : k => v if v != "" }
+
+  # 本番だけに置く秘密の値。エラーの送信をプレビューに置かないのは、試しているときのエラーを本番の通知に混ぜないため
+  production_secret_env = { for k, v in {
+    GOOGLE_ERROR_REPORTING_CREDENTIALS = var.google_error_reporting_credentials
+  } : k => v if v != "" }
 }
 
 resource "vercel_project_environment_variable" "public" {
@@ -48,5 +53,15 @@ resource "vercel_project_environment_variable" "secret" {
   key        = each.key
   value      = local.secret_env[each.key]
   target     = ["production", "preview"]
+  sensitive  = true
+}
+
+resource "vercel_project_environment_variable" "production_secret" {
+  for_each = nonsensitive(toset(keys(local.production_secret_env)))
+
+  project_id = var.vercel_project_id
+  key        = each.key
+  value      = local.production_secret_env[each.key]
+  target     = ["production"]
   sensitive  = true
 }

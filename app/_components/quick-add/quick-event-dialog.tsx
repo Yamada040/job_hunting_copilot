@@ -6,6 +6,7 @@ import { useCreateCalendarEvent } from "@/lib/api/calendar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
 import {
   EventFields,
   eventLink,
@@ -62,7 +63,12 @@ function QuickEventForm({ onDone }: { onDone: () => void }) {
             url: eventLink(values) ?? undefined,
             note: values.note || undefined,
           },
-          { onSuccess: onDone },
+          {
+            onSuccess: () => {
+              showSuccessNotice("予定を追加しました");
+              onDone();
+            },
+          },
         );
       }}
     >

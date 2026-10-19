@@ -66,6 +66,8 @@ type Fields struct {
 	Note    *string
 }
 
+const maxEvents = 2000
+
 type Service struct {
 	pool *pgxpool.Pool
 }
@@ -129,6 +131,13 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, f Fields) (Item,
 	var item Item
 	err = platform.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		q := db.New(tx)
+		count, err := q.CountCalendarEvents(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("count calendar events: %w", err)
+		}
+		if err := platform.CheckLimit(count, maxEvents, fmt.Sprintf("登録できる予定は%d件までです。過ぎた予定を削除してから登録してください", maxEvents)); err != nil {
+			return err
+		}
 		if f.CompanyID != nil {
 			if err := company.EnsureOwned(ctx, q, userID, *f.CompanyID); err != nil {
 				return err

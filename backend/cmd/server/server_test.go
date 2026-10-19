@@ -33,6 +33,8 @@ func (memoryProfiles) Update(_ context.Context, userID uuid.UUID, u profile.Upda
 	return profile.Profile{ID: userID, FullName: u.FullName, Level: 1}, nil
 }
 
+func (memoryProfiles) Delete(context.Context, uuid.UUID) error { return nil }
+
 type testServer struct {
 	t       *testing.T
 	issuer  *authtest.Issuer
@@ -183,6 +185,32 @@ func TestMCPProtectedResourceMetadataIsPublic(t *testing.T) {
 	}
 }
 
+func TestContactCanBeSentWithoutLogin(t *testing.T) {
+	// SMTP の設定が無いので 503 になる。401 ではなく handler まで届いたことを確かめる
+	rec := newTestServer(t).do(http.MethodPost, "/v1/contact", uuid.Nil,
+		`{"subject":"件名","message":"本文","email":"guest@example.com"}`)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503 (reached the handler without login)", rec.Code)
+	}
+}
+
+func TestDeleteMeRequiresLogin(t *testing.T) {
+	rec := serve(t, http.MethodDelete, "/v1/me")
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+}
+
+func TestDeleteMeReturnsNoContent(t *testing.T) {
+	rec := newTestServer(t).do(http.MethodDelete, "/v1/me", uuid.New(), "")
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204: %s", rec.Code, rec.Body)
+	}
+}
+
 func TestMeReturnsLoggedInUser(t *testing.T) {
 	userID := uuid.New()
 
@@ -214,6 +242,28 @@ func TestUpdateMeRejectsTooLongValue(t *testing.T) {
 	}
 	if e := (*p.Errors)[0]; e.Field != "fullName" || e.Message != "100文字以内で入力してください" {
 		t.Errorf("field error = %+v, want fullName with the length message", e)
+	}
+}
+
+func TestCompanyLinksRejectNonHTTPURL(t *testing.T) {
+	cases := []struct{ method, path, body, field string }{
+		{http.MethodPost, "/v1/companies", `{"name":"サンプル","url":"javascript:alert(1)"}`, "url"},
+		{http.MethodPost, "/v1/companies", `{"name":"サンプル","mypageUrl":"javascript:alert(1)"}`, "mypageUrl"},
+		{http.MethodPatch, "/v1/companies/" + uuid.NewString(), `{"url":"data:text/html,x"}`, "url"},
+		{http.MethodPatch, "/v1/companies/" + uuid.NewString(), `{"mypageUrl":"ftp://example.com"}`, "mypageUrl"},
+	}
+	for _, c := range cases {
+		t.Run(c.method+" "+c.field, func(t *testing.T) {
+			rec := newTestServer(t).do(c.method, c.path, uuid.New(), c.body)
+
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400 because the link is opened in the browser", rec.Code)
+			}
+			p := decodeProblem(t, rec)
+			if p.Errors == nil || len(*p.Errors) != 1 || (*p.Errors)[0].Field != c.field {
+				t.Errorf("errors = %v, want one error on %s", p.Errors, c.field)
+			}
+		})
 	}
 }
 

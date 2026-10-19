@@ -16,8 +16,12 @@ type fakeCompanies struct {
 	rows []db.Company
 }
 
-func (f fakeCompanies) List(_ context.Context, _ uuid.UUID, _ string) ([]db.Company, error) {
-	return f.rows, nil
+func (f fakeCompanies) List(_ context.Context, _ uuid.UUID, _ string) ([]db.ListCompaniesRow, error) {
+	rows := make([]db.ListCompaniesRow, len(f.rows))
+	for i, row := range f.rows {
+		rows[i] = db.ListCompaniesRow{ID: row.ID, Name: row.Name}
+	}
+	return rows, nil
 }
 
 func (f fakeCompanies) Get(_ context.Context, _ uuid.UUID, id uuid.UUID) (db.Company, error) {
@@ -34,11 +38,24 @@ type fakeES struct {
 	company uuid.UUID
 }
 
-func (f *fakeES) List(_ context.Context, _ uuid.UUID, companyID *uuid.UUID, _ int) ([]es.Entry, error) {
+func (f *fakeES) List(_ context.Context, _ uuid.UUID, companyID *uuid.UUID, _ int) ([]db.ListEsEntriesRow, error) {
 	if companyID != nil {
 		f.company = *companyID
 	}
-	return f.entries, nil
+	rows := make([]db.ListEsEntriesRow, len(f.entries))
+	for i, entry := range f.entries {
+		rows[i] = db.ListEsEntriesRow{ID: entry.ID, CompanyID: entry.CompanyID}
+	}
+	return rows, nil
+}
+
+func (f *fakeES) Get(_ context.Context, _ uuid.UUID, id uuid.UUID) (es.Entry, error) {
+	for _, entry := range f.entries {
+		if entry.ID == id {
+			return entry, nil
+		}
+	}
+	return es.Entry{}, nil
 }
 
 type fakeCalendar struct {

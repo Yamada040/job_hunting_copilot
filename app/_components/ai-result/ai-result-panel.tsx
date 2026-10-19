@@ -5,11 +5,13 @@ import { CheckIcon, ClipboardDocumentIcon, SparklesIcon } from "@heroicons/react
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ApiErrorMessage } from "@/app/_components/api-error-message";
+import { AiSendingNote } from "./ai-sending-note";
 import { sanitizeMarkdown } from "./sanitize";
 import { EmptyState } from "@/app/_components/empty-state";
 
 type Props = {
+  /** ほかの画面から、この欄を開いて見せるための目印（URLの # に付ける） */
+  id?: string;
   title: string;
   description: string;
   /** 保存済みのAIの結果。まだ無ければ null */
@@ -17,7 +19,6 @@ type Props = {
   runLabel: string;
   onRun: () => void;
   pending: boolean;
-  error: unknown;
   /** 1回だけ実行できる機能で、すでに結果がある場合は true（ボタンを出さない） */
   done?: boolean;
   /** 実行できない理由（未保存など）。あればボタンを押せなくして表示する */
@@ -29,13 +30,13 @@ type Props = {
  * ここでは「実行する」操作と結果の表示だけを受け持つ（docs/backend-design.md 5章）。
  */
 export function AiResultPanel({
+  id,
   title,
   description,
   result,
   runLabel,
   onRun,
   pending,
-  error,
   done,
   blockedReason,
 }: Props) {
@@ -54,11 +55,12 @@ export function AiResultPanel({
         {pending ? "AIが処理中です（数十秒かかることがあります）…" : runLabel}
       </Button>
       {blockedReason && <p className="text-xs text-muted-foreground">{blockedReason}</p>}
+      <AiSendingNote />
     </div>
   );
 
   return (
-    <Card className="gap-4 py-6">
+    <Card id={id} className="scroll-mt-32 gap-4 py-6">
       <CardHeader className="px-6">
         <CardTitle>
           <h2 className="flex items-center gap-2 text-base font-semibold">
@@ -76,7 +78,6 @@ export function AiResultPanel({
             {runAction}
           </EmptyState>
         )}
-        <ApiErrorMessage error={error} />
 
         {text && (
           <Card variant="muted" className="gap-2 px-4">

@@ -13,6 +13,17 @@ import (
 	"github.com/google/uuid"
 )
 
+const countWebtestQuestions = `-- name: CountWebtestQuestions :one
+select count(*) from webtest_questions where user_id = $1
+`
+
+func (q *Queries) CountWebtestQuestions(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countWebtestQuestions, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createWebtestAttempt = `-- name: CreateWebtestAttempt :one
 insert into webtest_attempts (user_id, question_id, is_correct, time_spent)
 values ($1, $2, $3, $4)
@@ -96,6 +107,45 @@ func (q *Queries) CreateWebtestQuestion(ctx context.Context, arg CreateWebtestQu
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const deleteOldWebtestAttempts = `-- name: DeleteOldWebtestAttempts :exec
+delete from webtest_attempts
+where id in (
+  select old.id from webtest_attempts as old
+  where old.question_id = $1 and old.user_id = $2
+  order by old.created_at desc, old.id
+  offset $3
+)
+`
+
+type DeleteOldWebtestAttemptsParams struct {
+	QuestionID uuid.UUID
+	UserID     uuid.UUID
+	KeptRows   int32
+}
+
+// 問題ごとに、新しい方から kept_rows 件を残して古いものを消す
+func (q *Queries) DeleteOldWebtestAttempts(ctx context.Context, arg DeleteOldWebtestAttemptsParams) error {
+	_, err := q.db.Exec(ctx, deleteOldWebtestAttempts, arg.QuestionID, arg.UserID, arg.KeptRows)
+	return err
+}
+
+const deleteWebtestQuestion = `-- name: DeleteWebtestQuestion :execrows
+delete from webtest_questions where id = $1 and user_id = $2
+`
+
+type DeleteWebtestQuestionParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) DeleteWebtestQuestion(ctx context.Context, arg DeleteWebtestQuestionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteWebtestQuestion, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getWebtestQuestion = `-- name: GetWebtestQuestion :one
@@ -214,4 +264,61 @@ func (q *Queries) ListWebtestQuestions(ctx context.Context, arg ListWebtestQuest
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateWebtestQuestion = `-- name: UpdateWebtestQuestion :one
+update webtest_questions set
+  title = $1, body = $2, test_type = $3, choices = $4, answer = $5, explanation = $6,
+  category = $7, format = $8, difficulty = $9, time_limit = $10
+where id = $11 and user_id = $12
+returning id, user_id, title, body, test_type, choices, answer, explanation, category, format, difficulty, time_limit, created_at
+`
+
+type UpdateWebtestQuestionParams struct {
+	Title       string
+	Body        string
+	TestType    *string
+	Choices     json.RawMessage
+	Answer      string
+	Explanation *string
+	Category    *string
+	Format      *string
+	Difficulty  *string
+	TimeLimit   *int32
+	ID          uuid.UUID
+	UserID      uuid.UUID
+}
+
+func (q *Queries) UpdateWebtestQuestion(ctx context.Context, arg UpdateWebtestQuestionParams) (WebtestQuestion, error) {
+	row := q.db.QueryRow(ctx, updateWebtestQuestion,
+		arg.Title,
+		arg.Body,
+		arg.TestType,
+		arg.Choices,
+		arg.Answer,
+		arg.Explanation,
+		arg.Category,
+		arg.Format,
+		arg.Difficulty,
+		arg.TimeLimit,
+		arg.ID,
+		arg.UserID,
+	)
+	var i WebtestQuestion
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Body,
+		&i.TestType,
+		&i.Choices,
+		&i.Answer,
+		&i.Explanation,
+		&i.Category,
+		&i.Format,
+		&i.Difficulty,
+		&i.TimeLimit,
+		&i.CreatedAt,
+	)
+	return i, err
 }

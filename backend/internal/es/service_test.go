@@ -14,7 +14,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/db"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
-	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit/ratelimittest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
 
@@ -34,7 +34,7 @@ func setup(t *testing.T) fixture {
 	fake := &aitest.Fake{Reply: "添削結果"}
 	return fixture{
 		pool:      pool,
-		es:        NewService(pool, x, fake, ratelimit.NewLimiter()),
+		es:        NewService(pool, x, fake, ratelimittest.NewLimiter()),
 		companies: company.NewService(pool, x, nil, nil),
 		ai:        fake,
 	}
@@ -63,6 +63,16 @@ func assertKind(t *testing.T, err error, kind platform.Kind) {
 	var appErr *platform.Error
 	if !errors.As(err, &appErr) || appErr.Kind != kind {
 		t.Fatalf("error = %v, want kind %v", err, kind)
+	}
+}
+
+func assertCompanyNotFound(t *testing.T, err error) {
+	t.Helper()
+	assertKind(t, err, platform.KindInvalid)
+	var appErr *platform.Error
+	errors.As(err, &appErr)
+	if len(appErr.Fields) != 1 || appErr.Fields[0].Field != "companyId" || appErr.Fields[0].Message != "企業が見つかりません" {
+		t.Errorf("fields = %+v, want companyId: 企業が見つかりません", appErr.Fields)
 	}
 }
 
@@ -105,6 +115,22 @@ func TestCreateRejectsOtherUsersCompany(t *testing.T) {
 	_, err := f.es.Create(t.Context(), bob, Fields{CompanyID: &alicesCompany, Title: ptr("ES")})
 
 	assertKind(t, err, platform.KindInvalid)
+}
+
+func TestUpdateRejectsOtherUsersCompany(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	alicesCompany := f.company(t, alice, "サンプル")
+	bobsCompany := f.company(t, bob, "サンプル")
+	e := f.entry(t, bob, bobsCompany, "ES")
+
+	_, err := f.es.Update(t.Context(), bob, e.ID, Fields{CompanyID: &alicesCompany})
+
+	assertCompanyNotFound(t, err)
+	if got, err := f.es.Get(t.Context(), bob, e.ID); err != nil || got.CompanyID != bobsCompany {
+		t.Errorf("Get = %+v, %v; want the entry still linked to bob's company", got, err)
+	}
 }
 
 func TestUpdateChangesOnlyGivenFieldsAndClearsDeadline(t *testing.T) {
@@ -177,6 +203,44 @@ func TestListFiltersByCompanyAndLimits(t *testing.T) {
 	}
 	if len(limited) != 2 {
 		t.Errorf("limited = %d entries, want 2", len(limited))
+	}
+}
+
+func TestCreateStopsAtLimitPerUser(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	companyID := f.company(t, alice, "サンプル")
+	if _, err := f.pool.Exec(t.Context(),
+		`insert into es_entries (user_id, company_id, title) select $1, $2, 'ES' || n from generate_series(1, $3) as n`,
+		alice, companyID, maxEntries); err != nil {
+		t.Fatalf("fill es entries: %v", err)
+	}
+
+	_, err := f.es.Create(t.Context(), alice, Fields{CompanyID: &companyID, Title: ptr("上限を超えるES")})
+	assertKind(t, err, platform.KindConflict)
+	f.entry(t, bob, f.company(t, bob, "サンプル"), "別のユーザーのES")
+}
+
+func TestListReviewsReturnsOnlyRecentHistory(t *testing.T) {
+	f := setup(t)
+	f.ai.Reply = oneItemReply
+	userID := dbtest.CreateUser(t, f.pool)
+	companyID := f.company(t, userID, "サンプル")
+	e, err := f.es.Create(t.Context(), userID, Fields{CompanyID: &companyID, Title: ptr("ES"), Questions: &[]Question{{Prompt: "志望動機", Answer: "回答"}}})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	var latest Review
+	for range reviewHistoryLimit + 1 {
+		if latest, err = f.es.Review(t.Context(), userID, e.ID); err != nil {
+			t.Fatalf("Review: %v", err)
+		}
+	}
+
+	reviews, err := f.es.ListReviews(t.Context(), userID, e.ID)
+	if err != nil || len(reviews) != reviewHistoryLimit || reviews[0].ID != latest.ID {
+		t.Errorf("reviews = %d, %v; want the newest %d reviews", len(reviews), err, reviewHistoryLimit)
 	}
 }
 

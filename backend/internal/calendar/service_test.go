@@ -28,6 +28,16 @@ func assertKind(t *testing.T, err error, kind platform.Kind) {
 	}
 }
 
+func assertCompanyNotFound(t *testing.T, err error) {
+	t.Helper()
+	assertKind(t, err, platform.KindInvalid)
+	var appErr *platform.Error
+	errors.As(err, &appErr)
+	if len(appErr.Fields) != 1 || appErr.Fields[0].Field != "companyId" || appErr.Fields[0].Message != "企業が見つかりません" {
+		t.Errorf("fields = %+v, want companyId: 企業が見つかりません", appErr.Fields)
+	}
+}
+
 func TestListMergesEventsAndESDeadlinesByDate(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
@@ -111,6 +121,43 @@ func TestCompanyLinkIsOptionalAndMustBeOwn(t *testing.T) {
 	unlinked, err := s.Update(t.Context(), alice, item.ID, Fields{SetCompanyID: true})
 	if err != nil || unlinked.CompanyID != nil {
 		t.Errorf("Update = %+v, %v; want the company unlinked", unlinked, err)
+	}
+}
+
+func TestUpdateRejectsOtherUsersCompany(t *testing.T) {
+	pool := dbtest.Connect(t)
+	alice := dbtest.CreateUser(t, pool)
+	bob := dbtest.CreateUser(t, pool)
+	c, _, err := company.NewService(pool, xp.NewService(), nil, nil).Create(t.Context(), alice, company.Fields{Name: ptr("サンプル")})
+	if err != nil {
+		t.Fatalf("create company: %v", err)
+	}
+	s := NewService(pool)
+	item, err := s.Create(t.Context(), bob, Fields{Title: ptr("予定"), Date: day("2026-11-01")})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	_, err = s.Update(t.Context(), bob, item.ID, Fields{SetCompanyID: true, CompanyID: &c.ID})
+
+	assertCompanyNotFound(t, err)
+}
+
+func TestCreateStopsAtLimitPerUser(t *testing.T) {
+	pool := dbtest.Connect(t)
+	alice := dbtest.CreateUser(t, pool)
+	bob := dbtest.CreateUser(t, pool)
+	s := NewService(pool)
+	if _, err := pool.Exec(t.Context(),
+		`insert into calendar_events (user_id, title, date) select $1, '予定', date '2026-11-01' from generate_series(1, $2)`,
+		alice, maxEvents); err != nil {
+		t.Fatalf("fill calendar events: %v", err)
+	}
+
+	_, err := s.Create(t.Context(), alice, Fields{Title: ptr("上限を超える予定"), Date: day("2026-11-01")})
+	assertKind(t, err, platform.KindConflict)
+	if _, err := s.Create(t.Context(), bob, Fields{Title: ptr("予定"), Date: day("2026-11-01")}); err != nil {
+		t.Errorf("Create for another user: %v, want success", err)
 	}
 }
 
