@@ -313,7 +313,7 @@ backend/
 - `.github/workflows/ci.yml`: PR ごとに、変わった場所に関係するジョブだけを走らせる（`changes` ジョブで判定し、関係ないジョブは `if:` でスキップ。スキップは必須チェックで成功扱い）
   - `checks`（lint/type-check/format:check/APIの型の鮮度）: 常に
   - `build`（本番ビルド確認）・`unit`（Vitest）: フロント・依存・ワークフローの変更
-  - `backend`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）: `backend/`・`supabase/`・ワークフローの変更
+  - `backend`（生成コードの鮮度・golangci-lint・govulncheck・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）: `backend/`・`supabase/`・ワークフローの変更
   - `e2e`（Playwright。CIの中で Supabase を起動する）: `backend/`・`supabase/`・`e2e/`・依存・ワークフローの変更。フロントだけの変更では走らせない
   - `migrations`: リリース PR（dev → master）でだけ、本番に当たるマイグレーションを `supabase db push --dry-run` で表示する
 - `.github/workflows/cache.yml`: dev への push で、Go のモジュールとビルド結果・npm・Playwright のブラウザのキャッシュを dev に置く（PR は自分のキャッシュと dev のキャッシュしか読めないため）
@@ -377,7 +377,7 @@ E2Eテストの値（テストユーザーなど）は、手元の Supabase 専�
 
 ### Supabase Auth設定
 
-`infra/supabase.tf` で管理する。Site URL は本番のURL、Redirect URL は本番と `http://localhost:3000` の `/auth/callback`・`/dashboard`。Google ログインの OAuth クライアントも同じファイルで設定する。
+`infra/supabase.tf` で管理する。Site URL は本番のURL、Redirect URL は本番の `/auth/callback`・`/dashboard` だけ（localhost は手元の Supabase の `supabase/config.toml` で許可する）。Google ログインの OAuth クライアントも同じファイルで設定する。
 
 Data API（PostgREST）は使わないため、公開するスキーマを `graphql_public` だけにして `public` を外している。
 
