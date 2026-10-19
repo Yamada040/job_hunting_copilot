@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { PUBLIC_PAGES, ROUTES } from "@/lib/constants/routes";
 
 // 認証不要のパス
-const PUBLIC_PATHS = [...PUBLIC_PAGES, "/auth/callback", "/robots.txt", "/sitemap.xml"];
+const PUBLIC_PATHS = [...PUBLIC_PAGES, "/auth/callback", "/oauth/consent", "/robots.txt", "/sitemap.xml"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });

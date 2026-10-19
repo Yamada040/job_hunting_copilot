@@ -9,10 +9,12 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/calendar"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/companyoverview"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/contact"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/es"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/health"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/interview"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/mcpserver"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
@@ -58,6 +60,7 @@ type deps struct {
 	es         *es.Service
 	interview  *interview.Service
 	calendar   *calendar.Service
+	overview   *companyoverview.Service
 	xpLogs     xp.Handler
 	assessment assessment.Handler
 	webtest    *webtest.Service
@@ -69,7 +72,7 @@ type deps struct {
 
 var _ openapi.StrictServerInterface = server{}
 
-func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
+func newHandler(verifier *auth.Verifier, mcpOAuth mcpserver.OAuthConfig, d deps) (http.Handler, error) {
 	spec, err := openapi.GetSpec()
 	if err != nil {
 		return nil, fmt.Errorf("load openapi spec: %w", err)
@@ -99,14 +102,23 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 		ErrorHandlerFunc: writeRequestError,
 	})
 
-	return platform.Chain(routes,
+	apiHandler := platform.Chain(routes,
+		verifier.Authenticate,
+		platform.Validate(spec, auth.RequireUser),
+	)
+	mcpHandler := mcpserver.NewHandler(d.overview, verifier, mcpOAuth)
+	mux := http.NewServeMux()
+	mux.Handle("/.well-known/oauth-protected-resource/mcp", mcpserver.ProtectedResourceMetadataHandler(mcpOAuth))
+	mux.Handle("/mcp", mcpHandler)
+	mux.Handle("/mcp/", mcpHandler)
+	mux.Handle("/", apiHandler)
+
+	return platform.Chain(mux,
 		platform.ReportErrors(d.errorReporter),
 		platform.RequestID,
 		platform.AccessLog,
 		platform.Recover,
 		platform.ClientIP,
-		verifier.Authenticate,
-		platform.Validate(spec, auth.RequireUser),
 	), nil
 }
 

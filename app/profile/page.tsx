@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
 import { AppLayout } from "@/app/_components/layout";
 import { ProfileForm } from "./_components/profile-form";
+import { ConnectedApps } from "./_components/connected-apps";
 import { DeleteAccount } from "./_components/delete-account";
 import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
@@ -23,6 +24,7 @@ export default async function ProfilePage() {
       className="flex flex-col gap-8"
     >
       <ProfileForm email={userData.user?.email ?? ""} />
+      <ConnectedApps />
       <DeleteAccount />
     </AppLayout>
   );

@@ -24,7 +24,7 @@ dir = "backend"
 # 接続先は supabase status から読む。どれも手元専用の既定値で、秘密ではない
 run = """
 eval "$(supabase status -o env)"
-SUPABASE_URL="$API_URL" DATABASE_URL="$DB_URL" go run ./cmd/server
+SUPABASE_URL="$API_URL" DATABASE_URL="$DB_URL" NEXT_PUBLIC_SITE_URL=http://localhost:3000 go run ./cmd/server
 """
 
 [tasks."dev:web"]

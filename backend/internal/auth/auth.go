@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -19,7 +20,10 @@ import (
 // Supabase Auth はログイン済みユーザーのトークンにこの audience を付ける
 const audience = "authenticated"
 
-var errNoUser = errors.New("no authenticated user")
+var (
+	errNoUser           = errors.New("no authenticated user")
+	errOAuthClientToken = errors.New("token was issued to an OAuth client")
+)
 
 // Verifier は、Supabase の公開鍵（JWKS）でトークンの署名・有効期限・発行者・audience を確かめる。
 // 共有の秘密鍵や、リクエストごとの Supabase への問い合わせは使わない（docs/backend-design.md 6章）。
@@ -42,13 +46,16 @@ func NewVerifier(ctx context.Context, supabaseURL string) (*Verifier, error) {
 // claims は、Supabase Auth のトークンのうち、バックエンドが使う項目。
 type claims struct {
 	jwt.RegisteredClaims
-	Email string `json:"email"`
+	Email    string `json:"email"`
+	ClientID string `json:"client_id"`
 }
 
 // User は、トークンから分かるログイン中のユーザー。
 type User struct {
-	ID    uuid.UUID
-	Email string
+	ID        uuid.UUID
+	Email     string
+	ClientID  string
+	ExpiresAt time.Time
 }
 
 // UserID は、トークンを検証してユーザーID（sub）を返す。
@@ -73,7 +80,7 @@ func (v *Verifier) User(token string) (User, error) {
 	if err != nil {
 		return User{}, fmt.Errorf("token subject is not a user id: %w", err)
 	}
-	return User{ID: id, Email: c.Email}, nil
+	return User{ID: id, Email: c.Email, ClientID: c.ClientID, ExpiresAt: c.ExpiresAt.Time}, nil
 }
 
 type userKey struct{}
@@ -81,6 +88,8 @@ type userKey struct{}
 // Authenticate は、Authorization ヘッダーにトークンがあれば検証し、ユーザーIDをコンテキストに入れる。
 // トークンが無いリクエストはそのまま通し、ログインが必要かどうかは OpenAPI の security を見る RequireUser に任せる。
 // トークンがあるのに不正な場合は、その場で 401 を返す。
+// OAuth クライアント（MCP）向けに発行された client_id 付きのトークンも 401 にする。
+// 外部のアプリに許したのは MCP の読み取りだけで、同じトークンで更新・削除・AIの実行まで通すと許した範囲を超えるため。
 func (v *Verifier) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -89,6 +98,9 @@ func (v *Verifier) Authenticate(next http.Handler) http.Handler {
 			return
 		}
 		user, err := v.User(token)
+		if err == nil && user.ClientID != "" {
+			err = errOAuthClientToken
+		}
 		if err != nil {
 			platform.Logger(r.Context()).Info("invalid access token", "error", err)
 			platform.WriteError(w, r, &platform.Error{Kind: platform.KindUnauthorized, Message: "ログインが必要です"})

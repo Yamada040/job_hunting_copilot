@@ -160,6 +160,20 @@ Next.js 認証コールバック: `app/auth/callback/route.ts` で `exchangeCode
 
 `supabase/migrations/` に定義（Supabase CLI で管理）。全テーブルの説明は [docs/database-schema.md](docs/database-schema.md) を参照。企業を中心に、ES・面接ログ・予定が企業にひも付く。
 
+## MCP（読み取り専用）
+
+バックエンドは Streamable HTTP の MCP endpoint `POST /mcp` を公開し、最初のツールとして `get_company_overview` を提供する。`companyName` を渡すと、本人が登録した企業の選考状況、ES の設問・回答・本文、今日以降の予定と ES 締切をまとめて返す。データは既存の企業・ES・予定を読み取るだけで、DB マイグレーションは不要である。書き込みツールは提供しない。
+
+外部のAIクライアントは、MCP URL に `https://<公開URL>/mcp` を指定して接続する。未認証の呼び出しには `/.well-known/oauth-protected-resource/mcp` を案内するため、対応クライアントはSupabase OAuth 2.1を使ってPKCE付きで認可を始める。通常のブラウザログイン用トークンは受け付けず、OAuthクライアントを示す `client_id` を持つトークンだけを許可する。アクセストークンを手入力・共有して接続してはならない。
+
+初回の本番公開前に、Supabase Dashboard の **Auth > OAuth Server** で次を設定する（OAuth ServerはSupabaseのbeta機能）。この設定はプロジェクト外の管理設定であり、TerraformやDBマイグレーションでは管理しない。
+
+1. OAuth 2.1 Server を有効にする。
+2. Authorization path に `/oauth/consent` を指定する（SupabaseのSite URLと組み合わされ、`https://<公開URL>/oauth/consent` になる）。
+3. 任意のMCPクライアントから接続できるよう Dynamic Client Registration を有効にする。接続のたびにアプリ名・要求権限・リダイレクト先を表示する同意画面を経由する。
+
+接続済みアプリはプロフィール画面で一覧・取り消しできる。取り消すと、Supabaseが当該クライアントへの同意、セッション、更新トークンを無効にする。認可済みクライアント、同意、認可コード、更新トークンはSupabaseが管理するため、アプリ固有のテーブルは不要である。
+
 ## 開発ルール
 
 - YAGNI/DRY を徹底、MVP 以外の過剰実装は避ける。

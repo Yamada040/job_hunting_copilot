@@ -45,7 +45,12 @@ export default defineConfig({
       command: "go run ./cmd/server",
       cwd: "backend",
       url: `http://localhost:${API_PORT}/v1/health`,
-      env: { PORT: String(API_PORT), SUPABASE_URL: supabase.API_URL, DATABASE_URL: supabase.DB_URL },
+      env: {
+        PORT: String(API_PORT),
+        SUPABASE_URL: supabase.API_URL,
+        DATABASE_URL: supabase.DB_URL,
+        NEXT_PUBLIC_SITE_URL: baseURL,
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },
