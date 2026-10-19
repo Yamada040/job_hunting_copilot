@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
+import { safeNextPath } from "@/lib/auth/next-path";
 import { createSupabaseActionClient } from "@/lib/supabase/supabase-server";
-
-const safeNextPath = (next: string | null) => {
-  if (!next?.startsWith("/") || next.startsWith("//")) return undefined;
-  return next;
-};
 
 export async function GET(request: Request) {
   const url = new URL(request.url);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { safeNextPath } from "@/lib/auth/next-path";
 import { ROUTES } from "@/lib/constants/routes";
 import { BrandLogo } from "@/app/_components/layout/BrandLogo";
 import { LoginClient } from "./login-client";
@@ -13,11 +14,6 @@ const LOGIN_ERRORS: Record<string, string> = {
   auth: "ログインに失敗しました。もう一度お試しください。",
   session: "ログインの有効期限が切れました。もう一度ログインしてください。",
   logout: "ほかの端末からのログアウトに失敗しました。この端末からはログアウトしています。",
-};
-
-const safeNextPath = (next: string | undefined) => {
-  if (!next?.startsWith("/") || next.startsWith("//")) return undefined;
-  return next;
 };
 
 export const metadata: Metadata = {
