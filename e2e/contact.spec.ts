@@ -55,4 +55,13 @@ test.describe("ログインしているとき", () => {
     await expect(page.getByLabel("返信先のメールアドレス")).toHaveCount(0);
     await expect(page.getByRole("navigation", { name: "メインメニュー" })).toBeVisible();
   });
+
+  test("返信先を書かずに送れる", async ({ page }) => {
+    await page.goto("/contact");
+    await page.getByLabel("件名").fill("ESの保存について");
+    await page.getByLabel("お問い合わせ内容").fill("保存したESが一覧に出ません。");
+    await page.getByRole("button", { name: "送信する" }).click();
+
+    await expect(page.getByText("現在、お問い合わせを受け付けられない状態です。")).toBeVisible();
+  });
 });
