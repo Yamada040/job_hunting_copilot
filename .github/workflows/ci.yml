@@ -145,7 +145,7 @@ jobs:
           working-directory: backend
       # Dependabot は脆弱性のある依存を知らせるだけで、その関数を実際に呼んでいるかは見ない。呼んでいる箇所を PR の時点で止める
       - name: 既知の脆弱性を呼んでいないか確認
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
       - name: マイグレーションを適用
         working-directory: .
         env:
