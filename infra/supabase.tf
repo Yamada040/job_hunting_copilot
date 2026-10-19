@@ -5,11 +5,11 @@ resource "supabase_settings" "this" {
 
   auth = jsonencode({
     site_url = var.site_url
+    # localhost は許可しない。手元の開発は手元の Supabase（supabase/config.toml）でログインするので本番には不要で、
+    # 許可しておくと、手元で待ち受けるほかのアプリへ本番のログインのコードを渡せてしまう
     uri_allow_list = join(",", [
       "${var.site_url}/auth/callback",
       "${var.site_url}/dashboard",
-      "http://localhost:3000/auth/callback",
-      "http://localhost:3000/dashboard",
     ])
     external_google_enabled   = true
     external_google_client_id = var.google_oauth.client_id
