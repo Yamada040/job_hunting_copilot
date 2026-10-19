@@ -136,6 +136,21 @@ func TestPrivateAPIPassesUserIDWithValidToken(t *testing.T) {
 	}
 }
 
+func TestOAuthClientTokenIsRejected(t *testing.T) {
+	issuer := authtest.NewIssuer(t)
+	token := issuer.SignWithClientID(t, issuer.Claims(userID), "mcp-client")
+
+	for _, path := range []string{"/private", "/public"} {
+		t.Run(path, func(t *testing.T) {
+			rec, user := serve(t, issuer, path, token)
+
+			if rec.Code != http.StatusUnauthorized || user != uuid.Nil {
+				t.Errorf("got status %d user %s, want 401 without user", rec.Code, user)
+			}
+		})
+	}
+}
+
 func TestPrivateAPIRejectsMissingToken(t *testing.T) {
 	issuer := authtest.NewIssuer(t)
 
