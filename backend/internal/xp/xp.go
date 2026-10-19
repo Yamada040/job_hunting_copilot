@@ -30,6 +30,7 @@ type rule struct {
 	once bool
 }
 
+// 画面のXPのもらい方の説明（lib/xp/rules.ts）にも同じ値を書いているので、変えるときはそろえる
 var rules = map[db.XpAction]rule{
 	db.XpActionEsSubmitted:            {amount: 25, perTarget: true, dailyCap: 5},
 	db.XpActionInterviewLog:           {amount: 20, perTarget: true, dailyCap: 5},
