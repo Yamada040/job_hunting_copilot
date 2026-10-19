@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { useCreateCalendarEvent } from "@/lib/api/calendar";
+import type { CompanySummary } from "@/lib/api/companies";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ApiErrorMessage } from "@/app/_components/api-error-message";
@@ -15,8 +16,15 @@ import {
 } from "@/app/calendar/_components/calendar/event-fields";
 import { formatDateKey } from "@/app/calendar/_components/calendar/utils";
 
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** 最初から選んでおく企業（企業の詳細から開いたとき） */
+  company?: CompanySummary;
+};
+
 /** 画面を移らずに、その場で予定を追加するダイアログ。入れる項目と見た目はカレンダーの画面と同じ。 */
-export function QuickEventDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function QuickEventDialog({ open, onOpenChange, company }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-8 sm:max-w-xl">
@@ -25,13 +33,13 @@ export function QuickEventDialog({ open, onOpenChange }: { open: boolean; onOpen
           追加した予定は、カレンダーとホームの直近の予定に出ます。
         </DialogDescription>
         {/* 開くたびに入力を空に戻すため、開いている間だけ描く */}
-        {open && <QuickEventForm onDone={() => onOpenChange(false)} />}
+        {open && <QuickEventForm company={company} onDone={() => onOpenChange(false)} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function QuickEventForm({ onDone }: { onDone: () => void }) {
+function QuickEventForm({ company, onDone }: { company?: CompanySummary; onDone: () => void }) {
   const createEvent = useCreateCalendarEvent();
   const [values, setValues] = useState<EventFieldValues>(() => ({
     title: "",
@@ -41,7 +49,7 @@ function QuickEventForm({ onDone }: { onDone: () => void }) {
     allDay: true,
     time: "",
     endDate: "",
-    company: null,
+    company: company ?? null,
     url: "",
     note: "",
   }));

@@ -8,7 +8,13 @@ export const metadata: Metadata = {
   title: "面接ログを追加",
 };
 
-export default function InterviewNewPage() {
+export default async function InterviewNewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ companyId?: string | string[] }>;
+}) {
+  const { companyId } = await searchParams;
+
   return (
     <AppLayout
       avatar={<AvatarGuide messages={GUIDE_TIPS.interviewNew} />}
@@ -16,7 +22,7 @@ export default function InterviewNewPage() {
       headerDescription="面接で聞かれたこと・答えたこと・手応えを記録し、次の面接に備えます"
       className="space-y-6"
     >
-      <NewInterviewForm />
+      <NewInterviewForm companyId={typeof companyId === "string" ? companyId : undefined} />
     </AppLayout>
   );
 }
