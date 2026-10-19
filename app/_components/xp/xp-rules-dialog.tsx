@@ -25,7 +25,7 @@ export function XpRulesDialog({ children }: { children: React.ReactNode }) {
           {children}
         </button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>XPのもらい方</DialogTitle>
           <DialogDescription>
