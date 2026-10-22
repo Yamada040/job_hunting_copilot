@@ -215,3 +215,84 @@ func TestRefundAfterDailyResetKeepsNewDayCount(t *testing.T) {
 		t.Errorf("second charge of the new day: %v, want rate limited because refunding yesterday's charge must not reduce today's count", err)
 	}
 }
+
+// dailyCount は、本人の1日の枠の今の回数を返す。
+func dailyCount(t *testing.T, pool *pgxpool.Pool, userID uuid.UUID, bucket string) int {
+	t.Helper()
+	var count int
+	err := pool.QueryRow(t.Context(), `select count from api_rate_limits where user_id = $1 and bucket = $2`, userID, bucket).Scan(&count)
+	if err != nil {
+		t.Fatalf("get rate limit %s: %v", bucket, err)
+	}
+	return count
+}
+
+// chargeAndRefund は、数えてすぐに戻す（AIの呼び出しが失敗したとき）を1回行う。
+func chargeAndRefund(t *testing.T, l *Limiter, q *db.Queries, userID uuid.UUID, rule Rule) {
+	t.Helper()
+	charge, err := l.charge(t.Context(), q, userID, rule)
+	if err != nil {
+		t.Fatalf("charge: %v", err)
+	}
+	charge.Refund(t.Context(), q)
+}
+
+func TestRefundStopsAfterDailyRefundLimit(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	now := time.Date(2026, 10, 10, 12, 0, 0, 0, jst)
+	l := &Limiter{now: func() time.Time { return now }}
+	q := db.New(pool)
+	daily := Rule{Bucket: "test_refund_limit_daily", Max: 100, Daily: true, Message: "今日はもう使えません"}
+
+	for i := range AIRefundDaily.Max {
+		chargeAndRefund(t, l, q, userID, daily)
+		if got := dailyCount(t, pool, userID, daily.Bucket); got != 0 {
+			t.Fatalf("after refund %d: count %d, want 0 because refunds within the limit are returned", i+1, got)
+		}
+	}
+	for i := range 2 {
+		chargeAndRefund(t, l, q, userID, daily)
+		if got := dailyCount(t, pool, userID, daily.Bucket); got != i+1 {
+			t.Errorf("after refund %d: count %d, want %d because refunds over the limit are not returned", AIRefundDaily.Max+i+1, got, i+1)
+		}
+	}
+}
+
+func TestRefundLimitIsPerUser(t *testing.T) {
+	pool := dbtest.Connect(t)
+	heavyUser := dbtest.CreateUser(t, pool)
+	otherUser := dbtest.CreateUser(t, pool)
+	now := time.Date(2026, 10, 10, 12, 0, 0, 0, jst)
+	l := &Limiter{now: func() time.Time { return now }}
+	q := db.New(pool)
+	daily := Rule{Bucket: "test_refund_per_user_daily", Max: 100, Daily: true, Message: "今日はもう使えません"}
+
+	for range AIRefundDaily.Max + 2 {
+		chargeAndRefund(t, l, q, heavyUser, daily)
+	}
+	chargeAndRefund(t, l, q, otherUser, daily)
+
+	if got := dailyCount(t, pool, otherUser, daily.Bucket); got != 0 {
+		t.Errorf("other user's count %d, want 0 because another user's refunds do not use this user's refund limit", got)
+	}
+}
+
+func TestRefundLimitResetsAtMidnightInJST(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	now := time.Date(2026, 10, 10, 12, 0, 0, 0, jst)
+	l := &Limiter{now: func() time.Time { return now }}
+	q := db.New(pool)
+	daily := Rule{Bucket: "test_refund_next_day_daily", Max: 100, Daily: true, Message: "今日はもう使えません"}
+
+	for range AIRefundDaily.Max + 1 {
+		chargeAndRefund(t, l, q, userID, daily)
+	}
+	now = time.Date(2026, 10, 11, 0, 10, 0, 0, jst)
+	chargeAndRefund(t, l, q, userID, daily)
+
+	if got := dailyCount(t, pool, userID, daily.Bucket); got != 0 {
+		t.Errorf("count on the next day %d, want 0 because the refund limit resets at midnight in JST", got)
+	}
+}

@@ -205,6 +205,28 @@ func TestUpdateMeRejectsTooLongValue(t *testing.T) {
 	}
 }
 
+func TestCompanyLinksRejectNonHTTPURL(t *testing.T) {
+	cases := []struct{ method, path, body, field string }{
+		{http.MethodPost, "/v1/companies", `{"name":"サンプル","url":"javascript:alert(1)"}`, "url"},
+		{http.MethodPost, "/v1/companies", `{"name":"サンプル","mypageUrl":"javascript:alert(1)"}`, "mypageUrl"},
+		{http.MethodPatch, "/v1/companies/" + uuid.NewString(), `{"url":"data:text/html,x"}`, "url"},
+		{http.MethodPatch, "/v1/companies/" + uuid.NewString(), `{"mypageUrl":"ftp://example.com"}`, "mypageUrl"},
+	}
+	for _, c := range cases {
+		t.Run(c.method+" "+c.field, func(t *testing.T) {
+			rec := newTestServer(t).do(c.method, c.path, uuid.New(), c.body)
+
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400 because the link is opened in the browser", rec.Code)
+			}
+			p := decodeProblem(t, rec)
+			if p.Errors == nil || len(*p.Errors) != 1 || (*p.Errors)[0].Field != c.field {
+				t.Errorf("errors = %v, want one error on %s", p.Errors, c.field)
+			}
+		})
+	}
+}
+
 func TestUpdateMeRejectsUnknownField(t *testing.T) {
 	rec := newTestServer(t).do(http.MethodPatch, "/v1/me", uuid.New(), `{"xp": 9999}`)
 

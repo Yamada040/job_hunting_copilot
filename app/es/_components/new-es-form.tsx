@@ -2,19 +2,27 @@
 
 import { useRouter } from "next/navigation";
 
+import { useOptionalCompany } from "@/lib/api/companies";
 import { useCreateEsEntry, useSubmitEsEntry } from "@/lib/api/es";
 import { ROUTES } from "@/lib/constants/routes";
 import { showFailureNotice, showSuccessNotice } from "@/app/_components/avatar/avatar-notice-store";
+import { FormSkeleton } from "@/app/_components/loading-skeletons";
 import { EsForm } from "./es-form";
 
-export function NewEsForm() {
+/** companyId を渡すと、その企業を選んだ状態で始める（見つからなければ選ばずに始める）。 */
+export function NewEsForm({ companyId }: { companyId?: string }) {
   const router = useRouter();
   const createEsEntry = useCreateEsEntry();
   const submitEsEntry = useSubmitEsEntry();
+  const preselected = useOptionalCompany(companyId);
+
+  // フォームは最初に描いたときの値で企業の欄を作るので、届くまで待つ
+  if (companyId && preselected.isPending) return <FormSkeleton />;
 
   return (
     <EsForm
       canSubmit
+      defaultCompany={preselected.data && { id: preselected.data.id, name: preselected.data.name }}
       defaultQuestions={[
         { prompt: "自己PR・強み・成果", answer: "" },
         { prompt: "志望動機", answer: "" },

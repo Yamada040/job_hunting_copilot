@@ -72,6 +72,16 @@ func assertKind(t *testing.T, err error, kind platform.Kind) {
 	}
 }
 
+func assertCompanyNotFound(t *testing.T, err error) {
+	t.Helper()
+	assertKind(t, err, platform.KindInvalid)
+	var appErr *platform.Error
+	errors.As(err, &appErr)
+	if len(appErr.Fields) != 1 || appErr.Fields[0].Field != "companyId" || appErr.Fields[0].Message != "企業が見つかりません" {
+		t.Errorf("fields = %+v, want companyId: 企業が見つかりません", appErr.Fields)
+	}
+}
+
 func TestCreateSavesLogAndAwardsXP(t *testing.T) {
 	f := setup(t)
 	userID := dbtest.CreateUser(t, f.pool)
@@ -109,6 +119,25 @@ func TestCreateRejectsOtherUsersCompany(t *testing.T) {
 	_, _, err := f.interviews.Create(t.Context(), bob, validFields(f.newCompany(t, alice, "サンプル"), "2026-10-01"))
 
 	assertKind(t, err, platform.KindInvalid)
+}
+
+func TestUpdateRejectsOtherUsersCompany(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	alicesCompany := f.newCompany(t, alice, "サンプル")
+	bobsCompany := f.newCompany(t, bob, "サンプル")
+	log, _, err := f.interviews.Create(t.Context(), bob, validFields(bobsCompany, "2026-10-01"))
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	_, err = f.interviews.Update(t.Context(), bob, log.ID, Fields{CompanyID: &alicesCompany})
+
+	assertCompanyNotFound(t, err)
+	if got, err := f.interviews.Get(t.Context(), bob, log.ID); err != nil || got.CompanyID != bobsCompany {
+		t.Errorf("Get = %+v, %v; want the log still linked to bob's company", got, err)
+	}
 }
 
 func TestUpdateChangesOnlyGivenFields(t *testing.T) {
@@ -174,6 +203,35 @@ func TestListReturnsWhetherReviewed(t *testing.T) {
 	}
 	if len(logs) != 2 || !logs[0].Reviewed || logs[1].Reviewed {
 		t.Errorf("logs = %+v, want only the newer log reviewed", logs)
+	}
+}
+
+func TestListFiltersByCompanyWithinUser(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	a := f.newCompany(t, alice, "A社")
+	b := f.newCompany(t, alice, "B社")
+	for _, companyID := range []uuid.UUID{a, a, b} {
+		if _, _, err := f.interviews.Create(t.Context(), alice, validFields(companyID, "2026-10-01")); err != nil {
+			t.Fatalf("Create: %v", err)
+		}
+	}
+
+	byCompany, err := f.interviews.List(t.Context(), alice, &a, 0)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	bobsList, err := f.interviews.List(t.Context(), bob, &a, 0)
+	if err != nil {
+		t.Fatalf("List for bob: %v", err)
+	}
+
+	if len(byCompany) != 2 || byCompany[0].CompanyName != "A社" {
+		t.Errorf("by company = %d logs, want 2 logs of A社", len(byCompany))
+	}
+	if len(bobsList) != 0 {
+		t.Errorf("bob sees %d logs of alice's company, want none", len(bobsList))
 	}
 }
 

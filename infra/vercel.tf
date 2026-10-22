@@ -16,17 +16,19 @@ locals {
     DEV_ADMIN_USER_IDS                   = var.dev_admin_user_ids
   } : k => v if v != "" }
 
-  # 秘密の値。Vercel の画面でも読めないようにする（sensitive は development に置けない）
+  # 秘密の値。Vercel の画面でも読めないようにする（sensitive は development に置けない）。
+  # 本番だけに置く。プレビューのデプロイは止めているが、手でデプロイしても本番の DB・AI のキーに届かないようにする
   secret_env = { for k, v in {
-    DATABASE_URL        = local.database_url
-    AI_MODEL            = var.ai_model
-    AI_PROVIDER_API_KEY = var.ai_provider_api_key
-    TAVILY_API_KEY      = var.tavily_api_key
-    SMTP_HOST           = var.smtp.host
-    SMTP_PORT           = var.smtp.port
-    SMTP_USER           = var.smtp.user
-    SMTP_PASS           = var.smtp.pass
-    CONTACT_TO_EMAIL    = var.smtp.to
+    DATABASE_URL                       = local.database_url
+    AI_MODEL                           = var.ai_model
+    AI_PROVIDER_API_KEY                = var.ai_provider_api_key
+    TAVILY_API_KEY                     = var.tavily_api_key
+    SMTP_HOST                          = var.smtp.host
+    SMTP_PORT                          = var.smtp.port
+    SMTP_USER                          = var.smtp.user
+    SMTP_PASS                          = var.smtp.pass
+    CONTACT_TO_EMAIL                   = var.smtp.to
+    GOOGLE_ERROR_REPORTING_CREDENTIALS = var.google_error_reporting_credentials
   } : k => v if v != "" }
 }
 
@@ -47,6 +49,11 @@ resource "vercel_project_environment_variable" "secret" {
   project_id = var.vercel_project_id
   key        = each.key
   value      = local.secret_env[each.key]
-  target     = ["production", "preview"]
+  target     = ["production"]
   sensitive  = true
+}
+
+moved {
+  from = vercel_project_environment_variable.production_secret["GOOGLE_ERROR_REPORTING_CREDENTIALS"]
+  to   = vercel_project_environment_variable.secret["GOOGLE_ERROR_REPORTING_CREDENTIALS"]
 }

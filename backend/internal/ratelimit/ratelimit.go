@@ -36,6 +36,10 @@ var (
 		Message: "企業分析のリクエストが多すぎます。しばらく待ってから再度お試しください。"}
 	CompanyAnalysisDaily = Rule{Bucket: "ai_company_analysis_daily", Max: 3, Daily: true,
 		Message: "企業分析を使えるのは1日3回までです。明日また使えます。"}
+	// AIRefundDaily は、AIの呼び出しが失敗して1日の回数を戻せる、1人あたりの1日の上限。
+	// 汎用のAIと企業分析で枠を分けないのは、守りたいのがアプリ全体の利用料（両方で共有）で、
+	// 分けると1人が戻せる回数が増えるだけだから。上限を超えた失敗は、戻さずに利用者へ返す（Message は使わない）
+	AIRefundDaily = Rule{Bucket: "ai_refund_daily", Max: 3, Daily: true}
 )
 
 // 問い合わせの制限。送信用の Gmail のアカウントが1日の送信上限で止められないよう、アプリ全体の上限も設ける
@@ -140,10 +144,16 @@ func (l *Limiter) charge(ctx context.Context, q *db.Queries, userID uuid.UUID, r
 
 // Refund は、AIの呼び出しが失敗した1回を、1日の枠（本人とアプリ全体）から戻す。利用料は、かかった分なので戻さない。
 // 短時間の連打の枠を戻さないのは、AIの障害中に再試行が続いても、外部のAPIを叩き続けないようにするため。
+// 戻せるのは本人1日 AIRefundDaily.Max 回まで。失敗をすべて戻さないのは、ESに「JSONで返さないで」などと書けば
+// 毎回失敗させられ、1日の回数が効かなくなって、アプリ全体の利用料の上限を1人で使い切れてしまうため。
+// 失敗の理由（AIの障害か、入力による失敗か）で分けないのは、入力による失敗を確実に見分ける方法が無いため。
 // 戻せなくても、元の失敗を利用者に返すのを優先してログにだけ出す。
 func (c Charge) Refund(ctx context.Context, q *db.Queries) {
 	// 利用者が待たずに画面を離れ、リクエストが取り消されていても戻す
 	ctx = context.WithoutCancel(ctx)
+	if !c.allowRefund(ctx, q) {
+		return
+	}
 	for _, r := range c.rules {
 		if !r.Daily {
 			continue
@@ -158,6 +168,18 @@ func (c Charge) Refund(ctx context.Context, q *db.Queries) {
 			platform.Logger(ctx).Error("refund rate limit", "bucket", r.Bucket, "error", err)
 		}
 	}
+}
+
+// allowRefund は、本人の今日の戻した回数を1つ数え、上限以内なら true を返す。
+// 数えられなかったときは、戻しすぎないよう戻さない
+func (c Charge) allowRefund(ctx context.Context, q *db.Queries) bool {
+	r := AIRefundDaily
+	count, err := q.HitRateLimit(ctx, db.HitRateLimitParams{UserID: c.userID, Bucket: r.Bucket, Now: c.at, WindowStart: windowStart(r, c.at)})
+	if err != nil {
+		platform.Logger(ctx).Error("hit refund limit", "bucket", r.Bucket, "error", err)
+		return false
+	}
+	return int(count) <= r.Max
 }
 
 // checkAICost は、今日のAIの利用料がアプリ全体の上限に達していれば 429 のエラーを返す。

@@ -77,13 +77,13 @@ func NewService(pool *pgxpool.Pool) *Service {
 }
 
 // List は、期間内の予定とESの締切を日付順にまとめて返す。from・to は nil なら絞らない。
-func (s *Service) List(ctx context.Context, userID uuid.UUID, from, to *time.Time) ([]Item, error) {
+func (s *Service) List(ctx context.Context, userID uuid.UUID, companyID *uuid.UUID, from, to *time.Time) ([]Item, error) {
 	q := db.New(s.pool)
-	events, err := q.ListCalendarEvents(ctx, db.ListCalendarEventsParams{UserID: userID, FromDate: from, ToDate: to})
+	events, err := q.ListCalendarEvents(ctx, db.ListCalendarEventsParams{UserID: userID, CompanyID: companyID, FromDate: from, ToDate: to})
 	if err != nil {
 		return nil, fmt.Errorf("list calendar events: %w", err)
 	}
-	deadlines, err := q.ListEsDeadlines(ctx, db.ListEsDeadlinesParams{UserID: userID, FromDate: from, ToDate: to})
+	deadlines, err := q.ListEsDeadlines(ctx, db.ListEsDeadlinesParams{UserID: userID, CompanyID: companyID, FromDate: from, ToDate: to})
 	if err != nil {
 		return nil, fmt.Errorf("list es deadlines: %w", err)
 	}

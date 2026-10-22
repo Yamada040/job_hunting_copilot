@@ -24,7 +24,7 @@ var problemKinds = map[Kind]problemKind{
 }
 
 // WriteError は、エラーを RFC 9457 の Problem Details として書き出す。エラーからHTTPのレスポンスへの変換はすべてここを通す。
-// 想定外のエラーは、利用者には詳細を見せずにログにだけ残す。
+// 想定外のエラーは、利用者には詳細を見せずにログに残し、ReportErrors で設定した外部のサービスにも送る。
 func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	var appErr *Error
 	if errors.As(err, &appErr) {
@@ -35,6 +35,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 
 	Logger(r.Context()).Error("unexpected error", "error", err)
+	reportUnexpected(r, err)
 	writeProblem(w, r, http.StatusInternalServerError, "internal_error", "サーバーでエラーが発生しました", nil)
 }
 

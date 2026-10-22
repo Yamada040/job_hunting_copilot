@@ -21,6 +21,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/calendar"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/company"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/contact"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/errorreport"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/es"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/interview"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
@@ -38,6 +39,10 @@ type config struct {
 	ai          ai.Config
 	aiAppLimits ratelimit.AppLimits
 	smtp        contact.SMTPConfig
+	// errorReportingCredentials は、Error Reporting に書き込めるサービスアカウントの鍵（JSON）。空ならエラーを送らない
+	errorReportingCredentials string
+	// version は、エラーをどの版で起きたかで分けるための値。Vercel がデプロイしたコミットを入れる
+	version string
 }
 
 // loadConfig は、環境変数から設定を読む。必須の値が無ければ、誤った状態で動き出さないようエラーにする。
@@ -63,6 +68,8 @@ func loadConfig() (config, error) {
 			Pass: os.Getenv("SMTP_PASS"),
 			To:   os.Getenv("CONTACT_TO_EMAIL"),
 		},
+		errorReportingCredentials: os.Getenv("GOOGLE_ERROR_REPORTING_CREDENTIALS"),
+		version:                   os.Getenv("VERCEL_GIT_COMMIT_SHA"),
 	}
 	if cfg.port == "" {
 		cfg.port = "8080"
@@ -153,6 +160,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// 鍵が壊れていても、エラーを送れないだけでほかの機能は動くので、ログに出して起動を続ける
+	errorReporter, err := errorreport.New(cfg.errorReportingCredentials, "backend", cfg.version)
+	if err != nil {
+		slog.Error("error reporting disabled", "error", err)
+	}
 	ctx := context.Background()
 	verifier, err := auth.NewVerifier(ctx, cfg.supabaseURL)
 	if err != nil {
@@ -180,9 +192,10 @@ func run() error {
 			Aptitude:     assessment.NewAptitudeService(db, xpService, aiClient, limiter),
 			SelfAnalysis: assessment.NewSelfAnalysisService(db, xpService, aiClient, limiter),
 		},
-		webtest: webtest.NewService(db, xpService),
-		contact: contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP, Limiter: limiter},
-		admin:   admin.Handler{Pool: db, IsDeveloper: profiles.IsDeveloper, Now: time.Now},
+		webtest:       webtest.NewService(db, xpService),
+		contact:       contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP, Limiter: limiter},
+		admin:         admin.Handler{Pool: db, IsDeveloper: profiles.IsDeveloper, Now: time.Now},
+		errorReporter: errorReporter,
 	})
 	if err != nil {
 		return err

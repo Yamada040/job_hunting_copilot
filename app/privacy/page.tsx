@@ -34,6 +34,13 @@ const recipients = [
     purpose: "サービスの配信（画面とAPIの実行）",
     content: "アクセスしたときの通信の内容と、IPアドレスなどのアクセスの記録。",
   },
+  // 送る内容は backend/internal/platform/report.go の UnexpectedError と合わせる
+  {
+    name: "Google Cloud（Error Reporting）",
+    purpose: "サーバーで想定外のエラーが起きたときに、運営者が気づいて直すため",
+    content:
+      "エラーの内容と、エラーが起きたプログラムの場所、APIの種類（メソッドとパス）、起きた日時。入力した内容・メールアドレス・ユーザーIDなど、利用者を特定するための情報は送りません（エラーの内容に、まれに入力した値の一部が含まれることがあります）。",
+  },
   {
     name: "メール送信サービス",
     purpose: "問い合わせを運営者のメールに届けるため",

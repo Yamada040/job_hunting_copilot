@@ -122,6 +122,13 @@ variable "dev_admin_user_ids" {
   default     = ""
 }
 
+variable "google_error_reporting_credentials" {
+  description = "Google Cloud の Error Reporting に書き込むサービスアカウントの鍵（JSON。roles/errorreporting.writer だけを付ける）。空ならバックエンドはエラーを送らない"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "google_oauth" {
   description = "Google ログインの OAuth クライアント（Google Cloud Console で発行したもの）"
   type = object({

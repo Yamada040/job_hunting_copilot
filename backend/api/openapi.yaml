@@ -428,8 +428,14 @@ paths:
     get:
       operationId: listCalendarItems
       summary: カレンダーに表示する予定を取得する
-      description: ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。
+      description: ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。companyId を渡すとその企業の予定とESの締切だけに絞る。
       parameters:
+        - name: companyId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
         - name: from
           in: query
           required: false
@@ -1142,12 +1148,16 @@ components:
         url:
           type: string
           maxLength: 500
+          # 画面でリンクとして開くので、javascript: などは受け付けない。画面は空の欄を "" で送って消すので、空も受け付ける
+          pattern: "^$|^https?://"
         mypageId:
           type: string
           maxLength: 100
         mypageUrl:
           type: string
           maxLength: 500
+          # 画面でリンクとして開くので、javascript: などは受け付けない。画面は空の欄を "" で送って消すので、空も受け付ける
+          pattern: "^$|^https?://"
         memo:
           type: string
           maxLength: 2000
@@ -1174,12 +1184,16 @@ components:
         url:
           type: string
           maxLength: 500
+          # 画面でリンクとして開くので、javascript: などは受け付けない。画面は空の欄を "" で送って消すので、空も受け付ける
+          pattern: "^$|^https?://"
         mypageId:
           type: string
           maxLength: 100
         mypageUrl:
           type: string
           maxLength: 500
+          # 画面でリンクとして開くので、javascript: などは受け付けない。画面は空の欄を "" で送って消すので、空も受け付ける
+          pattern: "^$|^https?://"
         memo:
           type: string
           maxLength: 2000

@@ -9,6 +9,7 @@
 - データの読み書きは バックエンドだけが行う。バックエンドはRLSの対象外のロールで接続し、すべての問い合わせを `user_id` で絞り込む
 - 全テーブルでRLSは有効だが、ポリシーは作らない。Supabase が公開している Data API からは `anon` / `authenticated` ロールで一切読み書きできない
 - すべての `user_id` は `auth.users(id)` を `on delete cascade` で参照し、`not null`
+- ほかの行へのひも付け（ES・面接ログ・予定の `company_id`、`es_reviews.es_entry_id`、`webtest_attempts.question_id`）は `(id, user_id)` の組で参照し、持ち主が同じ行にしかひも付けられない。バックエンドの確かめ（`company.EnsureOwned` など）に漏れがあってもDBが弾く。予定の `company_id` が null のときは検査しない
 - `updated_at` を持つテーブルは、`moddatetime` のトリガーで更新時刻を自動で入れる
 - 決まった値の列は Postgres の enum。値は英語のコードで、日本語の表示名はフロントエンドが持つ
 

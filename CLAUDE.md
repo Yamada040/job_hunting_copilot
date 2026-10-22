@@ -20,6 +20,8 @@
 - **アニメーション**: Framer Motion
 - **ホスティング**: Vercel（無料プラン）。Next.js と バックエンドを同じプロジェクトの Services で動かす（`vercel.json`）
 
+- **エラーの通知**: Google Cloud の Error Reporting（バックエンドの想定外のエラーだけ。`backend/internal/errorreport`）
+
 すべての依存サービスは**無料プラン**で運用している（有料インフラなし）。設計の詳細と、各判断で採らなかった案は [docs/backend-design.md](./docs/backend-design.md) を参照。
 
 ## 開発コマンド
@@ -114,10 +116,11 @@ backend/
     ├── ai/                   # Gemini / GPT / Tavily とプロンプト
     ├── ratelimit/            # AI・問い合わせの回数制限（短時間の連打と1日の上限）と、AIの1日の利用料の上限
     ├── auth/                 # JWTの検証
+    ├── errorreport/          # 想定外のエラーを Google Cloud の Error Reporting に送る
     └── platform/             # エラーの形式、ミドルウェア、トランザクション、DB接続
 ```
 
-- **エラー**: service は `platform.Error`（`Kind` と日本語のメッセージ）を返し、RFC 9457（Problem Details）への変換は `platform.WriteError` の1か所で行う。想定外のエラーは利用者に詳細を見せずログにだけ出す
+- **エラー**: service は `platform.Error`（`Kind` と日本語のメッセージ）を返し、RFC 9457（Problem Details）への変換は `platform.WriteError` の1か所で行う。想定外のエラー（500。panic を含む）は利用者に詳細を見せずログに出し、応答を書く前に Error Reporting にも送る（締め切り2秒。送るのはエラーの文言・スタックトレース・メソッド・伏せたパス・版だけで、本文・クエリ・ヘッダー・ユーザーIDは送らない）。`platform.Error` の想定内のもの（4xx・503）は送らない
 - **入力の検証**: 形式（必須・文字数・enum）は `openapi.yaml` で定義し、ミドルウェアが仕様と照らし合わせて弾く。ドメインのルール（空白だけの企業名など）は service で確かめる
 - **トランザクション**: 複数の書き込みは `platform.InTx` でまとめる。XPの付与は元の操作と同じトランザクションで行う
 - **企業へのひも付け**: ES・面接ログ・予定を企業にひも付けるときは、`company.EnsureOwned` で本人の企業かを確かめる
@@ -141,7 +144,7 @@ backend/
 | AI適性診断                | `POST /v1/aptitude-result/diagnosis`     | 1回                      |
 | AI自己分析                | `POST /v1/self-analysis-result/analysis` | 1回                      |
 
-- **回数制限**（`internal/ratelimit`）: 汎用のAIは1分12回・1日20回、企業分析は10分5回・1日3回（1人あたり、1日は日本時間）。それとは別に、アプリ全体の1日の上限（既定は汎用のAI 300回・企業分析10回。Tavily の月1,000回に収まる値）を全員で共有し、環境変数で変えられる。本人の上限で断ったリクエストは全体の枠を減らさない。AIの呼び出しが失敗したら1日の上限の1回を戻す（連打の上限と、企業分析の時間切れは戻さない）
+- **回数制限**（`internal/ratelimit`）: 汎用のAIは1分12回・1日20回、企業分析は10分5回・1日3回（1人あたり、1日は日本時間）。それとは別に、アプリ全体の1日の上限（既定は汎用のAI 300回・企業分析10回。Tavily の月1,000回に収まる値）を全員で共有し、環境変数で変えられる。本人の上限で断ったリクエストは全体の枠を減らさない。AIの呼び出しが失敗したら1日の上限の1回を戻す（連打の上限と、企業分析の時間切れは戻さない。戻せるのは1人1日3回まで）
 - **利用料の上限**（`internal/ratelimit`）: AIの応答のトークン数から料金を出してアプリ全体で1日ずつ足し、1日の上限（既定は $1）に達したら、AIを呼ぶ前に全体の上限と同じメッセージの 429 を返す。確かめるのは呼ぶ前、足すのは呼んだ後なので、同時に処理中の数件分は超えうる。足すのは `Limiter.TrackCost` で包んだ Generator が1か所で行い（失敗した呼び出しもトークン数が分かれば数える）、各サービスでは足さない
 - **Web検索**: 企業分析の検索は1回の分析で最大3回（実際に Tavily を呼んだ回数で数える）。検索が使えないとき（キーが無い・無料枠が尽きた・失敗した）は検索なしで分析を続け、結果の先頭にその旨を書く
 - **プロバイダー**: `AI_PROVIDER=gemini|gpt`。キーが無いときはAI機能だけが 503 を返す（仮の文章は保存されてしまうので返さない）
@@ -167,7 +170,7 @@ backend/
 
 **一覧は軽くする**: 一覧のAPIは長い列を返さない（企業は分析結果の冒頭200文字だけ、ESは設問・本文・メモなし、面接ログは質問と回答・振り返り結果なしで `reviewed` だけ）。全文は詳細のAPIで返す。予定は画面が期間（`from`・`to`）を渡し、カレンダーは表示している月と直近7日、ホームは直近7日を取る。
 
-企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。全テーブルが `auth.users` を `on delete cascade` で参照しており、退会（`DELETE /v1/me`）はバックエンドが `auth.users` の行を消すだけで、その人のデータをすべて消す。テーブルを足すときも `auth.users` への参照は必ず `on delete cascade` にする（`internal/profile` のテストが確かめる）。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
+企業を削除すると、ひも付くES・面接ログ・予定も `on delete cascade` で消える。企業・ES・Webテストの問題への外部キーは `(id, user_id)` の組で張っており、他人の行にはDBがひも付けさせない（バックエンドの確かめの多層防御）。全テーブルが `auth.users` を `on delete cascade` で参照しており、退会（`DELETE /v1/me`）はバックエンドが `auth.users` の行を消すだけで、その人のデータをすべて消す。テーブルを足すときも `auth.users` への参照は必ず `on delete cascade` にする（`internal/profile` のテストが確かめる）。決まった値の列（選考状況など）は Postgres の enum で、値は英語のコード、日本語の表示名はフロントエンド（`lib/companies/stages.ts` など）に置く。
 
 ### APIルート
 
@@ -213,7 +216,7 @@ backend/
 ### ゲーミフィケーション（XPシステム）
 
 - レベル = XP ÷ 25（切り捨て）＋ 1。合計XPとレベルは `profiles` に保存する
-- 付与のルールは `backend/internal/xp`（画面ではなく操作に結び付ける）
+- 付与のルールは `backend/internal/xp`（画面ではなく操作に結び付ける）。ヘッダーのレベル・XPを押すと開く説明（`app/_components/xp/xp-rules-dialog.tsx`）は `lib/xp/rules.ts` の値を出すので、ルールを変えたら両方をそろえる
 
 | 操作                         | XP  | 制限                        |
 | ---------------------------- | --- | --------------------------- |
@@ -249,6 +252,7 @@ backend/
 - マイページID・URLを保存し、一覧からマイページを開ける
 - 志望度・お気に入り（一覧で絞り込める）
 - AI企業分析（企業ごとに1回）
+- 詳細に、その企業のES・面接ログ・予定を出す（各一覧のAPIに `companyId` を渡して絞る。予定は期間を渡さない）。作成のボタンは、その企業を選んだ状態で開く（`/es/new?companyId=...` など）
 - 削除すると、ひも付くES・面接ログ・予定も消える
 
 **ログイン（`/login`）**:
@@ -300,6 +304,7 @@ backend/
 - **本番ではなく、手元・CIで起動した Supabase（`supabase start`）につなぐ**。`playwright.config.ts` が `supabase status` からURLとキーを読み、バックエンド（ポート8180）と本番ビルドの Next.js（ポート3100）を起動する
 - 手元の Supabase は、本番と同じ ES256 でトークンに署名する（`npm run supabase:signing-key`。バックエンドは HS256 を受け付けない）
 - `e2e/global-setup.ts` が、手元の Supabase の管理APIでテストユーザーA/Bを作り、`POST /api/test-support/login` でログインして `storageState` を保存する。このルートは `E2E_TEST_MODE=true` かつ `x-e2e-secret` ヘッダー一致のときだけ動く
+- AIは、`playwright.config.ts` が起動する偽の OpenAI 互換サーバー（`e2e/fake-ai/server.mjs`）が答える。バックエンドに E2E 専用の切り替えは足さず、`AI_ENDPOINT` でそこを向ける。AIを使うテストは、1回だけの機能と回数制限に当たらないよう、テストごとに新しいユーザーで行う（`e2e/support/new-user.ts`）
 - 本番の Supabase はメールアドレスでのログインを止めているので、本番ではテストユーザーでログインできない
 - 本番Vercel環境変数には **`E2E_TEST_MODE` を絶対に設定しない**
 - 詳細な設計・セキュリティ上の注意点は `docs/testing/e2e-test-plan.md` を参照
@@ -309,7 +314,7 @@ backend/
 - `.github/workflows/ci.yml`: PR ごとに、変わった場所に関係するジョブだけを走らせる（`changes` ジョブで判定し、関係ないジョブは `if:` でスキップ。スキップは必須チェックで成功扱い）
   - `checks`（lint/type-check/format:check/APIの型の鮮度）: 常に
   - `build`（本番ビルド確認）・`unit`（Vitest）: フロント・依存・ワークフローの変更
-  - `backend`（生成コードの鮮度・golangci-lint・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）: `backend/`・`supabase/`・ワークフローの変更
+  - `backend`（生成コードの鮮度・golangci-lint・govulncheck・DBを使うテスト。DBは Supabase の Postgres イメージをサービスコンテナで起動）: `backend/`・`supabase/`・ワークフローの変更
   - `e2e`（Playwright。CIの中で Supabase を起動する）: `backend/`・`supabase/`・`e2e/`・依存・ワークフローの変更。フロントだけの変更では走らせない
   - `migrations`: リリース PR（dev → master）でだけ、本番に当たるマイグレーションを `supabase db push --dry-run` で表示する
 - `.github/workflows/cache.yml`: dev への push で、Go のモジュールとビルド結果・npm・Playwright のブラウザのキャッシュを dev に置く（PR は自分のキャッシュと dev のキャッシュしか読めないため）
@@ -364,6 +369,7 @@ SMTP_USER=your-mail@example.com
 SMTP_PASS=your-app-password
 CONTACT_TO_EMAIL=contact-destination@example.com
 DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザー
+GOOGLE_ERROR_REPORTING_CREDENTIALS={...}   # Error Reporting に書き込むサービスアカウントの鍵（JSON。送り先は鍵のプロジェクト）。無ければエラーを送らない
 ```
 
 E2Eテストの値（テストユーザーなど）は、手元の Supabase 専用の固定値として `e2e/support/local-supabase.ts` に置いている。
@@ -372,7 +378,7 @@ E2Eテストの値（テストユーザーなど）は、手元の Supabase 専�
 
 ### Supabase Auth設定
 
-`infra/supabase.tf` で管理する。Site URL は本番のURL、Redirect URL は本番と `http://localhost:3000` の `/auth/callback`・`/dashboard`。Google ログインの OAuth クライアントも同じファイルで設定する。
+`infra/supabase.tf` で管理する。Site URL は本番のURL、Redirect URL は本番の `/auth/callback`・`/dashboard` だけ（localhost は手元の Supabase の `supabase/config.toml` で許可する）。Google ログインの OAuth クライアントも同じファイルで設定する。
 
 Data API（PostgREST）は使わないため、公開するスキーマを `graphql_public` だけにして `public` を外している。
 
@@ -408,9 +414,9 @@ Data API（PostgREST）は使わないため、公開するスキーマを `grap
 ### デプロイ
 
 - **Vercel**（無料のHobbyプラン）でホスティング。`vercel.json` の Services で、`/v1/*` を Go、それ以外を Next.js に振り分ける。関数のリージョンは東京（`hnd1`、Supabase と同じ）
-- 本番へのデプロイはリリース（下記）でだけ行う。Vercel の Git 連携は master をデプロイしない（`vercel.json` の `git.deploymentEnabled`）。マイグレーションとの順番を保証するため、`release.yml` が Vercel CLI でデプロイする
+- 本番へのデプロイはリリース（下記）でだけ行う。Vercel の Git 連携はどのブランチもデプロイしない（`vercel.json` の `git.deploymentEnabled`）。マイグレーションとの順番を保証するため、`release.yml` が Vercel CLI でデプロイする
 - 環境変数は `infra/vercel.tf`（Terraform）で設定する。変えたら Vercel で再デプロイするまで反映されない
-- ブランチごとにプレビューデプロイが作成される。プレビューは本番と同じ Supabase につながるので、本番のデータに触れることに注意する。マイグレーションを含む変更は、リリースまでプレビューでは動かない
+- プレビューのデプロイは作らない（`vercel.json` の `git.deploymentEnabled: false`）。プレビューが本番の Supabase・AI のキーにつながると、レビュー前のコードが利用者のデータに届くため。秘密の環境変数も production にだけ置く。変更は手元（`mise run dev`）と CI の E2E で確かめる
 
 ### リリース
 

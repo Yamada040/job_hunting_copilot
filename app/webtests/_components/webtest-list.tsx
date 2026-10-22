@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useWebtestQuestions, type WebtestQuestionSummary } from "@/lib/api/webtests";
@@ -43,7 +44,11 @@ export function WebtestList() {
       <EmptyState
         title="まだ問題がありません"
         description="受ける予定のWebテストの問題を登録して、解答の練習ができます。"
-      />
+      >
+        <Button asChild>
+          <Link href={ROUTES.WEBTESTS_NEW}>問題を追加する</Link>
+        </Button>
+      </EmptyState>
     );
   }
 

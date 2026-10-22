@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -97,11 +97,21 @@ func AccessLog(next http.Handler) http.Handler {
 		next.ServeHTTP(rec, r)
 		Logger(r.Context()).Info("request",
 			"method", r.Method,
-			"path", r.URL.Path,
+			"path", maskPath(r.URL.Path),
 			"status", rec.status,
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
 	})
+}
+
+const calendarFeedPrefix = "/v1/calendar-feed/"
+
+// maskPath は、ログに出すパスから秘密の値を伏せる。購読用URLはトークンだけで本人と見なすので、ログを読める人が予定を読めてしまう。
+func maskPath(path string) string {
+	if strings.HasPrefix(path, calendarFeedPrefix) {
+		return calendarFeedPrefix + "***"
+	}
+	return path
 }
 
 // Recover は、panic を 500 のエラーレスポンスに変え、サーバーを止めずに処理を続ける。
@@ -113,7 +123,7 @@ func Recover(next http.Handler) http.Handler {
 				if v == http.ErrAbortHandler {
 					panic(v)
 				}
-				WriteError(w, r, fmt.Errorf("panic: %v\n%s", v, debug.Stack()))
+				WriteError(w, r, &panicError{value: v, stack: debug.Stack()})
 			}
 		}()
 		next.ServeHTTP(w, r)

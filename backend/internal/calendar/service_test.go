@@ -28,6 +28,16 @@ func assertKind(t *testing.T, err error, kind platform.Kind) {
 	}
 }
 
+func assertCompanyNotFound(t *testing.T, err error) {
+	t.Helper()
+	assertKind(t, err, platform.KindInvalid)
+	var appErr *platform.Error
+	errors.As(err, &appErr)
+	if len(appErr.Fields) != 1 || appErr.Fields[0].Field != "companyId" || appErr.Fields[0].Message != "企業が見つかりません" {
+		t.Errorf("fields = %+v, want companyId: 企業が見つかりません", appErr.Fields)
+	}
+}
+
 func TestListMergesEventsAndESDeadlinesByDate(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
@@ -46,7 +56,7 @@ func TestListMergesEventsAndESDeadlinesByDate(t *testing.T) {
 		}
 	}
 
-	items, err := s.List(t.Context(), userID, day("2026-11-01"), day("2026-11-30"))
+	items, err := s.List(t.Context(), userID, nil, day("2026-11-01"), day("2026-11-30"))
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -114,6 +124,25 @@ func TestCompanyLinkIsOptionalAndMustBeOwn(t *testing.T) {
 	}
 }
 
+func TestUpdateRejectsOtherUsersCompany(t *testing.T) {
+	pool := dbtest.Connect(t)
+	alice := dbtest.CreateUser(t, pool)
+	bob := dbtest.CreateUser(t, pool)
+	c, _, err := company.NewService(pool, xp.NewService(), nil, nil).Create(t.Context(), alice, company.Fields{Name: ptr("サンプル")})
+	if err != nil {
+		t.Fatalf("create company: %v", err)
+	}
+	s := NewService(pool)
+	item, err := s.Create(t.Context(), bob, Fields{Title: ptr("予定"), Date: day("2026-11-01")})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	_, err = s.Update(t.Context(), bob, item.ID, Fields{SetCompanyID: true, CompanyID: &c.ID})
+
+	assertCompanyNotFound(t, err)
+}
+
 func TestCreateStopsAtLimitPerUser(t *testing.T) {
 	pool := dbtest.Connect(t)
 	alice := dbtest.CreateUser(t, pool)
@@ -146,8 +175,53 @@ func TestOtherUsersEventIsNotFound(t *testing.T) {
 	assertKind(t, err, platform.KindNotFound)
 	err = s.Delete(t.Context(), bob, item.ID)
 	assertKind(t, err, platform.KindNotFound)
-	if items, _ := s.List(t.Context(), bob, nil, nil); len(items) != 0 {
+	if items, _ := s.List(t.Context(), bob, nil, nil, nil); len(items) != 0 {
 		t.Errorf("bob sees %d items, want none", len(items))
+	}
+}
+
+func TestListFiltersByCompanyWithinUser(t *testing.T) {
+	pool := dbtest.Connect(t)
+	alice := dbtest.CreateUser(t, pool)
+	bob := dbtest.CreateUser(t, pool)
+	x := xp.NewService()
+	companies := company.NewService(pool, x, nil, nil)
+	a, _, err := companies.Create(t.Context(), alice, company.Fields{Name: ptr("A社")})
+	if err != nil {
+		t.Fatalf("create company: %v", err)
+	}
+	b, _, err := companies.Create(t.Context(), alice, company.Fields{Name: ptr("B社")})
+	if err != nil {
+		t.Fatalf("create company: %v", err)
+	}
+	if _, err := es.NewService(pool, x, nil, nil).Create(t.Context(), alice, es.Fields{CompanyID: &a.ID, Title: ptr("A社のES"), Deadline: day("2026-11-05")}); err != nil {
+		t.Fatalf("create es: %v", err)
+	}
+	s := NewService(pool)
+	for _, f := range []Fields{
+		{Title: ptr("A社の面接"), Date: day("2026-11-10"), CompanyID: &a.ID},
+		{Title: ptr("B社の面接"), Date: day("2026-11-11"), CompanyID: &b.ID},
+		{Title: ptr("企業なし"), Date: day("2026-11-12")},
+	} {
+		if _, err := s.Create(t.Context(), alice, f); err != nil {
+			t.Fatalf("Create: %v", err)
+		}
+	}
+
+	items, err := s.List(t.Context(), alice, &a.ID, nil, nil)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	bobsItems, err := s.List(t.Context(), bob, &a.ID, nil, nil)
+	if err != nil {
+		t.Fatalf("List for bob: %v", err)
+	}
+
+	if len(items) != 2 || items[0].Title != "A社のES" || items[1].Title != "A社の面接" {
+		t.Errorf("items = %+v, want only A社's deadline and event", items)
+	}
+	if len(bobsItems) != 0 {
+		t.Errorf("bob sees %d items of alice's company, want none", len(bobsItems))
 	}
 }
 
@@ -210,7 +284,7 @@ func TestEventSpanRules(t *testing.T) {
 	}
 
 	// 期間に少しでも重なれば、絞り込んだ一覧に入る
-	items, err := s.List(t.Context(), userID, day("2026-11-01"), day("2026-11-30"))
+	items, err := s.List(t.Context(), userID, nil, day("2026-11-01"), day("2026-11-30"))
 	if err != nil || len(items) != 1 {
 		t.Fatalf("List = %v, %v, want 期間の重なる1件", items, err)
 	}
