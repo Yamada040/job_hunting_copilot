@@ -20,7 +20,7 @@
 - **アニメーション**: Framer Motion
 - **ホスティング**: Vercel（無料プラン）。Next.js と バックエンドを同じプロジェクトの Services で動かす（`vercel.json`）
 
-- **エラーの通知**: Google Cloud の Error Reporting（バックエンドの想定外のエラーだけ。`backend/internal/errorreport`）
+- **エラーの通知**: Google Cloud の Error Reporting（バックエンドの想定外のエラーだけ。`backend/internal/errorreport`）と、Slack（バックエンドの Warn 以上のログ。`backend/internal/slack`）
 
 すべての依存サービスは**無料プラン**で運用している（有料インフラなし）。設計の詳細と、各判断で採らなかった案は [docs/backend-design.md](./docs/backend-design.md) を参照。
 
@@ -117,10 +117,11 @@ backend/
     ├── ratelimit/            # AI・問い合わせの回数制限（短時間の連打と1日の上限）と、AIの1日の利用料の上限
     ├── auth/                 # JWTの検証
     ├── errorreport/          # 想定外のエラーを Google Cloud の Error Reporting に送る
+    ├── slack/                # Warn 以上のログを Slack に送る（slog のハンドラー）
     └── platform/             # エラーの形式、ミドルウェア、トランザクション、DB接続
 ```
 
-- **エラー**: service は `platform.Error`（`Kind` と日本語のメッセージ）を返し、RFC 9457（Problem Details）への変換は `platform.WriteError` の1か所で行う。想定外のエラー（500。panic を含む）は利用者に詳細を見せずログに出し、応答を書く前に Error Reporting にも送る（締め切り2秒。送るのはエラーの文言・スタックトレース・メソッド・伏せたパス・版だけで、本文・クエリ・ヘッダー・ユーザーIDは送らない）。`platform.Error` の想定内のもの（4xx・503）は送らない
+- **エラー**: service は `platform.Error`（`Kind` と日本語のメッセージ）を返し、RFC 9457（Problem Details）への変換は `platform.WriteError` の1か所で行う。想定外のエラー（500。panic を含む）は利用者に詳細を見せずログに出し、応答を書く前に Error Reporting にも送る（締め切り2秒。送るのはエラーの文言・スタックトレース・メソッド・伏せたパス・版だけで、本文・クエリ・ヘッダー・ユーザーIDは送らない）。`platform.Error` の想定内のもの（4xx・503）は送らない。別に、Warn 以上のログはすべて Slack にも送る（`internal/slack`。送る属性は `error`・`bucket`・`request_id` だけ）。運営がすぐ知るべき不正な利用の疑い（アプリ全体・IPごとの回数の上限への到達、AIの1日の利用料の上限への到達、問い合わせの隠した欄への入力）は、その日の初回だけ Warn で出す（`internal/ratelimit`）。Slack に届いてほしくないログは Info 以下にする
 - **入力の検証**: 形式（必須・文字数・enum）は `openapi.yaml` で定義し、ミドルウェアが仕様と照らし合わせて弾く。ドメインのルール（空白だけの企業名など）は service で確かめる
 - **トランザクション**: 複数の書き込みは `platform.InTx` でまとめる。XPの付与は元の操作と同じトランザクションで行う
 - **企業へのひも付け**: ES・面接ログ・予定を企業にひも付けるときは、`company.EnsureOwned` で本人の企業かを確かめる
@@ -320,6 +321,7 @@ backend/
 - `.github/workflows/cache.yml`: dev への push で、Go のモジュールとビルド結果・npm・Playwright のブラウザのキャッシュを dev に置く（PR は自分のキャッシュと dev のキャッシュしか読めないため）
 - `.github/workflows/release.yml`: master へのマージで、本番の Supabase にマイグレーションを適用し、成功したら Vercel の本番にデプロイし、日付のタグと GitHub Release を作る
 - `.github/workflows/keepalive.yml`: 毎日 `/v1/health` を呼び、Supabase の無料プランの一時停止（7日間アクセスが無いと止まる）を防ぐ
+- `.github/workflows/vulncheck.yml`: 毎日 `govulncheck` を走らせ、バックエンドを触っていない間に公開された脆弱性にも気づく。Go 本体（標準ライブラリ）の脆弱性は Dependabot が見ないため。見つかったら失敗してメールが届くので、`backend/go.mod` の `go` と `mise.toml` の `go` を上げる
 - Dependabot: 依存パッケージの既知の脆弱性を検知し、直すPRを作る。普段のバージョンアップのPRは作らない（`infra/github.tf`）
 - devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`backend`/`e2e`）を要求し、マージ前にブランチを最新化するルールセットが設定されている。master はそれに `migrations` を加え、マージコミットでのマージだけを許す（`infra/github.tf`）
 
@@ -370,6 +372,7 @@ SMTP_PASS=your-app-password
 CONTACT_TO_EMAIL=contact-destination@example.com
 DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザー
 GOOGLE_ERROR_REPORTING_CREDENTIALS={...}   # Error Reporting に書き込むサービスアカウントの鍵（JSON。送り先は鍵のプロジェクト）。無ければエラーを送らない
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # Warn 以上のログを送る Slack の Incoming Webhook。無ければ送らない
 ```
 
 E2Eテストの値（テストユーザーなど）は、手元の Supabase 専用の固定値として `e2e/support/local-supabase.ts` に置いている。

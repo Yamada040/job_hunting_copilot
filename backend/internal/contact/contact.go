@@ -56,6 +56,9 @@ func (h Handler) SendContact(ctx context.Context, req openapi.SendContactRequest
 	// 隠した欄に値があるのは、画面を使わない自動送信。送れたと思わせて、何度も試されないようにする
 	if req.Body.Website != nil && *req.Body.Website != "" {
 		platform.Logger(ctx).Info("contact rejected by honeypot")
+		if err := h.Limiter.Record(ctx, db.New(h.Pool), ratelimit.ContactHoneypotDaily); err != nil {
+			platform.Logger(ctx).Error("count honeypot", "error", err)
+		}
 		return openapi.SendContact204Response{}, nil
 	}
 	subject, message := strings.TrimSpace(req.Body.Subject), strings.TrimSpace(req.Body.Message)

@@ -4,6 +4,7 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -49,6 +50,11 @@ var (
 	ContactAppDaily = Rule{Bucket: "contact_daily", Max: 50, Daily: true, AppWide: true,
 		Message: "本日はお問い合わせが多く、受付を一時的に止めています。明日以降に再度お試しください。"}
 )
+
+// ContactHoneypotDaily は、問い合わせの隠した欄に値が入った（自動送信の）回数を数える枠。上限を0にして、
+// その日の1回目から「アプリ全体の枠が溢れた」として運営に知らせる（hit を参照）。送信は止めずに捨てるだけなので、Record で数える。
+// 毎回知らせないのは、ボットに連投されると通知が埋まるため
+var ContactHoneypotDaily = Rule{Bucket: "contact_honeypot_daily", Max: 0, Daily: true, AppWide: true}
 
 // ContactIPDaily は、ログインしていない人の問い合わせの、IPごとの1日の上限。ipHash ごとに別の枠を
 // アプリ全体の枠と同じ表で数える（ユーザーに属さない枠なので）。ContactAppDaily の枠と名前がぶつからないよう接頭辞を付ける
@@ -206,8 +212,13 @@ func (l *Limiter) AddAICost(ctx context.Context, q *db.Queries, usage ai.Usage) 
 	}
 	r := l.aiCostDaily
 	now := l.now()
-	if _, err := q.AddAppRateLimit(ctx, db.AddAppRateLimitParams{Bucket: r.Bucket, Now: now, WindowStart: windowStart(r, now), Amount: int32(cost)}); err != nil {
+	spent, err := q.AddAppRateLimit(ctx, db.AddAppRateLimitParams{Bucket: r.Bucket, Now: now, WindowStart: windowStart(r, now), Amount: int32(cost)})
+	if err != nil {
 		return fmt.Errorf("add ai cost: %w", err)
+	}
+	// 今日の利用料が、この呼び出しで上限をまたいだときだけ知らせる
+	if before := int(spent) - cost; before < r.Max && int(spent) >= r.Max {
+		platform.Logger(ctx).Warn("ai daily budget reached", "bucket", r.Bucket)
 	}
 	return nil
 }
@@ -216,6 +227,16 @@ func (l *Limiter) AddAICost(ctx context.Context, q *db.Queries, usage ai.Usage) 
 // 上限を超えたリクエストも1回として数える（連打を続けると待ち時間が延びるのではなく、期間が切り替わるまで拒否され続ける）。
 func (l *Limiter) Hit(ctx context.Context, q *db.Queries, userID uuid.UUID, rules ...Rule) error {
 	return hit(ctx, q, userID, l.now(), rules)
+}
+
+// Record は、アプリ全体の枠 rule に1回を数える。上限を超えても断らず、運営に知らせるだけにする（hit を参照）。
+func (l *Limiter) Record(ctx context.Context, q *db.Queries, rule Rule) error {
+	err := hit(ctx, q, uuid.Nil, l.now(), []Rule{rule})
+	var limited *platform.Error
+	if errors.As(err, &limited) && limited.Kind == platform.KindRateLimited {
+		return nil
+	}
+	return err
 }
 
 func hit(ctx context.Context, q *db.Queries, userID uuid.UUID, now time.Time, rules []Rule) error {
@@ -232,6 +253,11 @@ func hit(ctx context.Context, q *db.Queries, userID uuid.UUID, now time.Time, ru
 			return fmt.Errorf("hit rate limit %s: %w", r.Bucket, err)
 		}
 		if int(count) > r.Max {
+			// アプリ全体（またはIPごと）の枠が今の期間で初めて溢れたときだけ知らせる。1人の上限は普段の使い方でも当たるので知らせない。
+			// 溢れたかを別に覚えずに「初めて上限を1つ超えた回」で判断できるのは、上限を超えたリクエストも数えているため
+			if r.AppWide && int(count) == r.Max+1 {
+				platform.Logger(ctx).Warn("app-wide rate limit reached", "bucket", r.Bucket)
+			}
 			return &platform.Error{Kind: platform.KindRateLimited, Message: r.Message}
 		}
 	}

@@ -1,8 +1,11 @@
 package ratelimit
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -294,5 +297,70 @@ func TestRefundLimitResetsAtMidnightInJST(t *testing.T) {
 
 	if got := dailyCount(t, pool, userID, daily.Bucket); got != 0 {
 		t.Errorf("count on the next day %d, want 0 because the refund limit resets at midnight in JST", got)
+	}
+}
+
+// captureWarnings は、テストの間だけ Warn 以上のログを貯めて返す（Slack に送られるのは Warn 以上のため）。
+func captureWarnings(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+	defaultLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(defaultLogger) })
+	return &buf
+}
+
+func TestAppLimitWarnsOnlyTheFirstTimeItIsExceeded(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	l := unlimitedLimiter()
+	rule := appRule(t, pool, 1)
+	q := db.New(pool)
+	logs := captureWarnings(t)
+
+	for range 3 {
+		_ = l.Hit(t.Context(), q, userID, rule)
+	}
+
+	if got := strings.Count(logs.String(), "app-wide rate limit reached"); got != 1 {
+		t.Errorf("warned %d times, want once: %q", got, logs.String())
+	}
+	if !strings.Contains(logs.String(), "bucket="+rule.Bucket) {
+		t.Errorf("log = %q, want the bucket", logs.String())
+	}
+}
+
+func TestOwnLimitDoesNotWarn(t *testing.T) {
+	pool := dbtest.Connect(t)
+	userID := dbtest.CreateUser(t, pool)
+	l := unlimitedLimiter()
+	daily := Rule{Bucket: "test_own_daily", Max: 1, Daily: true, Message: "今日はもう使えません"}
+	q := db.New(pool)
+	logs := captureWarnings(t)
+
+	for range 3 {
+		_ = l.Hit(t.Context(), q, userID, daily)
+	}
+
+	if logs.Len() != 0 {
+		t.Errorf("log = %q, want no warnings for a per-user limit", logs.String())
+	}
+}
+
+func TestRecordCountsWithoutRejecting(t *testing.T) {
+	pool := dbtest.Connect(t)
+	l := unlimitedLimiter()
+	rule := appRule(t, pool, 0)
+	q := db.New(pool)
+	logs := captureWarnings(t)
+
+	for i := range 2 {
+		if err := l.Record(t.Context(), q, rule); err != nil {
+			t.Fatalf("record %d: %v, want nil", i+1, err)
+		}
+	}
+
+	if got := strings.Count(logs.String(), "app-wide rate limit reached"); got != 1 {
+		t.Errorf("warned %d times, want once from the first record: %q", got, logs.String())
 	}
 }

@@ -1,0 +1,23 @@
+name: Vulncheck
+
+# Go 本体（標準ライブラリ）の脆弱性は Dependabot が見ない（go.mod のモジュールしか見ない）。
+# CI の govulncheck は backend/ を変えた PR でしか走らないので、毎日走らせて、触っていない間に公開された脆弱性にも気づく。
+# 見つかったら失敗し、GitHub からメールが届く
+on:
+  schedule:
+    - cron: "0 0 * * *" # 毎日 9:00（日本時間）
+  workflow_dispatch:
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
