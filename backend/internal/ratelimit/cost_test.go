@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -157,5 +158,23 @@ func TestTrackCostAddsUsageEvenWhenGenerationFails(t *testing.T) {
 	}
 	if got := spentToday(t, l, db.New(pool)); got != 240 {
 		t.Errorf("spent %d microdollars, want 240 (both calls, including the failed one)", got)
+	}
+}
+
+func TestAddAICostWarnsOnlyWhenTheBudgetIsCrossed(t *testing.T) {
+	pool := dbtest.Connect(t)
+	l := costLimiter(t, pool, 1000)
+	q := db.New(pool)
+	logs := captureWarnings(t)
+
+	// 600 → 1200 で上限をまたぎ、その後の 1800 では知らせない
+	for range 3 {
+		if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 600}); err != nil {
+			t.Fatalf("add: %v", err)
+		}
+	}
+
+	if got := strings.Count(logs.String(), "ai daily budget reached"); got != 1 {
+		t.Errorf("warned %d times, want once: %q", got, logs.String())
 	}
 }

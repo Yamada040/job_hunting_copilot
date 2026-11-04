@@ -1,8 +1,10 @@
 package contact
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -35,7 +37,7 @@ func (m *mailbox) send(_ context.Context, _ SMTPConfig, msg Message) error {
 // アプリ全体の回数は実行をまたいで同じ行に貯まるので、消さないと何度か実行するうちに上限に達する。
 func newHandler(t *testing.T, pool *pgxpool.Pool, box *mailbox) Handler {
 	t.Helper()
-	if _, err := pool.Exec(t.Context(), `delete from api_app_rate_limits where bucket like 'contact_daily%'`); err != nil {
+	if _, err := pool.Exec(t.Context(), `delete from api_app_rate_limits where bucket like 'contact_%'`); err != nil {
 		t.Fatalf("reset contact rate limits: %v", err)
 	}
 	return Handler{Pool: pool, Config: config, Send: box.send, Limiter: ratelimit.NewLimiter(ratelimit.DefaultAppLimits)}
@@ -164,6 +166,28 @@ func TestSendContactIgnoresSubmissionsWithTheHoneypotFilled(t *testing.T) {
 
 	if len(box.sent) != 0 {
 		t.Errorf("sent %d mails, want none", len(box.sent))
+	}
+}
+
+func TestSendContactWarnsOncePerDayWhenTheHoneypotIsFilled(t *testing.T) {
+	pool := dbtest.Connect(t)
+	h := newHandler(t, pool, &mailbox{})
+	req := body("bot@example.com")
+	website := "https://spam.example.com"
+	req.Body.Website = &website
+	var logs bytes.Buffer
+	defaultLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(defaultLogger) })
+
+	for range 3 {
+		if _, err := h.SendContact(anonymous("203.0.113.1"), req); err != nil {
+			t.Fatalf("SendContact: %v", err)
+		}
+	}
+
+	if got := strings.Count(logs.String(), "bucket=contact_honeypot_daily"); got != 1 {
+		t.Errorf("warned %d times, want once: %q", got, logs.String())
 	}
 }
 

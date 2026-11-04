@@ -27,6 +27,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/slack"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/webtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
@@ -41,6 +42,8 @@ type config struct {
 	smtp        contact.SMTPConfig
 	// errorReportingCredentials は、Error Reporting に書き込めるサービスアカウントの鍵（JSON）。空ならエラーを送らない
 	errorReportingCredentials string
+	// slackWebhookURL は、Warn 以上のログを送る Slack の Incoming Webhook。空なら送らない
+	slackWebhookURL string
 	// version は、エラーをどの版で起きたかで分けるための値。Vercel がデプロイしたコミットを入れる
 	version string
 }
@@ -69,6 +72,7 @@ func loadConfig() (config, error) {
 			To:   os.Getenv("CONTACT_TO_EMAIL"),
 		},
 		errorReportingCredentials: os.Getenv("GOOGLE_ERROR_REPORTING_CREDENTIALS"),
+		slackWebhookURL:           os.Getenv("SLACK_WEBHOOK_URL"),
 		version:                   os.Getenv("VERCEL_GIT_COMMIT_SHA"),
 	}
 	if cfg.port == "" {
@@ -160,6 +164,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	slog.SetDefault(slog.New(slack.NewHandler(slog.NewJSONHandler(os.Stdout, nil), cfg.slackWebhookURL, "backend")))
 	// 鍵が壊れていても、エラーを送れないだけでほかの機能は動くので、ログに出して起動を続ける
 	errorReporter, err := errorreport.New(cfg.errorReportingCredentials, "backend", cfg.version)
 	if err != nil {
