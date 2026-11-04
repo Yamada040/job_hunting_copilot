@@ -174,6 +174,9 @@ func notConfigured() error {
 	return &platform.Error{Kind: platform.KindUnavailable, Message: "AIの設定が完了していないため、現在AI機能は使えません。"}
 }
 
+// RequestsFailing は、AIの呼び出しが失敗したこと。1時間に10回を超えたら、キー切れや障害を疑って知らせる
+var RequestsFailing = platform.Alert{Name: "ai_failed", Message: "ai requests keep failing", Threshold: 10}
+
 var errEmptyResponse = errors.New("ai returned no text")
 
 // InvalidResult は、AIの結果が求めた形になっていなかったときのエラー。利用者には、AIの呼び出しに失敗したときと同じく再試行を促す。
@@ -185,7 +188,9 @@ func upstream(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	platform.Logger(ctx).Error("ai request failed", "error", err)
+	// 失敗のたびには知らせない。無料枠の混雑などでよく起き、こちらでは直せないため。続いたら（キー切れ・障害）知らせる
+	platform.Logger(ctx).Info("ai request failed", "error", err)
+	platform.Notify(ctx, RequestsFailing)
 	return &platform.Error{Kind: platform.KindUnavailable, Message: "AIの処理に失敗しました。しばらく経ってから再試行してください。"}
 }
 

@@ -65,6 +65,8 @@ type deps struct {
 	admin      admin.Handler
 	// errorReporter は、想定外のエラーの送り先。nil なら送らない
 	errorReporter platform.ErrorReporter
+	// alerter は、攻撃や障害の疑いを数えて知らせる。nil なら知らせない
+	alerter platform.Alerter
 }
 
 var _ openapi.StrictServerInterface = server{}
@@ -101,6 +103,7 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 
 	return platform.Chain(routes,
 		platform.ReportErrors(d.errorReporter),
+		alerts(d.alerter),
 		platform.RequestID,
 		platform.AccessLog,
 		platform.Recover,
@@ -108,6 +111,14 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 		verifier.Authenticate,
 		platform.Validate(spec, auth.RequireUser),
 	), nil
+}
+
+// alerts は、alerter が nil なら何もしないミドルウェアを返す（テストで知らせる先を用意しなくてよいように）。
+func alerts(a platform.Alerter) platform.Middleware {
+	if a == nil {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return platform.Alerts(a)
 }
 
 func writeRequestError(w http.ResponseWriter, r *http.Request, err error) {

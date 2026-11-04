@@ -71,7 +71,8 @@ func (s *Service) Award(ctx context.Context, q *db.Queries, userID uuid.UUID, ac
 		return Result{}, fmt.Errorf("xp action %q needs a target id", action)
 	}
 
-	if err := q.CreateProfileIfMissing(ctx, userID); err != nil {
+	// 新しいユーザーとしては数えない（profile.NewUsers）。画面は最初にヘッダーのためプロフィールを取るので、そこで数えられる
+	if _, err := q.CreateProfileIfMissing(ctx, userID); err != nil {
 		return Result{}, fmt.Errorf("create profile: %w", err)
 	}
 	// ここから commit まで、同じユーザーの他の付与は待たされる。日次上限の確認と追加の間に割り込まれないようにするため

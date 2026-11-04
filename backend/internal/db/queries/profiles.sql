@@ -1,4 +1,4 @@
--- name: CreateProfileIfMissing :exec
+-- name: CreateProfileIfMissing :execrows
 -- ログイン済みでもプロフィールの行がまだ無いユーザーがいるため、最初の取得のときに作る
 insert into profiles (id) values (@id) on conflict (id) do nothing;
 

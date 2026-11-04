@@ -16,6 +16,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform/alerttest"
 )
 
 func loggedIn(t *testing.T, userID uuid.UUID) context.Context {
@@ -39,10 +40,14 @@ func TestStatsAreOnlyForDevelopers(t *testing.T) {
 	other := dbtest.CreateUser(t, pool)
 	h := Handler{Pool: pool, IsDeveloper: func(id uuid.UUID) bool { return id == developer }, Now: time.Now}
 
-	_, err := h.GetAdminStats(loggedIn(t, other), openapi.GetAdminStatsRequestObject{})
+	ctx, alerts := alerttest.Context(loggedIn(t, other))
+	_, err := h.GetAdminStats(ctx, openapi.GetAdminStatsRequestObject{})
 	var appErr *platform.Error
 	if !errors.As(err, &appErr) || appErr.Kind != platform.KindForbidden {
 		t.Fatalf("error = %v, want forbidden for a non-developer", err)
+	}
+	if got := alerts.Names(); len(got) != 1 || got[0] != NonDeveloperAccess.Name {
+		t.Errorf("alerts = %v, want the non-developer access counted", got)
 	}
 
 	if _, err := pool.Exec(t.Context(), `insert into profiles (id) values ($1)`, developer); err != nil {

@@ -17,6 +17,9 @@ import (
 
 var jst = time.FixedZone("Asia/Tokyo", 9*60*60)
 
+// NonDeveloperAccess は、開発者以外が開発者向けのAPIを呼んだこと。画面からは開発者にしかリンクが出ないので、1回目から知らせる
+var NonDeveloperAccess = platform.Alert{Name: "admin_forbidden", Message: "a non-developer called the admin api"}
+
 type Handler struct {
 	Pool *pgxpool.Pool
 	// IsDeveloper は、ユーザーが開発者かを返す（profile.Service.IsDeveloper）
@@ -30,6 +33,7 @@ func (h Handler) GetAdminStats(ctx context.Context, _ openapi.GetAdminStatsReque
 		return nil, err
 	}
 	if !h.IsDeveloper(userID) {
+		platform.Notify(ctx, NonDeveloperAccess)
 		return nil, &platform.Error{Kind: platform.KindForbidden, Message: "このページは開発者のみ利用できます"}
 	}
 	now := h.Now().In(jst)

@@ -11,14 +11,17 @@ import (
 	"github.com/google/uuid"
 )
 
-const createProfileIfMissing = `-- name: CreateProfileIfMissing :exec
+const createProfileIfMissing = `-- name: CreateProfileIfMissing :execrows
 insert into profiles (id) values ($1) on conflict (id) do nothing
 `
 
 // ログイン済みでもプロフィールの行がまだ無いユーザーがいるため、最初の取得のときに作る
-func (q *Queries) CreateProfileIfMissing(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, createProfileIfMissing, id)
-	return err
+func (q *Queries) CreateProfileIfMissing(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, createProfileIfMissing, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const deleteUser = `-- name: DeleteUser :exec
