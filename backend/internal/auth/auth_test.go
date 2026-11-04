@@ -13,6 +13,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth/authtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform/alerttest"
 )
 
 const userID = "6f1c2a7e-3b4d-4c5e-8f90-a1b2c3d4e5f6"
@@ -163,5 +164,21 @@ func TestPublicAPIAllowsMissingToken(t *testing.T) {
 
 	if rec.Code != http.StatusOK || user != uuid.Nil {
 		t.Errorf("got status %d user %s, want 200 without user", rec.Code, user)
+	}
+}
+
+func TestInvalidTokensAreCountedForAlerts(t *testing.T) {
+	issuer := authtest.NewIssuer(t)
+	alerts := &alerttest.Recorder{}
+	h := platform.Alerts(alerts)(newVerifier(t, issuer).Authenticate(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
+
+	for _, token := range []string{"garbage", issuer.Sign(t, issuer.Claims(userID))} {
+		req := httptest.NewRequest(http.MethodGet, "/public", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		h.ServeHTTP(httptest.NewRecorder(), req)
+	}
+
+	if got := alerts.Names(); len(got) != 1 || got[0] != auth.AccessTokensRejected.Name {
+		t.Errorf("alerts = %v, want only the invalid token counted", got)
 	}
 }

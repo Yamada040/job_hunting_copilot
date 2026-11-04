@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform/alerttest"
 )
 
 func isUnavailable(err error) bool {
@@ -213,10 +214,15 @@ func TestUpstreamErrorIsUnavailable(t *testing.T) {
 	srv, _ := fakeServer(t) // 何も返さず500
 	c := NewClient(Config{Provider: "gemini", APIKey: "k", GeminiBaseURL: srv.URL}, srv.Client())
 
-	_, _, err := c.Generate(t.Context(), KindSelfAnalysis, "回答")
+	ctx, alerts := alerttest.Context(t.Context())
+
+	_, _, err := c.Generate(ctx, KindSelfAnalysis, "回答")
 
 	if !isUnavailable(err) {
 		t.Errorf("error = %v, want unavailable", err)
+	}
+	if got := alerts.Names(); len(got) != 1 || got[0] != RequestsFailing.Name {
+		t.Errorf("alerts = %v, want the failure counted", got)
 	}
 }
 

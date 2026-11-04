@@ -87,7 +87,7 @@ flowchart LR
 
 - **ログイン**: Supabase Auth（Google OAuth）。Next.js の `proxy.ts` がページへのアクセス時にセッションを確かめ、未ログインなら `/login` へリダイレクトする
 - **バックエンドの認証**: ブラウザが Supabase のアクセストークンを `Authorization: Bearer` で送り、バックエンドが Supabase の公開鍵（JWKS）で検証する（`backend/internal/auth`）。ユーザーIDは検証したトークンからだけ取り出し、リクエストの本文やURLのIDは信用しない
-- **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける（稼働確認・カレンダーの購読用URL・問い合わせ）。`proxy.ts` は `/v1` を素通しし、ログインの判断はバックエンドに任せる
+- **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける（稼働確認・カレンダーの購読用URL・問い合わせ・毎日のまとめ）。`proxy.ts` は `/v1` を素通しし、ログインの判断はバックエンドに任せる
 - **認可**: バックエンドがすべての問い合わせを `user_id` で絞り込む。DBにアクセスする関数は `userID` を必須の引数にする。他人のデータは存在しないデータと同じく 404 にする
 - **RLS**: 全テーブルで有効だが、ポリシーは1つも作らない。Supabase が公開している Data API を塞ぐためだけに使い、バックエンドはRLSの対象外のロールで接続する
 - **Next.js の Supabase クライアント**: 認証（セッション・ログイン・ログアウト・メールアドレスの表示）にだけ使い、データの読み書きには使わない
@@ -108,7 +108,7 @@ backend/
 ├── api/openapi.yaml          # API仕様（唯一の正）
 ├── cmd/server/               # 起動・設定の読み込み・依存の組み立て
 └── internal/
-    ├── <機能>/               # company, es, interview, calendar, assessment, webtest, profile, contact, admin, health
+    ├── <機能>/               # company, es, interview, calendar, assessment, webtest, profile, contact, admin, report, health
     │   ├── service.go        # ドメインのルール
     │   └── handler.go        # HTTPの入出力（生成された StrictServerInterface を実装）
     ├── db/                   # sqlc が internal/db/queries/*.sql から生成した問い合わせ
@@ -121,7 +121,21 @@ backend/
     └── platform/             # エラーの形式、ミドルウェア、トランザクション、DB接続
 ```
 
-- **エラー**: service は `platform.Error`（`Kind` と日本語のメッセージ）を返し、RFC 9457（Problem Details）への変換は `platform.WriteError` の1か所で行う。想定外のエラー（500。panic を含む）は利用者に詳細を見せずログに出し、応答を書く前に Error Reporting にも送る（締め切り2秒。送るのはエラーの文言・スタックトレース・メソッド・伏せたパス・版だけで、本文・クエリ・ヘッダー・ユーザーIDは送らない）。`platform.Error` の想定内のもの（4xx・503）は送らない。別に、Warn 以上のログはすべて Slack にも送る（`internal/slack`。送る属性は `error`・`bucket`・`request_id` だけ）。運営がすぐ知るべき不正な利用の疑い（アプリ全体・IPごとの回数の上限への到達、AIの1日の利用料の上限への到達、問い合わせの隠した欄への入力）は、その日の初回だけ Warn で出す（`internal/ratelimit`）。Slack に届いてほしくないログは Info 以下にする
+- **エラー**: service は `platform.Error`（`Kind` と日本語のメッセージ）を返し、RFC 9457（Problem Details）への変換は `platform.WriteError` の1か所で行う。想定外のエラー（500。panic を含む）は利用者に詳細を見せずログに出し、応答を書く前に Error Reporting にも送る（締め切り2秒。送るのはエラーの文言・スタックトレース・メソッド・伏せたパス・版だけで、本文・クエリ・ヘッダー・ユーザーIDは送らない）。`platform.Error` の想定内のもの（4xx・503）は送らない。別に、Warn 以上のログはすべて Slack にも送る（`internal/slack`。送る属性は `error`・`bucket`・`request_id` だけ）。攻撃や障害の疑いは `platform.Alert`（名前と、普段でも起きうる回数）を決めて `platform.Notify` で数え、1時間にその回数を超えた最初の回だけ Warn で出す（数えるのは `internal/ratelimit` の `Limiter.Alerter`）。起きるたびに Warn で出すと、攻撃が続いたときに Slack が埋まる。Slack に届いてほしくないログは Info 以下にする
+
+| 知らせる出来事                                      | 1時間に超えたら知らせる回数 | 置き場所    |
+| --------------------------------------------------- | --------------------------- | ----------- |
+| アプリ全体・IPごとの回数の枠で断った（枠ごと）      | 0                           | `ratelimit` |
+| 1人が自分の上限で断られ続けた（1人ごと）            | 10                          | `ratelimit` |
+| AIの利用料の上限で断った                            | 0                           | `ratelimit` |
+| AIの1回の呼び出しが1日の上限の5%を超えた            | 0                           | `ratelimit` |
+| AIの利用料が1日の上限の50%・80%をまたいだ（1日1回） | —                           | `ratelimit` |
+| AIの呼び出しの失敗                                  | 10                          | `ai`        |
+| 不正なトークンで断った                              | 30                          | `auth`      |
+| 開発者以外が開発者向けのAPIを呼んだ                 | 0                           | `admin`     |
+| 新しいユーザー（プロフィールの行を初めて作った）    | 20                          | `profile`   |
+| 問い合わせの隠した欄に値が入った                    | 0                           | `contact`   |
+
 - **入力の検証**: 形式（必須・文字数・enum）は `openapi.yaml` で定義し、ミドルウェアが仕様と照らし合わせて弾く。ドメインのルール（空白だけの企業名など）は service で確かめる
 - **トランザクション**: 複数の書き込みは `platform.InTx` でまとめる。XPの付与は元の操作と同じトランザクションで行う
 - **企業へのひも付け**: ES・面接ログ・予定を企業にひも付けるときは、`company.EnsureOwned` で本人の企業かを確かめる
@@ -321,6 +335,7 @@ backend/
 - `.github/workflows/cache.yml`: dev への push で、Go のモジュールとビルド結果・npm・Playwright のブラウザのキャッシュを dev に置く（PR は自分のキャッシュと dev のキャッシュしか読めないため）
 - `.github/workflows/release.yml`: master へのマージで、本番の Supabase にマイグレーションを適用し、成功したら Vercel の本番にデプロイし、日付のタグと GitHub Release を作る
 - `.github/workflows/keepalive.yml`: 毎日 `/v1/health` を呼び、Supabase の無料プランの一時停止（7日間アクセスが無いと止まる）を防ぐ
+- `.github/workflows/daily-report.yml`: 毎晩 23:50（日本時間）に `POST /v1/daily-report` を合言葉（`REPORT_SECRET`）付きで呼び、バックエンド（`internal/report`）がその日の利用状況（ユーザー・作成した件数・AIの回数と利用料・問い合わせ）を Slack に送る。朝に前日の分を送らないのは、AIの回数と利用料は日付が変わると数え直すため。遅れて日付が変わった後に動いても、呼ばれた1時間前の日を集計する
 - `.github/workflows/vulncheck.yml`: 毎日 `govulncheck` を走らせ、バックエンドを触っていない間に公開された脆弱性にも気づく。Go 本体（標準ライブラリ）の脆弱性は Dependabot が見ないため。見つかったら失敗してメールが届くので、`backend/go.mod` の `go` と `mise.toml` の `go` を上げる
 - Dependabot: 依存パッケージの既知の脆弱性を検知し、直すPRを作る。普段のバージョンアップのPRは作らない（`infra/github.tf`）
 - devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`backend`/`e2e`）を要求し、マージ前にブランチを最新化するルールセットが設定されている。master はそれに `migrations` を加え、マージコミットでのマージだけを許す（`infra/github.tf`）
@@ -372,7 +387,8 @@ SMTP_PASS=your-app-password
 CONTACT_TO_EMAIL=contact-destination@example.com
 DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザー
 GOOGLE_ERROR_REPORTING_CREDENTIALS={...}   # Error Reporting に書き込むサービスアカウントの鍵（JSON。送り先は鍵のプロジェクト）。無ければエラーを送らない
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # Warn 以上のログを送る Slack の Incoming Webhook。無ければ送らない
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # Warn 以上のログと毎日のまとめを送る Slack の Incoming Webhook。無ければ送らない
+REPORT_SECRET=...   # 毎日のまとめ（POST /v1/daily-report）の合言葉。Terraform が作り、GitHub Actions にも渡す。無ければまとめは 503
 ```
 
 E2Eテストの値（テストユーザーなど）は、手元の Supabase 専用の固定値として `e2e/support/local-supabase.ts` に置いている。

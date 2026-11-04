@@ -16,7 +16,15 @@ locals {
     VERCEL_TOKEN      = var.vercel_deploy_token
     VERCEL_ORG_ID     = var.vercel_team_id
     VERCEL_PROJECT_ID = var.vercel_project_id
+    # daily-report.yml が毎日のまとめを呼ぶときの合言葉（バックエンドと同じ値）
+    REPORT_SECRET = random_password.report_secret.result
   }
+}
+
+# 毎日のまとめ（POST /v1/daily-report）の合言葉。GitHub Actions とバックエンドにだけ渡し、人が扱わずに済むよう Terraform で作る
+resource "random_password" "report_secret" {
+  length  = 48
+  special = false
 }
 
 resource "github_actions_secret" "this" {

@@ -161,20 +161,92 @@ func TestTrackCostAddsUsageEvenWhenGenerationFails(t *testing.T) {
 	}
 }
 
-func TestAddAICostWarnsOnlyWhenTheBudgetIsCrossed(t *testing.T) {
+func TestAddAICostWarnsWhenPassingHalfAnd80PercentOfTheBudget(t *testing.T) {
 	pool := dbtest.Connect(t)
 	l := costLimiter(t, pool, 1000)
 	q := db.New(pool)
 	logs := captureWarnings(t)
 
-	// 600 → 1200 で上限をまたぎ、その後の 1800 では知らせない
-	for range 3 {
-		if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 600}); err != nil {
+	// 300 → 600 で 50% を、600 → 900 で 80% をまたぐ。1000 を超えても割合の通知は増えない
+	for range 4 {
+		if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 30}); err != nil {
+			t.Fatalf("add: %v", err)
+		}
+		if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 270}); err != nil {
 			t.Fatalf("add: %v", err)
 		}
 	}
 
+	for _, want := range []string{"ai daily budget 50% used", "ai daily budget 80% used"} {
+		if got := strings.Count(logs.String(), want); got != 1 {
+			t.Errorf("%q warned %d times, want once: %q", want, got, logs.String())
+		}
+	}
+}
+
+func TestExpensiveAICallWarns(t *testing.T) {
+	pool := dbtest.Connect(t)
+	resetAlert(t, pool, aiExpensiveCall)
+	l := costLimiter(t, pool, 1000)
+	q := db.New(pool)
+	logs := captureWarnings(t)
+
+	// 上限の5%（50）までは普段の呼び出し
+	if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 50}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	if strings.Contains(logs.String(), "expensive ai call") {
+		t.Fatalf("log = %q, want no warning for a normal call", logs.String())
+	}
+	if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 51}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	if !strings.Contains(logs.String(), "expensive ai call") {
+		t.Errorf("log = %q, want a warning for an expensive call", logs.String())
+	}
+}
+
+func TestRejectedByBudgetWarns(t *testing.T) {
+	pool := dbtest.Connect(t)
+	resetAlert(t, pool, aiBudgetReached)
+	userID := dbtest.CreateUser(t, pool)
+	l := costLimiter(t, pool, 10)
+	q := db.New(pool)
+	if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 10}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	logs := captureWarnings(t)
+
+	for range 2 {
+		_, _ = l.HitAI(t.Context(), q, userID)
+	}
+
 	if got := strings.Count(logs.String(), "ai daily budget reached"); got != 1 {
 		t.Errorf("warned %d times, want once: %q", got, logs.String())
+	}
+}
+
+func TestDailyUsageOnReadsOnlyThatDay(t *testing.T) {
+	pool := dbtest.Connect(t)
+	l := costLimiter(t, pool, 1000)
+	day := time.Date(2026, 11, 3, 15, 0, 0, 0, jst)
+	l.now = func() time.Time { return day }
+	q := db.New(pool)
+	if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 7}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	got, err := l.DailyUsageOn(t.Context(), q, day)
+	if err != nil {
+		t.Fatalf("DailyUsageOn: %v", err)
+	}
+	next, err := l.DailyUsageOn(t.Context(), q, day.AddDate(0, 0, 1))
+	if err != nil {
+		t.Fatalf("DailyUsageOn next day: %v", err)
+	}
+
+	if got.AICost != (Usage{Used: 7, Max: 1000}) || next.AICost.Used != 0 {
+		t.Errorf("usage = %+v, next day = %+v, want the cost only on its own day", got.AICost, next.AICost)
 	}
 }

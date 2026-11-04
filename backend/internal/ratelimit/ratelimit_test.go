@@ -310,27 +310,41 @@ func captureWarnings(t *testing.T) *bytes.Buffer {
 	return &buf
 }
 
-func TestAppLimitWarnsOnlyTheFirstTimeItIsExceeded(t *testing.T) {
+// resetAlert は、alert の今の1時間の回数を消す。固定の名前の Alert は、実行をまたいで同じ行に貯まるため。
+func resetAlert(t *testing.T, pool *pgxpool.Pool, alert platform.Alert) {
+	t.Helper()
+	// 後片付け（t.Cleanup）でも使うので、テストの終わりに取り消される t.Context は使わない
+	if _, err := pool.Exec(context.Background(), `delete from api_app_rate_limits where bucket = $1`, "alert:"+alert.Name); err != nil {
+		t.Fatalf("reset alert: %v", err)
+	}
+}
+
+func TestAppLimitWarnsOncePerHourWhileRejecting(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
+	now := time.Now()
 	l := unlimitedLimiter()
+	l.now = func() time.Time { return now }
 	rule := appRule(t, pool, 1)
+	rule.Window, rule.Daily = 24*time.Hour, false
 	q := db.New(pool)
 	logs := captureWarnings(t)
 
 	for range 3 {
 		_ = l.Hit(t.Context(), q, userID, rule)
 	}
+	now = now.Add(alertWindow + time.Second)
+	_ = l.Hit(t.Context(), q, userID, rule)
 
-	if got := strings.Count(logs.String(), "app-wide rate limit reached"); got != 1 {
-		t.Errorf("warned %d times, want once: %q", got, logs.String())
+	if got := strings.Count(logs.String(), "app-wide rate limit reached"); got != 2 {
+		t.Errorf("warned %d times, want once in each hour: %q", got, logs.String())
 	}
-	if !strings.Contains(logs.String(), "bucket="+rule.Bucket) {
+	if !strings.Contains(logs.String(), "bucket=alert:limit_reached:"+rule.Bucket) {
 		t.Errorf("log = %q, want the bucket", logs.String())
 	}
 }
 
-func TestOwnLimitDoesNotWarn(t *testing.T) {
+func TestUserWarnsOnlyAfterHittingOwnLimitRepeatedly(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
 	l := unlimitedLimiter()
@@ -338,29 +352,50 @@ func TestOwnLimitDoesNotWarn(t *testing.T) {
 	q := db.New(pool)
 	logs := captureWarnings(t)
 
+	// 1回目は通り、その後の Threshold 回の拒否までは知らせない
+	for range userKeepsHittingLimits.Threshold + 1 {
+		_ = l.Hit(t.Context(), q, userID, daily)
+	}
+	if logs.Len() != 0 {
+		t.Fatalf("log = %q, want no warnings yet", logs.String())
+	}
 	for range 3 {
 		_ = l.Hit(t.Context(), q, userID, daily)
 	}
 
-	if logs.Len() != 0 {
-		t.Errorf("log = %q, want no warnings for a per-user limit", logs.String())
+	if got := strings.Count(logs.String(), "a user keeps hitting rate limits"); got != 1 {
+		t.Errorf("warned %d times, want once: %q", got, logs.String())
+	}
+	if strings.Contains(logs.String(), userID.String()) {
+		t.Errorf("log = %q, want the user id left out", logs.String())
 	}
 }
 
-func TestRecordCountsWithoutRejecting(t *testing.T) {
+func TestAlerterWarnsAfterThreshold(t *testing.T) {
 	pool := dbtest.Connect(t)
 	l := unlimitedLimiter()
-	rule := appRule(t, pool, 0)
-	q := db.New(pool)
+	alert := platform.Alert{Name: "test_" + uuid.NewString(), Message: "test alert", Threshold: 2}
+	t.Cleanup(func() { resetAlert(t, pool, alert) })
 	logs := captureWarnings(t)
+	ctx := platform.WithAlerter(t.Context(), l.Alerter(pool))
 
-	for i := range 2 {
-		if err := l.Record(t.Context(), q, rule); err != nil {
-			t.Fatalf("record %d: %v, want nil", i+1, err)
+	for i := range 5 {
+		platform.Notify(ctx, alert)
+		if want := i >= 2; strings.Contains(logs.String(), "test alert") != want {
+			t.Fatalf("after %d: log = %q, want warned=%v", i+1, logs.String(), want)
 		}
 	}
+	if got := strings.Count(logs.String(), "test alert"); got != 1 {
+		t.Errorf("warned %d times, want once: %q", got, logs.String())
+	}
+}
 
-	if got := strings.Count(logs.String(), "app-wide rate limit reached"); got != 1 {
-		t.Errorf("warned %d times, want once from the first record: %q", got, logs.String())
+func TestNotifyWithoutAlerterDoesNothing(t *testing.T) {
+	logs := captureWarnings(t)
+
+	platform.Notify(t.Context(), platform.Alert{Name: "test", Message: "test alert"})
+
+	if logs.Len() != 0 {
+		t.Errorf("log = %q, want nothing", logs.String())
 	}
 }
