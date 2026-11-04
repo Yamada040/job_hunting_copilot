@@ -13,6 +13,7 @@ import (
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/auth/authtest"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/mcpserver"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
 )
@@ -47,7 +48,11 @@ func newTestServer(t *testing.T) *testServer {
 	if err != nil {
 		t.Fatalf("NewVerifier: %v", err)
 	}
-	handler, err := newHandler(verifier, deps{
+	mcpOAuth, err := mcpserver.NewOAuthConfig("https://app.example.com", issuer.URL)
+	if err != nil {
+		t.Fatalf("NewOAuthConfig: %v", err)
+	}
+	handler, err := newHandler(verifier, mcpOAuth, deps{
 		db:      okPinger{},
 		profile: profile.NewService(memoryProfiles{}, nil),
 	})
@@ -142,6 +147,41 @@ func TestMeRequiresLogin(t *testing.T) {
 	}
 	if p := decodeProblem(t, rec); p.Code != "unauthorized" {
 		t.Errorf("code = %q, want unauthorized", p.Code)
+	}
+}
+
+func TestMCPRequiresLogin(t *testing.T) {
+	rec := serve(t, http.MethodPost, "/mcp")
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+	if got := rec.Header().Get("WWW-Authenticate"); !strings.Contains(got, "resource_metadata=\"https://app.example.com/.well-known/oauth-protected-resource/mcp\"") {
+		t.Errorf("WWW-Authenticate = %q, want resource metadata URL", got)
+	}
+}
+
+func TestMCPProtectedResourceMetadataIsPublic(t *testing.T) {
+	s := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", nil)
+	rec := httptest.NewRecorder()
+	s.handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	var metadata struct {
+		Resource             string   `json:"resource"`
+		AuthorizationServers []string `json:"authorization_servers"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&metadata); err != nil {
+		t.Fatalf("decode metadata: %v", err)
+	}
+	if metadata.Resource != "https://app.example.com/mcp" {
+		t.Errorf("resource = %q", metadata.Resource)
+	}
+	if len(metadata.AuthorizationServers) != 1 || metadata.AuthorizationServers[0] != s.issuer.URL+"/auth/v1" {
+		t.Errorf("authorization_servers = %#v", metadata.AuthorizationServers)
 	}
 }
 

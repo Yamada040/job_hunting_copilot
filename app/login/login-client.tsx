@@ -5,14 +5,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/supabase-browser";
 
-export function LoginClient() {
+export function LoginClient({ nextPath }: { nextPath?: string }) {
   const [state, formAction, isPending] = useActionState<{ error: string } | null, FormData>(async () => {
     try {
       const supabase = createSupabaseBrowserClient();
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`,
         },
       });
       if (signInError) throw signInError;

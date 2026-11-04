@@ -57,6 +57,7 @@ export default defineConfig({
         PORT: String(API_PORT),
         SUPABASE_URL: supabase.API_URL,
         DATABASE_URL: supabase.DB_URL,
+        NEXT_PUBLIC_SITE_URL: baseURL,
         AI_PROVIDER: "gpt",
         AI_ENDPOINT: `http://127.0.0.1:${FAKE_AI_PORT}/v1/chat/completions`,
         AI_PROVIDER_API_KEY: "e2e-dummy-key",

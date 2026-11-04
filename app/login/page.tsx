@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { safeNextPath } from "@/lib/auth/next-path";
 import { ROUTES } from "@/lib/constants/routes";
 import { BrandLogo } from "@/app/_components/layout/BrandLogo";
 import { LoginClient } from "./login-client";
@@ -20,8 +21,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/login" },
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; next?: string }>;
+}) {
+  const { error, next } = await searchParams;
   const errorMessage = error ? LOGIN_ERRORS[error] : undefined;
 
   return (
@@ -48,7 +53,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>
             )}
-            <LoginClient />
+            <LoginClient nextPath={safeNextPath(next)} />
           </CardContent>
           {/* ログインしていないとダッシュボードは開けない（ログイン画面へ戻される）ので、そこへのボタンは置かない */}
           <CardFooter className="flex-col items-start gap-2">
