@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AppLayout } from "@/app/_components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
+import { createSupabaseServerReadonlyClient } from "@/lib/supabase/supabase-server";
 import { ContactForm } from "./_components/contact-form";
 import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 /** ログインしなくても開ける（ログインできなくて困っている人も連絡できるように）。 */
 export default async function ContactPage() {
   // メールアドレスとアカウント名はログイン情報（Supabase Auth）のものなので、セッションから読む
-  const supabase = await createSupabaseReadonlyClient();
+  const supabase = await createSupabaseServerReadonlyClient();
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
   const accountName = user?.user_metadata?.full_name || user?.user_metadata?.name || "";
