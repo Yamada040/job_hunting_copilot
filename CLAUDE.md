@@ -87,7 +87,7 @@ flowchart LR
 
 - **ログイン**: Supabase Auth（Google OAuth）。Next.js の `proxy.ts` がページへのアクセス時にセッションを確かめ、未ログインなら `/login` へリダイレクトする
 - **バックエンドの認証**: ブラウザが Supabase のアクセストークンを `Authorization: Bearer` で送り、バックエンドが Supabase の公開鍵（JWKS）で検証する（`backend/internal/auth`）。ユーザーIDは検証したトークンからだけ取り出し、リクエストの本文やURLのIDは信用しない
-- **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける（稼働確認・カレンダーの購読用URL・問い合わせ）。`proxy.ts` は `/v1` を素通しし、ログインの判断はバックエンドに任せる
+- **ログインが必要なAPI**: `openapi.yaml` の `security` で決まる。公開APIは `security: []` を付ける（稼働確認・カレンダーの購読用URL・問い合わせ・毎日のまとめ）。`proxy.ts` は `/v1` を素通しし、ログインの判断はバックエンドに任せる
 - **認可**: バックエンドがすべての問い合わせを `user_id` で絞り込む。DBにアクセスする関数は `userID` を必須の引数にする。他人のデータは存在しないデータと同じく 404 にする
 - **RLS**: 全テーブルで有効だが、ポリシーは1つも作らない。Supabase が公開している Data API を塞ぐためだけに使い、バックエンドはRLSの対象外のロールで接続する
 - **Next.js の Supabase クライアント**: 認証（セッション・ログイン・ログアウト・メールアドレスの表示）にだけ使い、データの読み書きには使わない
@@ -108,7 +108,7 @@ backend/
 ├── api/openapi.yaml          # API仕様（唯一の正）
 ├── cmd/server/               # 起動・設定の読み込み・依存の組み立て
 └── internal/
-    ├── <機能>/               # company, es, interview, calendar, assessment, webtest, profile, contact, admin, health
+    ├── <機能>/               # company, es, interview, calendar, assessment, webtest, profile, contact, admin, report, health
     │   ├── service.go        # ドメインのルール
     │   └── handler.go        # HTTPの入出力（生成された StrictServerInterface を実装）
     ├── db/                   # sqlc が internal/db/queries/*.sql から生成した問い合わせ
@@ -335,6 +335,7 @@ backend/
 - `.github/workflows/cache.yml`: dev への push で、Go のモジュールとビルド結果・npm・Playwright のブラウザのキャッシュを dev に置く（PR は自分のキャッシュと dev のキャッシュしか読めないため）
 - `.github/workflows/release.yml`: master へのマージで、本番の Supabase にマイグレーションを適用し、成功したら Vercel の本番にデプロイし、日付のタグと GitHub Release を作る
 - `.github/workflows/keepalive.yml`: 毎日 `/v1/health` を呼び、Supabase の無料プランの一時停止（7日間アクセスが無いと止まる）を防ぐ
+- `.github/workflows/daily-report.yml`: 毎晩 23:50（日本時間）に `POST /v1/daily-report` を合言葉（`REPORT_SECRET`）付きで呼び、バックエンド（`internal/report`）がその日の利用状況（ユーザー・作成した件数・AIの回数と利用料・問い合わせ）を Slack に送る。朝に前日の分を送らないのは、AIの回数と利用料は日付が変わると数え直すため。遅れて日付が変わった後に動いても、呼ばれた1時間前の日を集計する
 - `.github/workflows/vulncheck.yml`: 毎日 `govulncheck` を走らせ、バックエンドを触っていない間に公開された脆弱性にも気づく。Go 本体（標準ライブラリ）の脆弱性は Dependabot が見ないため。見つかったら失敗してメールが届くので、`backend/go.mod` の `go` と `mise.toml` の `go` を上げる
 - Dependabot: 依存パッケージの既知の脆弱性を検知し、直すPRを作る。普段のバージョンアップのPRは作らない（`infra/github.tf`）
 - devブランチには必須ステータスチェック（`checks`/`build`/`unit`/`backend`/`e2e`）を要求し、マージ前にブランチを最新化するルールセットが設定されている。master はそれに `migrations` を加え、マージコミットでのマージだけを許す（`infra/github.tf`）
@@ -386,7 +387,8 @@ SMTP_PASS=your-app-password
 CONTACT_TO_EMAIL=contact-destination@example.com
 DEV_ADMIN_USER_IDS=uuid1,uuid2   # 開発者向けページを使えるユーザー
 GOOGLE_ERROR_REPORTING_CREDENTIALS={...}   # Error Reporting に書き込むサービスアカウントの鍵（JSON。送り先は鍵のプロジェクト）。無ければエラーを送らない
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # Warn 以上のログを送る Slack の Incoming Webhook。無ければ送らない
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # Warn 以上のログと毎日のまとめを送る Slack の Incoming Webhook。無ければ送らない
+REPORT_SECRET=...   # 毎日のまとめ（POST /v1/daily-report）の合言葉。Terraform が作り、GitHub Actions にも渡す。無ければまとめは 503
 ```
 
 E2Eテストの値（テストユーザーなど）は、手元の Supabase 専用の固定値として `e2e/support/local-supabase.ts` に置いている。

@@ -24,23 +24,36 @@ const maxValueLength = 1000
 // 個人に結び付く値（ユーザーID・メールアドレスなど）を後から足しても外に出ないようにする
 var sentKeys = map[string]bool{"error": true, "bucket": true, "request_id": true}
 
+// Webhook は、Slack の Incoming Webhook に文章を送る。
+type Webhook struct {
+	client *http.Client
+	url    string
+}
+
+// NewWebhook は、url が空なら nil を返す（送らない）。
+func NewWebhook(url string) *Webhook {
+	if url == "" {
+		return nil
+	}
+	return &Webhook{client: &http.Client{Timeout: sendTimeout}, url: url}
+}
+
 // Handler は、next に書いたうえで、Warn 以上のログを Slack にも送る slog.Handler。
 type Handler struct {
-	next       slog.Handler
-	client     *http.Client
-	webhookURL string
-	service    string
+	next    slog.Handler
+	webhook *Webhook
+	service string
 	// attrs は、With で付けた属性のうち、送るもの
 	attrs []slog.Attr
 }
 
-// NewHandler は、webhookURL が空なら next をそのまま返す（Slack に送らない）。
+// NewHandler は、webhook が nil なら next をそのまま返す（Slack に送らない）。
 // service は、通知の先頭に付けて、どこから届いたかを分ける名前。
-func NewHandler(next slog.Handler, webhookURL, service string) slog.Handler {
-	if webhookURL == "" {
+func NewHandler(next slog.Handler, webhook *Webhook, service string) slog.Handler {
+	if webhook == nil {
 		return next
 	}
-	return &Handler{next: next, client: &http.Client{Timeout: sendTimeout}, webhookURL: webhookURL, service: service}
+	return &Handler{next: next, webhook: webhook, service: service}
 }
 
 func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool {
@@ -86,19 +99,24 @@ func (h *Handler) send(ctx context.Context, r slog.Record) error {
 	for _, a := range attrs {
 		lines = append(lines, a.Key+": "+truncate(a.Value.String()))
 	}
-	body, err := json.Marshal(map[string]string{"text": escape(strings.Join(lines, "\n"))})
+	return h.webhook.Post(ctx, strings.Join(lines, "\n"))
+}
+
+// Post は、text を1通として送る。text の中の &・<・> は書式ではなく文字として出す。
+func (w *Webhook) Post(ctx context.Context, text string) error {
+	body, err := json.Marshal(map[string]string{"text": escape(text)})
 	if err != nil {
 		return fmt.Errorf("encode message: %w", err)
 	}
 	// ログの呼び出し元のリクエストが取り消されていても、起きたことは知らせたい
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), sendTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.webhookURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, w.url, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := h.client.Do(req)
+	resp, err := w.client.Do(req)
 	if err != nil {
 		// URL（秘密の値）を含むので、エラーの文言をそのまま返さない
 		return fmt.Errorf("post webhook failed")

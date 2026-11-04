@@ -16,6 +16,7 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/report"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/webtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
@@ -33,6 +34,7 @@ type (
 	webtestHandler    = webtest.Handler
 	contactHandler    = contact.Handler
 	adminHandler      = admin.Handler
+	reportHandler     = report.Handler
 )
 
 // server は、機能ごとの handler を埋め込んで、生成された StrictServerInterface をまとめて満たす。
@@ -48,6 +50,7 @@ type server struct {
 	webtestHandler
 	contactHandler
 	adminHandler
+	reportHandler
 }
 
 // deps は、handler が使う依存。main で組み立て、テストでは偽物に差し替える。
@@ -63,6 +66,7 @@ type deps struct {
 	webtest    *webtest.Service
 	contact    contact.Handler
 	admin      admin.Handler
+	report     report.Handler
 	// errorReporter は、想定外のエラーの送り先。nil なら送らない
 	errorReporter platform.ErrorReporter
 	// alerter は、攻撃や障害の疑いを数えて知らせる。nil なら知らせない
@@ -91,6 +95,7 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 		webtestHandler:    webtest.Handler{Service: d.webtest},
 		contactHandler:    d.contact,
 		adminHandler:      d.admin,
+		reportHandler:     d.report,
 	}
 	strict := openapi.NewStrictHandlerWithOptions(srv, nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  writeRequestError,

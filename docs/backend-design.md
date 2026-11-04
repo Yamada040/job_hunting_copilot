@@ -426,6 +426,10 @@ GitHub Actions に次のGo用のチェックを追加し、devブランチの必
 - **送る属性は `error`・`bucket`・`request_id` だけ**。ログに調べるための値を後から足しても、個人に結び付く値が外に出ないよう、送るものを決めておく。`request_id` で Vercel のログを探せる
 - **ログを書いた場所で、2秒の締め切りで送り終える**。理由は Error Reporting と同じ（裏で送ると関数が止められて切れうる）。送れなければ、ログにだけ失敗を書く
 - 採らなかった案: Error Reporting の通知の送り先を Slack にする（コードの変更は要らないが、届くのは新しい種類のエラーの初回だけで、攻撃の疑いを送れない）、全リクエストのログを Cloud Logging に送ってアラートを作る（Vercel Hobby は Log Drain が使えず、全リクエストで送ると重い）
+- **毎日のまとめ**: 毎晩 23:50 に GitHub Actions（`daily-report.yml`）が `POST /v1/daily-report` を呼び、バックエンド（`internal/report`）がその日の利用状況を同じ Slack に送る。異常が無くても様子が分かるようにするため
+  - 朝に前日の分を送らないのは、AIの回数と利用料（`api_app_rate_limits`）は日付が変わると同じ行を数え直し、前日の分が残らないため。GitHub Actions の予定は遅れることがあるので、呼ばれた1時間前の日を集計する（それでも日付が変わった後にAIが使われていれば、前日のAIの分は0になる）
+  - ログインせずに呼ぶ API なので、合言葉（`X-Report-Secret`、`REPORT_SECRET`）で守る。合言葉は Terraform の `random_password` で作り、GitHub の Secrets と Vercel の環境変数にだけ置く。比べる時間を中身によらず同じにし、合わない呼び出しは攻撃の疑いとして知らせる
+  - 採らなかった案: GitHub Actions が DB を直接集計して送る（本番の DB の接続先と Webhook を GitHub にも置くことになり、集計の SQL も2か所になる）、Vercel の Cron Jobs（無料プランでは決めた時刻の1時間以内のどこかで動き、今の Services の構成で動くかを試していない）
 - 500 が続くと、その数だけ通知が届く。今の利用者数では許容し、多すぎるようになったら同じ文言をまとめる
 
 ### リプレイス後に行うこと

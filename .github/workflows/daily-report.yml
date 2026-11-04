@@ -1,0 +1,21 @@
+name: Daily report
+
+# 毎晩、その日（日本時間）の利用状況を運営の Slack に送る（バックエンドの POST /v1/daily-report が集計して送る）。
+# 朝に前日の分を送らないのは、AIの回数と利用料は日付が変わると数え直し、前日の分が残らないため。
+# 予定が遅れて日付が変わった後に動いても、バックエンドは呼ばれた1時間前の日を集計する
+on:
+  schedule:
+    - cron: "50 14 * * *" # 毎日 23:50（日本時間）
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      # 関数のコールドスタートや一時的な失敗で落ちないよう、数回やり直す。失敗したら GitHub からメールが届く
+      - run: >-
+          curl --fail --silent --show-error --max-time 30 --retry 3 --retry-all-errors
+          -X POST -H "X-Report-Secret: $REPORT_SECRET"
+          https://job-seeker-gray.vercel.app/v1/daily-report
+        env:
+          REPORT_SECRET: ${{ secrets.REPORT_SECRET }}
