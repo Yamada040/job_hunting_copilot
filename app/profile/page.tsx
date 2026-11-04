@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { createSupabaseReadonlyClient } from "@/lib/supabase/supabase-server";
+import { createSupabaseServerReadonlyClient } from "@/lib/supabase/supabase-server";
 import { AppLayout } from "@/app/_components/layout";
 import { ProfileForm } from "./_components/profile-form";
 import { DeleteAccount } from "./_components/delete-account";
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default async function ProfilePage() {
   // メールアドレスはログイン情報（Supabase Auth）のものなので、プロフィールのAPIではなくセッションから読む
-  const supabase = await createSupabaseReadonlyClient();
+  const supabase = await createSupabaseServerReadonlyClient();
   const { data: userData } = await supabase.auth.getUser();
 
   return (

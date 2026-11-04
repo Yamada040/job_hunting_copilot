@@ -59,6 +59,33 @@ func TestRequestIDKeepsCallerID(t *testing.T) {
 	}
 }
 
+func TestRequestIDReplacesMalformedCallerID(t *testing.T) {
+	h := RequestID(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	for _, id := range []string{strings.Repeat("a", 65), "id with spaces", "id\"},{\"x"} {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("X-Request-Id", id)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+
+		if got := rec.Header().Get("X-Request-Id"); got == id || got == "" {
+			t.Errorf("caller ID %q: header = %q, want a newly generated ID", id, got)
+		}
+	}
+}
+
+func TestSecurityHeadersForbidCachingAndSniffing(t *testing.T) {
+	h := SecurityHeaders(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q, want no-store", got)
+	}
+	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Errorf("X-Content-Type-Options = %q, want nosniff", got)
+	}
+}
+
 func TestRecoverTurnsPanicIntoInternalError(t *testing.T) {
 	h := Recover(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("boom")

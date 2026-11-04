@@ -109,6 +109,7 @@ func newHandler(verifier *auth.Verifier, d deps) (http.Handler, error) {
 	return platform.Chain(routes,
 		platform.ReportErrors(d.errorReporter),
 		alerts(d.alerter),
+		platform.SecurityHeaders,
 		platform.RequestID,
 		platform.AccessLog,
 		platform.Recover,

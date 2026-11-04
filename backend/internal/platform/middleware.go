@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"regexp"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -27,12 +28,15 @@ type requestIDKey struct{}
 
 const requestIDHeader = "X-Request-Id"
 
+// 引き継ぐリクエストIDの形。利用者が付けた長い値や記号入りの値が、そのままログ・Slack・応答に流れないようにする
+var requestIDPattern = regexp.MustCompile(`^[A-Za-z0-9-]{1,64}$`)
+
 // RequestID は、リクエストごとのIDを決めてコンテキストとレスポンスヘッダーに入れる。
-// 呼び出し元がIDを付けてきた場合はそれを引き継ぎ、ログを突き合わせられるようにする。
+// 呼び出し元が正しい形のIDを付けてきた場合はそれを引き継ぎ、ログを突き合わせられるようにする。
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := r.Header.Get(requestIDHeader)
-		if id == "" {
+		if !requestIDPattern.MatchString(id) {
 			id = newRequestID()
 		}
 		w.Header().Set(requestIDHeader, id)
@@ -53,6 +57,16 @@ func Logger(ctx context.Context) *slog.Logger {
 		return slog.Default().With("request_id", id)
 	}
 	return slog.Default()
+}
+
+// SecurityHeaders は、すべての応答にキャッシュさせない・中身の種類を推測させないヘッダーを付ける。
+// /v1 は Vercel が Next.js を通さずバックエンドへ振り分けるので、next.config.ts のヘッダーは付かない
+func SecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		next.ServeHTTP(w, r)
+	})
 }
 
 type clientIPKey struct{}
