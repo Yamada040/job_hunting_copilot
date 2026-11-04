@@ -61,6 +61,28 @@ func (q *Queries) GetAppRateLimit(ctx context.Context, arg GetAppRateLimitParams
 	return count, err
 }
 
+const getAppRateLimitOn = `-- name: GetAppRateLimitOn :one
+select coalesce((
+  select count from api_app_rate_limits
+  where bucket = $1 and window_start >= $2 and window_start < $3
+), 0)::integer as count
+`
+
+type GetAppRateLimitOnParams struct {
+	Bucket      string
+	WindowStart time.Time
+	WindowEnd   time.Time
+}
+
+// アプリ全体で共有する枠の、@window_start から始まった期間の量を返す。その期間の後に数え直していれば（行が無ければ）0。
+// GetAppRateLimit と違って期間の終わりも見るのは、日付が変わった後に前日の分を読むため
+func (q *Queries) GetAppRateLimitOn(ctx context.Context, arg GetAppRateLimitOnParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getAppRateLimitOn, arg.Bucket, arg.WindowStart, arg.WindowEnd)
+	var count int32
+	err := row.Scan(&count)
+	return count, err
+}
+
 const hitRateLimit = `-- name: HitRateLimit :one
 insert into api_rate_limits (user_id, bucket, window_start, count)
 values ($1, $2, $3, 1)

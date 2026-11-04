@@ -14,6 +14,10 @@ terraform {
       source  = "supabase/supabase"
       version = "~> 1.11"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7"
+    }
   }
 
   # state は手元の terraform.tfstate に置く（git の対象外）。state には秘密の値が平文で入るため、

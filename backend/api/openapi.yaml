@@ -840,6 +840,28 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  /v1/daily-report:
+    post:
+      operationId: sendDailyReport
+      summary: 今日（日本時間）の利用状況を運営の Slack に送る
+      description: >-
+        GitHub Actions（daily-report.yml）が毎晩呼ぶ。ログインせずに呼べるが、合言葉（X-Report-Secret）が
+        合わなければ 401。合言葉か Slack の送り先が設定されていなければ 503。
+        日付が変わった直後に呼ばれても前日の分を送れるよう、呼ばれた時刻の1時間前を含む日を集計する。
+      security: []
+      parameters:
+        - name: X-Report-Secret
+          in: header
+          required: true
+          schema:
+            type: string
+            maxLength: 200
+      responses:
+        "204":
+          description: 送った
+        default:
+          $ref: "#/components/responses/Problem"
+
   /v1/admin/stats:
     get:
       operationId: getAdminStats

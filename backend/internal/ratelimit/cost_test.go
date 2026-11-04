@@ -226,3 +226,27 @@ func TestRejectedByBudgetWarns(t *testing.T) {
 		t.Errorf("warned %d times, want once: %q", got, logs.String())
 	}
 }
+
+func TestDailyUsageOnReadsOnlyThatDay(t *testing.T) {
+	pool := dbtest.Connect(t)
+	l := costLimiter(t, pool, 1000)
+	day := time.Date(2026, 11, 3, 15, 0, 0, 0, jst)
+	l.now = func() time.Time { return day }
+	q := db.New(pool)
+	if err := l.AddAICost(t.Context(), q, ai.Usage{InputTokens: 7}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	got, err := l.DailyUsageOn(t.Context(), q, day)
+	if err != nil {
+		t.Fatalf("DailyUsageOn: %v", err)
+	}
+	next, err := l.DailyUsageOn(t.Context(), q, day.AddDate(0, 0, 1))
+	if err != nil {
+		t.Fatalf("DailyUsageOn next day: %v", err)
+	}
+
+	if got.AICost != (Usage{Used: 7, Max: 1000}) || next.AICost.Used != 0 {
+		t.Errorf("usage = %+v, next day = %+v, want the cost only on its own day", got.AICost, next.AICost)
+	}
+}

@@ -31,6 +31,11 @@ locals {
     GOOGLE_ERROR_REPORTING_CREDENTIALS = var.google_error_reporting_credentials
     SLACK_WEBHOOK_URL                  = var.slack_webhook_url
   } : k => v if v != "" }
+
+  # 空の値を除く上の書き方に入れないのは、作るまで値が決まらず、除くかどうか（for_each の名前の一覧）が決まらないため
+  generated_secret_env = {
+    REPORT_SECRET = random_password.report_secret.result
+  }
 }
 
 resource "vercel_project_environment_variable" "public" {
@@ -45,11 +50,11 @@ resource "vercel_project_environment_variable" "public" {
 }
 
 resource "vercel_project_environment_variable" "secret" {
-  for_each = nonsensitive(toset(keys(local.secret_env)))
+  for_each = nonsensitive(toset(concat(keys(local.secret_env), keys(local.generated_secret_env))))
 
   project_id = var.vercel_project_id
   key        = each.key
-  value      = local.secret_env[each.key]
+  value      = merge(local.secret_env, local.generated_secret_env)[each.key]
   target     = ["production"]
   sensitive  = true
 }

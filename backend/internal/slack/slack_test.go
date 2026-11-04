@@ -36,7 +36,7 @@ func newWebhook(t *testing.T, status int) *webhook {
 func newLogger(t *testing.T, w *webhook) (*slog.Logger, *bytes.Buffer) {
 	t.Helper()
 	var local bytes.Buffer
-	return slog.New(NewHandler(slog.NewTextHandler(&local, nil), w.server.URL, "backend")), &local
+	return slog.New(NewHandler(slog.NewTextHandler(&local, nil), NewWebhook(w.server.URL), "backend")), &local
 }
 
 func TestWarningsAndErrorsAreSentButInfoIsNot(t *testing.T) {
@@ -104,7 +104,7 @@ func TestFailedSendIsLoggedLocallyOnly(t *testing.T) {
 
 func TestWithoutWebhookURLLogsAreOnlyWrittenLocally(t *testing.T) {
 	next := slog.NewTextHandler(io.Discard, nil)
-	if got := NewHandler(next, "", "backend"); got != next {
+	if got := NewHandler(next, NewWebhook(""), "backend"); got != next {
 		t.Errorf("handler = %T, want the local handler as is", got)
 	}
 }
