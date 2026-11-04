@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useEsEntries, type EsEntrySummary } from "@/lib/api/es";
 import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
@@ -49,7 +51,11 @@ export function EsListClient() {
   if (isPending) return <CardListSkeleton className="xl:grid-cols-3" />;
   if (items.length === 0) {
     return (
-      <EmptyState title="まだESがありません" description="企業を選んで、設問と回答を書くところから始めましょう。" />
+      <EmptyState title="まだESがありません" description="企業を選んで、設問と回答を書くところから始めましょう。">
+        <Button asChild>
+          <Link href={ROUTES.ES_NEW}>ESを作成する</Link>
+        </Button>
+      </EmptyState>
     );
   }
 

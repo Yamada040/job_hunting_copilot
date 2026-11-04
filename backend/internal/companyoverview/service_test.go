@@ -63,9 +63,15 @@ type fakeCalendar struct {
 	from  *time.Time
 }
 
-func (f *fakeCalendar) List(_ context.Context, _ uuid.UUID, from, _ *time.Time) ([]calendar.Item, error) {
+func (f *fakeCalendar) List(_ context.Context, _ uuid.UUID, companyID *uuid.UUID, from, _ *time.Time) ([]calendar.Item, error) {
 	f.from = from
-	return f.items, nil
+	var items []calendar.Item
+	for _, item := range f.items {
+		if companyID == nil || (item.CompanyID != nil && *item.CompanyID == *companyID) {
+			items = append(items, item)
+		}
+	}
+	return items, nil
 }
 
 func TestGetByNameCombinesCompanyESAndUpcomingItems(t *testing.T) {

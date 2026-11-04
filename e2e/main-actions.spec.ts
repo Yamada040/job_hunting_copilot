@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { AUTH_STORAGE_STATE_A } from "./global-setup";
 
@@ -51,6 +52,8 @@ test("面接ログを記録する", async ({ page }) => {
 });
 
 test("Webテストの問題を作って解答し、直して削除する", async ({ page }) => {
+  // ほかのテストと違い企業を使わないので、--repeat-each で同時に動いても同じ名前の問題が並ばないよう、自分の印を使う
+  const stamp = randomUUID().slice(0, 8);
   await page.goto("/webtests/new");
   await page.getByLabel("タイトル").fill(`問題-${stamp}`);
   await page.getByLabel("問題文").fill("1+1は？");

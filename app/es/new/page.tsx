@@ -8,7 +8,13 @@ export const metadata: Metadata = {
   title: "ESを作成",
 };
 
-export default function NewEsPage() {
+export default async function NewEsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ companyId?: string | string[] }>;
+}) {
+  const { companyId } = await searchParams;
+
   return (
     <AppLayout
       avatar={<AvatarGuide messages={GUIDE_TIPS.esNew} />}
@@ -16,7 +22,7 @@ export default function NewEsPage() {
       headerDescription="企業を選び、設問と回答を書いて保存します"
       className="flex flex-col gap-8"
     >
-      <NewEsForm />
+      <NewEsForm companyId={typeof companyId === "string" ? companyId : undefined} />
     </AppLayout>
   );
 }

@@ -68,7 +68,7 @@ func (s *Service) FeedItems(ctx context.Context, token string) ([]Item, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get calendar feed user: %w", err)
 	}
-	return s.List(ctx, userID, nil, nil)
+	return s.List(ctx, userID, nil, nil, nil)
 }
 
 func hashToken(token string) []byte {

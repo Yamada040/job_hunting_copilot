@@ -14,8 +14,8 @@ export default async function InterviewDetailPage({ params }: { params: Promise<
   return (
     <AppLayout
       avatar={<AvatarGuide messages={GUIDE_TIPS.interviewDetail} />}
-      headerTitle="面接ログを編集"
-      headerDescription="面接後のログを更新し、次回改善に役立ててください。"
+      headerTitle="面接ログの編集"
+      headerDescription="面接の記録を更新し、次の面接に役立てます"
       className="space-y-6"
     >
       <InterviewDetail id={id} />

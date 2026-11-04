@@ -206,6 +206,19 @@ func TestListFiltersByCompanyAndLimits(t *testing.T) {
 	}
 }
 
+func TestListByOtherUsersCompanyIsEmpty(t *testing.T) {
+	f := setup(t)
+	alice := dbtest.CreateUser(t, f.pool)
+	bob := dbtest.CreateUser(t, f.pool)
+	alicesCompany := f.company(t, alice, "サンプル")
+	f.entry(t, alice, alicesCompany, "ES")
+
+	list, err := f.es.List(t.Context(), bob, &alicesCompany, 0)
+	if err != nil || len(list) != 0 {
+		t.Errorf("bob's list by alice's company = %d entries, %v; want none", len(list), err)
+	}
+}
+
 func TestCreateStopsAtLimitPerUser(t *testing.T) {
 	f := setup(t)
 	alice := dbtest.CreateUser(t, f.pool)

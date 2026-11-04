@@ -7,6 +7,7 @@ import { useMe } from "@/lib/api/me";
 import { LevelEmblem } from "./xp/level-emblem";
 import { LevelUpDialog } from "./xp/level-up-dialog";
 import { XpGauge } from "./xp/xp-gauge";
+import { XpRulesDialog } from "./xp/xp-rules-dialog";
 
 // XPのゲージが満ちて次のレベルへ繰り上がるまでの時間（ms）。これを待ってからレベルアップの演出を開く
 const LEVEL_UP_DELAY = 1100;
@@ -50,25 +51,27 @@ export function XpBadge() {
 
   return (
     <>
-      <div className="relative flex w-40 min-w-0 items-center gap-1 sm:w-[28rem] sm:gap-3">
-        <LevelEmblem level={level} className="h-11 w-10 shrink-0 text-xs sm:h-16 sm:w-14 sm:text-base" />
-        <XpGauge xp={xp} level={level} />
-        {/* 獲得したXPが、ゲージの上へ浮かんで消える */}
-        <AnimatePresence>
-          {gains.map((gain) => (
-            <motion.span
-              key={gain.id}
-              className="pointer-events-none absolute -top-1 right-0 text-sm font-black text-primary"
-              initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
-              animate={{ opacity: [0, 1, 1, 0], y: reduceMotion ? 0 : -18 }}
-              transition={{ duration: 1.4, times: [0, 0.15, 0.7, 1], ease: "easeOut" }}
-              onAnimationComplete={() => setGains((g) => g.filter((x) => x.id !== gain.id))}
-            >
-              +{gain.amount} XP
-            </motion.span>
-          ))}
-        </AnimatePresence>
-      </div>
+      <XpRulesDialog>
+        <div className="relative flex w-40 min-w-0 items-center gap-1 sm:w-[28rem] sm:gap-3">
+          <LevelEmblem level={level} className="h-11 w-10 shrink-0 text-xs sm:h-16 sm:w-14 sm:text-base" />
+          <XpGauge xp={xp} level={level} />
+          {/* 獲得したXPが、ゲージの上へ浮かんで消える */}
+          <AnimatePresence>
+            {gains.map((gain) => (
+              <motion.span
+                key={gain.id}
+                className="pointer-events-none absolute -top-1 right-0 text-sm font-black text-primary"
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+                animate={{ opacity: [0, 1, 1, 0], y: reduceMotion ? 0 : -18 }}
+                transition={{ duration: 1.4, times: [0, 0.15, 0.7, 1], ease: "easeOut" }}
+                onAnimationComplete={() => setGains((g) => g.filter((x) => x.id !== gain.id))}
+              >
+                +{gain.amount} XP
+              </motion.span>
+            ))}
+          </AnimatePresence>
+        </div>
+      </XpRulesDialog>
 
       <LevelUpDialog level={levelUp} onClose={() => setLevelUp(null)} />
     </>

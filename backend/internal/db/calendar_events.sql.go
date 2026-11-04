@@ -119,15 +119,17 @@ select calendar_events.id, calendar_events.user_id, calendar_events.company_id, 
 from calendar_events
 left join companies on companies.id = calendar_events.company_id
 where calendar_events.user_id = $1
-  and ($2::date is null or coalesce(calendar_events.end_date, calendar_events.date) >= $2::date)
-  and ($3::date is null or calendar_events.date <= $3::date)
+  and ($2::uuid is null or calendar_events.company_id = $2::uuid)
+  and ($3::date is null or coalesce(calendar_events.end_date, calendar_events.date) >= $3::date)
+  and ($4::date is null or calendar_events.date <= $4::date)
 order by calendar_events.date, calendar_events.time nulls last
 `
 
 type ListCalendarEventsParams struct {
-	UserID   uuid.UUID
-	FromDate *time.Time
-	ToDate   *time.Time
+	UserID    uuid.UUID
+	CompanyID *uuid.UUID
+	FromDate  *time.Time
+	ToDate    *time.Time
 }
 
 type ListCalendarEventsRow struct {
@@ -135,9 +137,14 @@ type ListCalendarEventsRow struct {
 	CompanyName   *string
 }
 
-// 期間（from 〜 to、どちらも含む）で絞り込む。どちらも省略できる。何日か続く予定は、期間に少しでも重なれば含める
+// 期間（from 〜 to、どちらも含む）で絞り込む。どちらも省略できる。何日か続く予定は、期間に少しでも重なれば含める。company_id を渡すと、その企業の予定だけに絞る
 func (q *Queries) ListCalendarEvents(ctx context.Context, arg ListCalendarEventsParams) ([]ListCalendarEventsRow, error) {
-	rows, err := q.db.Query(ctx, listCalendarEvents, arg.UserID, arg.FromDate, arg.ToDate)
+	rows, err := q.db.Query(ctx, listCalendarEvents,
+		arg.UserID,
+		arg.CompanyID,
+		arg.FromDate,
+		arg.ToDate,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -176,15 +183,17 @@ from es_entries
 join companies on companies.id = es_entries.company_id
 where es_entries.user_id = $1
   and es_entries.deadline is not null
-  and ($2::date is null or es_entries.deadline >= $2::date)
-  and ($3::date is null or es_entries.deadline <= $3::date)
+  and ($2::uuid is null or es_entries.company_id = $2::uuid)
+  and ($3::date is null or es_entries.deadline >= $3::date)
+  and ($4::date is null or es_entries.deadline <= $4::date)
 order by es_entries.deadline
 `
 
 type ListEsDeadlinesParams struct {
-	UserID   uuid.UUID
-	FromDate *time.Time
-	ToDate   *time.Time
+	UserID    uuid.UUID
+	CompanyID *uuid.UUID
+	FromDate  *time.Time
+	ToDate    *time.Time
 }
 
 type ListEsDeadlinesRow struct {
@@ -197,7 +206,12 @@ type ListEsDeadlinesRow struct {
 
 // カレンダーには、ユーザーが登録した予定に加えてESの締切も表示する（docs/backend-design.md 3章）
 func (q *Queries) ListEsDeadlines(ctx context.Context, arg ListEsDeadlinesParams) ([]ListEsDeadlinesRow, error) {
-	rows, err := q.db.Query(ctx, listEsDeadlines, arg.UserID, arg.FromDate, arg.ToDate)
+	rows, err := q.db.Query(ctx, listEsDeadlines,
+		arg.UserID,
+		arg.CompanyID,
+		arg.FromDate,
+		arg.ToDate,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -5,14 +5,14 @@ import { AvatarGuide } from "@/app/_components/avatar/avatar-guide";
 import { GUIDE_TIPS } from "@/app/_components/avatar/guide-messages";
 
 export const metadata: Metadata = {
-  title: "企業を追加",
+  title: "企業を登録",
 };
 
 export default function NewCompanyPage() {
   return (
     <AppLayout
       avatar={<AvatarGuide messages={GUIDE_TIPS.companyNew} />}
-      headerTitle="企業を追加"
+      headerTitle="企業を登録"
       headerDescription="企業情報と選考状況を登録します"
       className="flex flex-col gap-8"
     >

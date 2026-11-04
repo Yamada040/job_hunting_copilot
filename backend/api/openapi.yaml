@@ -428,8 +428,14 @@ paths:
     get:
       operationId: listCalendarItems
       summary: カレンダーに表示する予定を取得する
-      description: ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。
+      description: ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。companyId を渡すとその企業の予定とESの締切だけに絞る。
       parameters:
+        - name: companyId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
         - name: from
           in: query
           required: false
@@ -831,6 +837,28 @@ paths:
       responses:
         "204":
           description: 送信した
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /v1/daily-report:
+    post:
+      operationId: sendDailyReport
+      summary: 今日（日本時間）の利用状況を運営の Slack に送る
+      description: >-
+        GitHub Actions（daily-report.yml）が毎晩呼ぶ。ログインせずに呼べるが、合言葉（X-Report-Secret）が
+        合わなければ 401。合言葉か Slack の送り先が設定されていなければ 503。
+        日付が変わった直後に呼ばれても前日の分を送れるよう、呼ばれた時刻の1時間前を含む日を集計する。
+      security: []
+      parameters:
+        - name: X-Report-Secret
+          in: header
+          required: true
+          schema:
+            type: string
+            maxLength: 200
+      responses:
+        "204":
+          description: 送った
         default:
           $ref: "#/components/responses/Problem"
 

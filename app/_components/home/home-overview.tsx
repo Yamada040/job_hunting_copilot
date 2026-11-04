@@ -28,7 +28,7 @@ const contexts = [
   },
   {
     icon: ClipboardDocumentCheckIcon,
-    label: "TODO",
+    label: "NEXT",
     title: "やるべきこと",
     description: "志望度の高い企業から優先し、ESを磨き、面接を振り返って次に活かすことです。",
   },

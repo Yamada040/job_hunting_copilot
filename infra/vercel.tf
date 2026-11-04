@@ -16,23 +16,26 @@ locals {
     DEV_ADMIN_USER_IDS                   = var.dev_admin_user_ids
   } : k => v if v != "" }
 
-  # 秘密の値。Vercel の画面でも読めないようにする（sensitive は development に置けない）
+  # 秘密の値。Vercel の画面でも読めないようにする（sensitive は development に置けない）。
+  # 本番だけに置く。プレビューのデプロイは止めているが、手でデプロイしても本番の DB・AI のキーに届かないようにする
   secret_env = { for k, v in {
-    DATABASE_URL        = local.database_url
-    AI_MODEL            = var.ai_model
-    AI_PROVIDER_API_KEY = var.ai_provider_api_key
-    TAVILY_API_KEY      = var.tavily_api_key
-    SMTP_HOST           = var.smtp.host
-    SMTP_PORT           = var.smtp.port
-    SMTP_USER           = var.smtp.user
-    SMTP_PASS           = var.smtp.pass
-    CONTACT_TO_EMAIL    = var.smtp.to
+    DATABASE_URL                       = local.database_url
+    AI_MODEL                           = var.ai_model
+    AI_PROVIDER_API_KEY                = var.ai_provider_api_key
+    TAVILY_API_KEY                     = var.tavily_api_key
+    SMTP_HOST                          = var.smtp.host
+    SMTP_PORT                          = var.smtp.port
+    SMTP_USER                          = var.smtp.user
+    SMTP_PASS                          = var.smtp.pass
+    CONTACT_TO_EMAIL                   = var.smtp.to
+    GOOGLE_ERROR_REPORTING_CREDENTIALS = var.google_error_reporting_credentials
+    SLACK_WEBHOOK_URL                  = var.slack_webhook_url
   } : k => v if v != "" }
 
-  # 本番だけに置く秘密の値。エラーの送信をプレビューに置かないのは、試しているときのエラーを本番の通知に混ぜないため
-  production_secret_env = { for k, v in {
-    GOOGLE_ERROR_REPORTING_CREDENTIALS = var.google_error_reporting_credentials
-  } : k => v if v != "" }
+  # 空の値を除く上の書き方に入れないのは、作るまで値が決まらず、除くかどうか（for_each の名前の一覧）が決まらないため
+  generated_secret_env = {
+    REPORT_SECRET = random_password.report_secret.result
+  }
 }
 
 resource "vercel_project_environment_variable" "public" {
@@ -47,21 +50,16 @@ resource "vercel_project_environment_variable" "public" {
 }
 
 resource "vercel_project_environment_variable" "secret" {
-  for_each = nonsensitive(toset(keys(local.secret_env)))
+  for_each = nonsensitive(toset(concat(keys(local.secret_env), keys(local.generated_secret_env))))
 
   project_id = var.vercel_project_id
   key        = each.key
-  value      = local.secret_env[each.key]
-  target     = ["production", "preview"]
+  value      = merge(local.secret_env, local.generated_secret_env)[each.key]
+  target     = ["production"]
   sensitive  = true
 }
 
-resource "vercel_project_environment_variable" "production_secret" {
-  for_each = nonsensitive(toset(keys(local.production_secret_env)))
-
-  project_id = var.vercel_project_id
-  key        = each.key
-  value      = local.production_secret_env[each.key]
-  target     = ["production"]
-  sensitive  = true
+moved {
+  from = vercel_project_environment_variable.production_secret["GOOGLE_ERROR_REPORTING_CREDENTIALS"]
+  to   = vercel_project_environment_variable.secret["GOOGLE_ERROR_REPORTING_CREDENTIALS"]
 }

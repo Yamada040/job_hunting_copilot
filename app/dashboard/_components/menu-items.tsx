@@ -150,7 +150,7 @@ export function useMenuItems(today: string): CarouselItem[] {
         <>
           問題 <Count>{webtests.length}</Count>問
           <br />
-          解くとXPが付きます
+          {webtests.length > 0 ? "解くとXPが付きます" : "問題を作るとXPが付きます"}
         </>
       ) : webtestsError ? (
         loadError

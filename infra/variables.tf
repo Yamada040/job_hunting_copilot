@@ -129,6 +129,13 @@ variable "google_error_reporting_credentials" {
   default     = ""
 }
 
+variable "slack_webhook_url" {
+  description = "バックエンドの Warn 以上のログを送る Slack の Incoming Webhook の URL。空ならバックエンドは Slack に送らない"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "google_oauth" {
   description = "Google ログインの OAuth クライアント（Google Cloud Console で発行したもの）"
   type = object({

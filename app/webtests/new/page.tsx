@@ -12,8 +12,8 @@ export default function WebtestNewPage() {
   return (
     <AppLayout
       avatar={<AvatarGuide messages={GUIDE_TIPS.webtestNew} />}
-      headerTitle="Webテスト問題を追加"
-      headerDescription="オリジナル問題を登録し、演習に使います"
+      headerTitle="Webテストの問題を追加"
+      headerDescription="問題を作り、くり返し解いて練習します"
     >
       <NewWebtestForm />
     </AppLayout>

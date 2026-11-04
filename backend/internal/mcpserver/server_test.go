@@ -40,7 +40,7 @@ func (testES) Get(_ context.Context, _ uuid.UUID, _ uuid.UUID) (es.Entry, error)
 
 type testCalendar struct{}
 
-func (testCalendar) List(_ context.Context, _ uuid.UUID, _ *time.Time, _ *time.Time) ([]calendar.Item, error) {
+func (testCalendar) List(_ context.Context, _ uuid.UUID, _ *uuid.UUID, _ *time.Time, _ *time.Time) ([]calendar.Item, error) {
 	return []calendar.Item{}, nil
 }
 

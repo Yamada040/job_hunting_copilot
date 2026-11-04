@@ -39,6 +39,11 @@ export function useCompany(id: string) {
   return useQuery(companyQuery(id));
 }
 
+/** id を渡したときだけ企業1件を取る。作成の画面で、URL で渡された企業を最初から選んでおくのに使う。 */
+export function useOptionalCompany(id: string | undefined) {
+  return useQuery({ ...companyQuery(id ?? ""), enabled: !!id });
+}
+
 export function useCreateCompany() {
   const queryClient = useQueryClient();
   return useMutation({

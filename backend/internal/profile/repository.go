@@ -14,14 +14,18 @@ type Repository struct {
 	q *db.Queries
 }
 
+// NewUsers は、プロフィールの行を初めて作った（新しいユーザーが使い始めた）こと。
+// 1時間に20人を超えたら、アカウントを量産してAIなどの1人ごとの上限をすり抜ける動きを疑って知らせる
+var NewUsers = platform.Alert{Name: "new_users", Message: "many new users", Threshold: 20}
+
 func NewRepository(conn db.DBTX) *Repository {
 	return &Repository{q: db.New(conn)}
 }
 
 // Get は、ユーザーのプロフィールを返す。行がまだ無ければ作ってから返す。
 func (r *Repository) Get(ctx context.Context, userID uuid.UUID) (Profile, error) {
-	if err := r.q.CreateProfileIfMissing(ctx, userID); err != nil {
-		return Profile{}, fmt.Errorf("create profile: %w", err)
+	if err := r.createIfMissing(ctx, userID); err != nil {
+		return Profile{}, err
 	}
 	row, err := r.q.GetProfile(ctx, userID)
 	if err != nil {
@@ -32,8 +36,8 @@ func (r *Repository) Get(ctx context.Context, userID uuid.UUID) (Profile, error)
 
 // Update は、u のうち nil でない項目を書き換えて、更新後のプロフィールを返す。行がまだ無ければ作ってから書き換える。
 func (r *Repository) Update(ctx context.Context, userID uuid.UUID, u Update) (Profile, error) {
-	if err := r.q.CreateProfileIfMissing(ctx, userID); err != nil {
-		return Profile{}, fmt.Errorf("create profile: %w", err)
+	if err := r.createIfMissing(ctx, userID); err != nil {
+		return Profile{}, err
 	}
 	row, err := r.q.UpdateProfile(ctx, db.UpdateProfileParams{
 		ID:                userID,
@@ -79,4 +83,16 @@ func fromRow(row db.Profile) Profile {
 		XP:             int(row.Xp),
 		Level:          int(row.Level),
 	}
+}
+
+// createIfMissing は、プロフィールの行がまだ無ければ作る。作ったら新しいユーザーとして数える。
+func (r *Repository) createIfMissing(ctx context.Context, userID uuid.UUID) error {
+	created, err := r.q.CreateProfileIfMissing(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("create profile: %w", err)
+	}
+	if created > 0 {
+		platform.Notify(ctx, NewUsers)
+	}
+	return nil
 }

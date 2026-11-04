@@ -29,7 +29,7 @@ type ESReader interface {
 
 // CalendarReader は、overview の作成に必要な予定の読み取り操作。
 type CalendarReader interface {
-	List(context.Context, uuid.UUID, *time.Time, *time.Time) ([]calendar.Item, error)
+	List(context.Context, uuid.UUID, *uuid.UUID, *time.Time, *time.Time) ([]calendar.Item, error)
 }
 
 // Company は、overview で返す企業の要点。
@@ -139,7 +139,7 @@ func (s *Service) get(ctx context.Context, userID uuid.UUID, c db.Company) (Over
 		}
 	}
 	today := tokyoDate(s.now())
-	items, err := s.calendar.List(ctx, userID, &today, nil)
+	items, err := s.calendar.List(ctx, userID, &c.ID, &today, nil)
 	if err != nil {
 		return Overview{}, fmt.Errorf("list upcoming items for overview: %w", err)
 	}
@@ -148,13 +148,9 @@ func (s *Service) get(ctx context.Context, userID uuid.UUID, c db.Company) (Over
 	for i, entry := range entries {
 		overview.ES[i] = toES(entry)
 	}
-	for _, item := range items {
-		if item.CompanyID != nil && *item.CompanyID == c.ID {
-			overview.Upcoming = append(overview.Upcoming, toUpcomingItem(item))
-		}
-	}
-	if overview.Upcoming == nil {
-		overview.Upcoming = []UpcomingItem{}
+	overview.Upcoming = make([]UpcomingItem, len(items))
+	for i, item := range items {
+		overview.Upcoming[i] = toUpcomingItem(item)
 	}
 	return overview, nil
 }

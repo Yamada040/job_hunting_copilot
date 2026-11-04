@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useInterviewLogs } from "@/lib/api/interviews";
 import { ROUTES } from "@/lib/constants/routes";
 import { INTERVIEW_FORMAT_LABELS } from "@/lib/interviews/labels";
@@ -40,7 +42,11 @@ export function InterviewList() {
       <EmptyState
         title="まだ面接ログがありません"
         description="面接で聞かれた質問と答えを記録して、次の面接に活かしましょう。"
-      />
+      >
+        <Button asChild>
+          <Link href={ROUTES.INTERVIEWS_NEW}>面接ログを追加する</Link>
+        </Button>
+      </EmptyState>
     );
   }
 

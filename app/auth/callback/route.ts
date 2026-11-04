@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { safeNextPath } from "@/lib/auth/next-path";
-import { createSupabaseActionClient } from "@/lib/supabase/supabase-server";
+import { createSupabaseServerActionClient } from "@/lib/supabase/supabase-server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginURL);
   }
 
-  const supabase = await createSupabaseActionClient();
+  const supabase = await createSupabaseServerActionClient();
   if (!supabase) {
     return NextResponse.redirect(new URL("/login?error=auth", request.url));
   }

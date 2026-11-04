@@ -20,8 +20,8 @@ export default function WebtestsPage() {
           <Link href={ROUTES.WEBTESTS_NEW}>問題を追加する</Link>
         </Button>
       }
-      headerTitle="Webテスト対策（問題バンク）"
-      headerDescription="オリジナル問題を登録・一覧表示して演習に備えます"
+      headerTitle="Webテスト対策"
+      headerDescription="自分で作った問題を解いて、本番に備えます"
       className="space-y-6"
     >
       <WebtestList />

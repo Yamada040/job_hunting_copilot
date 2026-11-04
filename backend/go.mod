@@ -1,6 +1,6 @@
 module github.com/Yamada040/job_hunting_copilot/backend
 
-go 1.27.2
+go 1.27.3
 
 tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 

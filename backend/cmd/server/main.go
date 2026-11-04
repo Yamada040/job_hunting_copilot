@@ -29,6 +29,8 @@ import (
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/profile"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/ratelimit"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/report"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/slack"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/webtest"
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/xp"
 )
@@ -44,6 +46,10 @@ type config struct {
 	smtp        contact.SMTPConfig
 	// errorReportingCredentials は、Error Reporting に書き込めるサービスアカウントの鍵（JSON）。空ならエラーを送らない
 	errorReportingCredentials string
+	// slackWebhookURL は、Warn 以上のログを送る Slack の Incoming Webhook。空なら送らない
+	slackWebhookURL string
+	// reportSecret は、毎日のまとめ（POST /v1/daily-report）を呼ぶときの合言葉。空なら 503
+	reportSecret string
 	// version は、エラーをどの版で起きたかで分けるための値。Vercel がデプロイしたコミットを入れる
 	version string
 }
@@ -73,6 +79,8 @@ func loadConfig() (config, error) {
 			To:   os.Getenv("CONTACT_TO_EMAIL"),
 		},
 		errorReportingCredentials: os.Getenv("GOOGLE_ERROR_REPORTING_CREDENTIALS"),
+		slackWebhookURL:           os.Getenv("SLACK_WEBHOOK_URL"),
+		reportSecret:              os.Getenv("REPORT_SECRET"),
 		version:                   os.Getenv("VERCEL_GIT_COMMIT_SHA"),
 	}
 	if cfg.port == "" {
@@ -167,6 +175,8 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	slackWebhook := slack.NewWebhook(cfg.slackWebhookURL)
+	slog.SetDefault(slog.New(slack.NewHandler(slog.NewJSONHandler(os.Stdout, nil), slackWebhook, "backend")))
 	// 鍵が壊れていても、エラーを送れないだけでほかの機能は動くので、ログに出して起動を続ける
 	errorReporter, err := errorreport.New(cfg.errorReportingCredentials, "backend", cfg.version)
 	if err != nil {
@@ -210,7 +220,9 @@ func run() error {
 		webtest:       webtest.NewService(db, xpService),
 		contact:       contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP, Limiter: limiter},
 		admin:         admin.Handler{Pool: db, IsDeveloper: profiles.IsDeveloper, Now: time.Now},
+		report:        report.Handler{Pool: db, Secret: cfg.reportSecret, Slack: reportPoster(slackWebhook), Limiter: limiter, Now: time.Now},
 		errorReporter: errorReporter,
+		alerter:       limiter.Alerter(db),
 	})
 	if err != nil {
 		return err
@@ -223,4 +235,13 @@ func run() error {
 	}
 	slog.Info("listening", "port", cfg.port)
 	return srv.ListenAndServe()
+}
+
+// reportPoster は、送り先が無ければ nil の Poster を返す。nil の *slack.Webhook をそのまま渡すと、
+// インターフェースとしては nil にならず、report が「送り先が無い」と判断できないため
+func reportPoster(w *slack.Webhook) report.Poster {
+	if w == nil {
+		return nil
+	}
+	return w
 }

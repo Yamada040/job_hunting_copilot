@@ -20,11 +20,13 @@ export const ROUTES = {
   // ES関連
   ES: "/es",
   ES_NEW: "/es/new",
+  ES_NEW_FOR_COMPANY: (companyId: string) => `/es/new?companyId=${companyId}`,
   ES_DETAIL: (id: string) => `/es/${id}`,
 
   // 面接関連
   INTERVIEWS: "/interviews",
   INTERVIEWS_NEW: "/interviews/new",
+  INTERVIEWS_NEW_FOR_COMPANY: (companyId: string) => `/interviews/new?companyId=${companyId}`,
   INTERVIEW_DETAIL: (id: string) => `/interviews/${id}`,
 
   // Webテスト関連

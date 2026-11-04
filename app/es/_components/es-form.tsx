@@ -50,10 +50,12 @@ type Props = {
   canSubmit: boolean;
   /** 新規作成のときに最初から並べておく設問 */
   defaultQuestions?: EsQuestion[];
+  /** 新規作成のときに最初から選んでおく企業 */
+  defaultCompany?: CompanySummary;
 };
 
-export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQuestions = [] }: Props) {
-  const [company, setCompany] = useState<CompanySummary | null>(initial?.company ?? null);
+export function EsForm({ initial, pending, error, onSubmit, canSubmit, defaultQuestions = [], defaultCompany }: Props) {
+  const [company, setCompany] = useState<CompanySummary | null>(initial?.company ?? defaultCompany ?? null);
   const [questions, setQuestions] = useState<EsQuestion[]>(initial?.questions ?? defaultQuestions);
   const formRef = useRef<HTMLFormElement>(null);
   const { dirty, markDirty, formProps } = useFormEditing();

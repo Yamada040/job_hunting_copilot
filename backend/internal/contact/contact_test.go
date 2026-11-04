@@ -1,8 +1,10 @@
 package contact
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -35,7 +37,7 @@ func (m *mailbox) send(_ context.Context, _ SMTPConfig, msg Message) error {
 // アプリ全体の回数は実行をまたいで同じ行に貯まるので、消さないと何度か実行するうちに上限に達する。
 func newHandler(t *testing.T, pool *pgxpool.Pool, box *mailbox) Handler {
 	t.Helper()
-	if _, err := pool.Exec(t.Context(), `delete from api_app_rate_limits where bucket like 'contact_daily%'`); err != nil {
+	if _, err := pool.Exec(t.Context(), `delete from api_app_rate_limits where bucket like 'contact_%'`); err != nil {
 		t.Fatalf("reset contact rate limits: %v", err)
 	}
 	return Handler{Pool: pool, Config: config, Send: box.send, Limiter: ratelimit.NewLimiter(ratelimit.DefaultAppLimits)}
@@ -167,6 +169,32 @@ func TestSendContactIgnoresSubmissionsWithTheHoneypotFilled(t *testing.T) {
 	}
 }
 
+func TestSendContactWarnsWhenTheHoneypotIsFilled(t *testing.T) {
+	pool := dbtest.Connect(t)
+	h := newHandler(t, pool, &mailbox{})
+	if _, err := pool.Exec(t.Context(), `delete from api_app_rate_limits where bucket = $1`, "alert:"+ratelimit.ContactHoneypot.Name); err != nil {
+		t.Fatalf("reset alert: %v", err)
+	}
+	ctx := platform.WithAlerter(anonymous("203.0.113.1"), h.Limiter.Alerter(pool))
+	req := body("bot@example.com")
+	website := "https://spam.example.com"
+	req.Body.Website = &website
+	var logs bytes.Buffer
+	defaultLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(defaultLogger) })
+
+	for range 3 {
+		if _, err := h.SendContact(ctx, req); err != nil {
+			t.Fatalf("SendContact: %v", err)
+		}
+	}
+
+	if got := strings.Count(logs.String(), "bucket=alert:contact_honeypot"); got != 1 {
+		t.Errorf("warned %d times, want once: %q", got, logs.String())
+	}
+}
+
 func TestSendContactWithoutLoginIsLimitedPerIP(t *testing.T) {
 	pool := dbtest.Connect(t)
 	box := &mailbox{}
@@ -232,5 +260,29 @@ func TestSendContactWithoutSMTPConfigIsUnavailable(t *testing.T) {
 
 	if errorKind(err) != platform.KindUnavailable {
 		t.Errorf("error = %v, want unavailable", err)
+	}
+}
+
+func TestPerIPLimitAlertDoesNotIncludeTheIP(t *testing.T) {
+	pool := dbtest.Connect(t)
+	h := newHandler(t, pool, &mailbox{})
+	if _, err := pool.Exec(t.Context(), `delete from api_app_rate_limits where bucket like 'alert:limit_reached:contact_daily%'`); err != nil {
+		t.Fatalf("reset alert: %v", err)
+	}
+	ctx := platform.WithAlerter(anonymous("203.0.113.9"), h.Limiter.Alerter(pool))
+	var logs bytes.Buffer
+	defaultLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(defaultLogger) })
+
+	for range ratelimit.ContactIPDaily("").Max + 1 {
+		_, _ = h.SendContact(ctx, body("someone@example.com"))
+	}
+
+	if !strings.Contains(logs.String(), "bucket=alert:limit_reached:contact_daily:ip\n") {
+		t.Errorf("log = %q, want the per-IP limit named without the IP", logs.String())
+	}
+	if strings.Contains(logs.String(), ipHash("203.0.113.9")) {
+		t.Errorf("log = %q, want the IP hash left out", logs.String())
 	}
 }

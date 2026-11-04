@@ -33,3 +33,11 @@ select coalesce((
   select count from api_app_rate_limits
   where bucket = @bucket and window_start >= @window_start
 ), 0)::integer as count;
+
+-- name: GetAppRateLimitOn :one
+-- アプリ全体で共有する枠の、@window_start から始まった期間の量を返す。その期間の後に数え直していれば（行が無ければ）0。
+-- GetAppRateLimit と違って期間の終わりも見るのは、日付が変わった後に前日の分を読むため
+select coalesce((
+  select count from api_app_rate_limits
+  where bucket = @bucket and window_start >= @window_start and window_start < @window_end
+), 0)::integer as count;

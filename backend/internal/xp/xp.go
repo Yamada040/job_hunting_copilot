@@ -30,6 +30,7 @@ type rule struct {
 	once bool
 }
 
+// 画面のXPのもらい方の説明（lib/xp/rules.ts）にも同じ値を書いているので、変えるときはそろえる
 var rules = map[db.XpAction]rule{
 	db.XpActionEsSubmitted:            {amount: 25, perTarget: true, dailyCap: 5},
 	db.XpActionInterviewLog:           {amount: 20, perTarget: true, dailyCap: 5},
@@ -70,7 +71,8 @@ func (s *Service) Award(ctx context.Context, q *db.Queries, userID uuid.UUID, ac
 		return Result{}, fmt.Errorf("xp action %q needs a target id", action)
 	}
 
-	if err := q.CreateProfileIfMissing(ctx, userID); err != nil {
+	// 新しいユーザーとしては数えない（profile.NewUsers）。画面は最初にヘッダーのためプロフィールを取るので、そこで数えられる
+	if _, err := q.CreateProfileIfMissing(ctx, userID); err != nil {
 		return Result{}, fmt.Errorf("create profile: %w", err)
 	}
 	// ここから commit まで、同じユーザーの他の付与は待たされる。日次上限の確認と追加の間に割り込まれないようにするため

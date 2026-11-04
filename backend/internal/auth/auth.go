@@ -83,6 +83,10 @@ func (v *Verifier) User(token string) (User, error) {
 	return User{ID: id, Email: c.Email, ClientID: c.ClientID, ExpiresAt: c.ExpiresAt.Time}, nil
 }
 
+// AccessTokensRejected は、不正なトークン（偽物・期限切れ・別のプロジェクトのもの）で断ったこと。
+// 期限切れは普段でも少し起きるので、1時間に30回を超えたら、総当たりや盗んだトークンの使い回しを疑って知らせる
+var AccessTokensRejected = platform.Alert{Name: "access_token_rejected", Message: "many invalid access tokens", Threshold: 30}
+
 type userKey struct{}
 
 // Authenticate は、Authorization ヘッダーにトークンがあれば検証し、ユーザーIDをコンテキストに入れる。
@@ -103,6 +107,7 @@ func (v *Verifier) Authenticate(next http.Handler) http.Handler {
 		}
 		if err != nil {
 			platform.Logger(r.Context()).Info("invalid access token", "error", err)
+			platform.Notify(r.Context(), AccessTokensRejected)
 			platform.WriteError(w, r, &platform.Error{Kind: platform.KindUnauthorized, Message: "ログインが必要です"})
 			return
 		}

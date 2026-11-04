@@ -20,8 +20,8 @@ export default function InterviewsListPage() {
           <Link href={ROUTES.INTERVIEWS_NEW}>面接ログを追加する</Link>
         </Button>
       }
-      headerTitle="面接ログ一覧"
-      headerDescription="面接後の質問・回答ログと振り返りを一覧表示し、詳細ページで更新できます。"
+      headerTitle="面接ログ"
+      headerDescription="面接で聞かれたこと・答えたことと振り返りを見返し、開くと更新できます"
       className="space-y-6"
     >
       <InterviewList />

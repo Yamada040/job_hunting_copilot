@@ -1,0 +1,9 @@
+# 既定のルールに、生成したコードの除外だけを足す
+[extend]
+useDefault = true
+
+[allowlist]
+description = "oapi-codegen が openapi.yaml を圧縮して埋め込んだ文字列"
+# 埋め込んだ文字列は openapi.yaml を変えるたびに作り直され、たまたま鍵の形に見えて止まる。
+# 中身は openapi.yaml と同じで、そちらは除外せずに確かめるので、生成したファイルだけを外す
+paths = ['''^backend/internal/openapi/openapi\.gen\.go$''']

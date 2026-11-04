@@ -297,7 +297,7 @@ export interface paths {
     };
     /**
      * カレンダーに表示する予定を取得する
-     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。
+     * @description ユーザーが登録した予定と、ESの締切をまとめて日付順に返す。from・to（どちらも含む）で期間を絞れる（画面は表示している期間を渡す）。companyId を渡すとその企業の予定とESの締切だけに絞る。
      */
     get: operations["listCalendarItems"];
     put?: never;
@@ -575,6 +575,26 @@ export interface paths {
      * @description ログインできない人も連絡できるよう、ログインせずに使える。ログイン中ならユーザーIDとログインのメールアドレスを添える。 送れるのは、ログイン中は1人1日5通、ログインしていなければIPごとに1日3通、アプリ全体で1日50通まで（超えると 429）。 メールの送信の設定が無ければ 503。
      */
     post: operations["sendContact"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/daily-report": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * 今日（日本時間）の利用状況を運営の Slack に送る
+     * @description GitHub Actions（daily-report.yml）が毎晩呼ぶ。ログインせずに呼べるが、合言葉（X-Report-Secret）が 合わなければ 401。合言葉か Slack の送り先が設定されていなければ 503。 日付が変わった直後に呼ばれても前日の分を送れるよう、呼ばれた時刻の1時間前を含む日を集計する。
+     */
+    post: operations["sendDailyReport"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1813,6 +1833,7 @@ export interface operations {
   listCalendarItems: {
     parameters: {
       query?: {
+        companyId?: string;
         from?: string;
         to?: string;
       };
@@ -2312,6 +2333,27 @@ export interface operations {
     };
     responses: {
       /** @description 送信した */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components["responses"]["Problem"];
+    };
+  };
+  sendDailyReport: {
+    parameters: {
+      query?: never;
+      header: {
+        "X-Report-Secret": string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 送った */
       204: {
         headers: {
           [name: string]: unknown;
