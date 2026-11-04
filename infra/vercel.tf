@@ -29,6 +29,7 @@ locals {
     SMTP_PASS                          = var.smtp.pass
     CONTACT_TO_EMAIL                   = var.smtp.to
     GOOGLE_ERROR_REPORTING_CREDENTIALS = var.google_error_reporting_credentials
+    SLACK_WEBHOOK_URL                  = var.slack_webhook_url
   } : k => v if v != "" }
 }
 
