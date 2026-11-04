@@ -4,7 +4,6 @@ package ratelimit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -25,6 +24,9 @@ type Rule struct {
 	Daily   bool
 	AppWide bool
 	Message string
+	// AlertName は、この枠で断ったことを知らせるときの名前。空なら Bucket を使う。
+	// Bucket に個人に結び付く値（IPのハッシュ）が入る枠で、Slack にその値を出さないために決める
+	AlertName string
 }
 
 // AIの制限（docs/backend-design.md 3章）。短時間の連打の制限と、1日の上限の両方を確かめる
@@ -51,15 +53,10 @@ var (
 		Message: "本日はお問い合わせが多く、受付を一時的に止めています。明日以降に再度お試しください。"}
 )
 
-// ContactHoneypotDaily は、問い合わせの隠した欄に値が入った（自動送信の）回数を数える枠。上限を0にして、
-// その日の1回目から「アプリ全体の枠が溢れた」として運営に知らせる（hit を参照）。送信は止めずに捨てるだけなので、Record で数える。
-// 毎回知らせないのは、ボットに連投されると通知が埋まるため
-var ContactHoneypotDaily = Rule{Bucket: "contact_honeypot_daily", Max: 0, Daily: true, AppWide: true}
-
 // ContactIPDaily は、ログインしていない人の問い合わせの、IPごとの1日の上限。ipHash ごとに別の枠を
 // アプリ全体の枠と同じ表で数える（ユーザーに属さない枠なので）。ContactAppDaily の枠と名前がぶつからないよう接頭辞を付ける
 func ContactIPDaily(ipHash string) Rule {
-	return Rule{Bucket: "contact_daily:ip:" + ipHash, Max: 3, Daily: true, AppWide: true,
+	return Rule{Bucket: "contact_daily:ip:" + ipHash, AlertName: "contact_daily:ip", Max: 3, Daily: true, AppWide: true,
 		Message: "お問い合わせを送れるのは1日3通までです。明日また送れます。"}
 }
 
@@ -142,7 +139,7 @@ func (l *Limiter) HitCompanyAnalysis(ctx context.Context, q *db.Queries, userID 
 
 func (l *Limiter) charge(ctx context.Context, q *db.Queries, userID uuid.UUID, rules ...Rule) (Charge, error) {
 	now := l.now()
-	if err := hit(ctx, q, userID, now, rules); err != nil {
+	if err := l.hit(ctx, q, userID, now, rules); err != nil {
 		return Charge{}, err
 	}
 	return Charge{userID: userID, at: now, rules: rules}, nil
@@ -199,6 +196,7 @@ func (l *Limiter) checkAICost(ctx context.Context, q *db.Queries) error {
 		return fmt.Errorf("get ai cost: %w", err)
 	}
 	if int(spent) >= r.Max {
+		l.notify(ctx, q, aiBudgetReached)
 		return &platform.Error{Kind: platform.KindRateLimited, Message: r.Message}
 	}
 	return nil
@@ -216,30 +214,17 @@ func (l *Limiter) AddAICost(ctx context.Context, q *db.Queries, usage ai.Usage) 
 	if err != nil {
 		return fmt.Errorf("add ai cost: %w", err)
 	}
-	// 今日の利用料が、この呼び出しで上限をまたいだときだけ知らせる
-	if before := int(spent) - cost; before < r.Max && int(spent) >= r.Max {
-		platform.Logger(ctx).Warn("ai daily budget reached", "bucket", r.Bucket)
-	}
+	l.notifyCost(ctx, q, cost, int(spent))
 	return nil
 }
 
 // Hit は、rules を順に1つずつ数え、上限を超えたものがあればそこで止めて 429 のエラーを返す。
 // 上限を超えたリクエストも1回として数える（連打を続けると待ち時間が延びるのではなく、期間が切り替わるまで拒否され続ける）。
 func (l *Limiter) Hit(ctx context.Context, q *db.Queries, userID uuid.UUID, rules ...Rule) error {
-	return hit(ctx, q, userID, l.now(), rules)
+	return l.hit(ctx, q, userID, l.now(), rules)
 }
 
-// Record は、アプリ全体の枠 rule に1回を数える。上限を超えても断らず、運営に知らせるだけにする（hit を参照）。
-func (l *Limiter) Record(ctx context.Context, q *db.Queries, rule Rule) error {
-	err := hit(ctx, q, uuid.Nil, l.now(), []Rule{rule})
-	var limited *platform.Error
-	if errors.As(err, &limited) && limited.Kind == platform.KindRateLimited {
-		return nil
-	}
-	return err
-}
-
-func hit(ctx context.Context, q *db.Queries, userID uuid.UUID, now time.Time, rules []Rule) error {
+func (l *Limiter) hit(ctx context.Context, q *db.Queries, userID uuid.UUID, now time.Time, rules []Rule) error {
 	for _, r := range rules {
 		start := windowStart(r, now)
 		var count int32
@@ -253,10 +238,16 @@ func hit(ctx context.Context, q *db.Queries, userID uuid.UUID, now time.Time, ru
 			return fmt.Errorf("hit rate limit %s: %w", r.Bucket, err)
 		}
 		if int(count) > r.Max {
-			// アプリ全体（またはIPごと）の枠が今の期間で初めて溢れたときだけ知らせる。1人の上限は普段の使い方でも当たるので知らせない。
-			// 溢れたかを別に覚えずに「初めて上限を1つ超えた回」で判断できるのは、上限を超えたリクエストも数えているため
-			if r.AppWide && int(count) == r.Max+1 {
-				platform.Logger(ctx).Warn("app-wide rate limit reached", "bucket", r.Bucket)
+			// アプリ全体（またはIPごと）の枠で断ったことは、枠ごとに知らせる。1人の上限で断るのは普段の使い方でも起きるので、
+			// 1人が断られ続けたときだけ知らせる
+			if r.AppWide {
+				name := r.AlertName
+				if name == "" {
+					name = r.Bucket
+				}
+				l.notify(ctx, q, platform.Alert{Name: limitReached.Name + ":" + name, Message: limitReached.Message})
+			} else {
+				l.notifyUser(ctx, q, userID, userKeepsHittingLimits)
 			}
 			return &platform.Error{Kind: platform.KindRateLimited, Message: r.Message}
 		}

@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/dbtest"
+	"github.com/Yamada040/job_hunting_copilot/backend/internal/platform/alerttest"
 )
 
 func ptr(s string) *string { return &s }
@@ -17,8 +18,9 @@ func TestGetCreatesMissingProfile(t *testing.T) {
 	pool := dbtest.Connect(t)
 	userID := dbtest.CreateUser(t, pool)
 	repo := NewRepository(pool)
+	ctx, alerts := alerttest.Context(t.Context())
 
-	p, err := repo.Get(t.Context(), userID)
+	p, err := repo.Get(ctx, userID)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -26,12 +28,15 @@ func TestGetCreatesMissingProfile(t *testing.T) {
 		t.Errorf("profile = %+v, want a new empty profile with XP 0 and level 1", p)
 	}
 
-	again, err := repo.Get(t.Context(), userID)
+	again, err := repo.Get(ctx, userID)
 	if err != nil {
 		t.Fatalf("second Get: %v", err)
 	}
 	if again.ID != userID {
 		t.Errorf("second Get returned %s, want the same profile", again.ID)
+	}
+	if got := alerts.Names(); len(got) != 1 || got[0] != NewUsers.Name {
+		t.Errorf("alerts = %v, want the new user counted only once", got)
 	}
 }
 

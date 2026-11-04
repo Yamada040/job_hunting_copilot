@@ -169,9 +169,13 @@ func TestSendContactIgnoresSubmissionsWithTheHoneypotFilled(t *testing.T) {
 	}
 }
 
-func TestSendContactWarnsOncePerDayWhenTheHoneypotIsFilled(t *testing.T) {
+func TestSendContactWarnsWhenTheHoneypotIsFilled(t *testing.T) {
 	pool := dbtest.Connect(t)
 	h := newHandler(t, pool, &mailbox{})
+	if _, err := pool.Exec(t.Context(), `delete from api_app_rate_limits where bucket = $1`, "alert:"+ratelimit.ContactHoneypot.Name); err != nil {
+		t.Fatalf("reset alert: %v", err)
+	}
+	ctx := platform.WithAlerter(anonymous("203.0.113.1"), h.Limiter.Alerter(pool))
 	req := body("bot@example.com")
 	website := "https://spam.example.com"
 	req.Body.Website = &website
@@ -181,12 +185,12 @@ func TestSendContactWarnsOncePerDayWhenTheHoneypotIsFilled(t *testing.T) {
 	t.Cleanup(func() { slog.SetDefault(defaultLogger) })
 
 	for range 3 {
-		if _, err := h.SendContact(anonymous("203.0.113.1"), req); err != nil {
+		if _, err := h.SendContact(ctx, req); err != nil {
 			t.Fatalf("SendContact: %v", err)
 		}
 	}
 
-	if got := strings.Count(logs.String(), "bucket=contact_honeypot_daily"); got != 1 {
+	if got := strings.Count(logs.String(), "bucket=alert:contact_honeypot"); got != 1 {
 		t.Errorf("warned %d times, want once: %q", got, logs.String())
 	}
 }
@@ -256,5 +260,29 @@ func TestSendContactWithoutSMTPConfigIsUnavailable(t *testing.T) {
 
 	if errorKind(err) != platform.KindUnavailable {
 		t.Errorf("error = %v, want unavailable", err)
+	}
+}
+
+func TestPerIPLimitAlertDoesNotIncludeTheIP(t *testing.T) {
+	pool := dbtest.Connect(t)
+	h := newHandler(t, pool, &mailbox{})
+	if _, err := pool.Exec(t.Context(), `delete from api_app_rate_limits where bucket like 'alert:limit_reached:contact_daily%'`); err != nil {
+		t.Fatalf("reset alert: %v", err)
+	}
+	ctx := platform.WithAlerter(anonymous("203.0.113.9"), h.Limiter.Alerter(pool))
+	var logs bytes.Buffer
+	defaultLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(defaultLogger) })
+
+	for range ratelimit.ContactIPDaily("").Max + 1 {
+		_, _ = h.SendContact(ctx, body("someone@example.com"))
+	}
+
+	if !strings.Contains(logs.String(), "bucket=alert:limit_reached:contact_daily:ip\n") {
+		t.Errorf("log = %q, want the per-IP limit named without the IP", logs.String())
+	}
+	if strings.Contains(logs.String(), ipHash("203.0.113.9")) {
+		t.Errorf("log = %q, want the IP hash left out", logs.String())
 	}
 }

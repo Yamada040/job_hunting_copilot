@@ -201,6 +201,7 @@ func run() error {
 		contact:       contact.Handler{Pool: db, Config: cfg.smtp, Send: contact.SendSMTP, Limiter: limiter},
 		admin:         admin.Handler{Pool: db, IsDeveloper: profiles.IsDeveloper, Now: time.Now},
 		errorReporter: errorReporter,
+		alerter:       limiter.Alerter(db),
 	})
 	if err != nil {
 		return err
