@@ -154,8 +154,3 @@ flowchart TB
     Root --> E2e["e2e/ (Playwright)"]
     Root --> Docs["docs/"]
 ```
-
-## 既知の技術的負債（アーキテクチャ観点）
-
-- `error.tsx` / `loading.tsx` / `not-found.tsx` がリポジトリ全体に1つも無く、例外がNext標準のクラッシュ画面になる（Issue #109）
-- ライトテーマは `globals.css` の属性セレクタによるハードコード色の力技上書きで、脆弱な構造（Issue #116、#91で本格対応予定）
