@@ -91,7 +91,7 @@ func (s *Service[A]) Submit(ctx context.Context, userID uuid.UUID, answers A) (R
 			return fmt.Errorf("create %s: %w", s.kind.label, err)
 		}
 		if n == 0 {
-			return &platform.Error{Kind: platform.KindConflict, Message: s.kind.label + "は1回だけ回答できます。すでに回答済みです。"}
+			return &platform.Error{Kind: platform.KindConflict, Code: platform.CodeAlreadyDone, Message: s.kind.label + "は1回だけ回答できます。すでに回答済みです。"}
 		}
 		if reward, err = s.xp.Award(ctx, q, userID, s.kind.xpAction, nil); err != nil {
 			return err
@@ -148,5 +148,5 @@ func (s *Service[A]) get(ctx context.Context, q *db.Queries, userID uuid.UUID) (
 }
 
 func (s *Service[A]) alreadyDone() *platform.Error {
-	return &platform.Error{Kind: platform.KindConflict, Message: s.kind.label + "のAIの結果はすでに出ています（1回までです）"}
+	return &platform.Error{Kind: platform.KindConflict, Code: platform.CodeAlreadyDone, Message: s.kind.label + "のAIの結果はすでに出ています（1回までです）"}
 }

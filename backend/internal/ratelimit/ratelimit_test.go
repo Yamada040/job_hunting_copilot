@@ -399,3 +399,16 @@ func TestNotifyWithoutAlerterDoesNothing(t *testing.T) {
 		t.Errorf("log = %q, want nothing", logs.String())
 	}
 }
+
+func TestLimitErrorTellsWhenToRetry(t *testing.T) {
+	now := time.Date(2026, 11, 28, 23, 0, 0, 0, jst)
+
+	burst := limitError(AIBurst, now)
+	if burst.Code != "" || burst.RetryAfter != time.Minute {
+		t.Errorf("burst: code %q retry %v, want default code and the window", burst.Code, burst.RetryAfter)
+	}
+	daily := limitError(AIDaily, now)
+	if daily.Code != platform.CodeDailyLimitReached || daily.RetryAfter != time.Hour {
+		t.Errorf("daily: code %q retry %v, want daily_limit_reached and the time until JST midnight", daily.Code, daily.RetryAfter)
+	}
+}
