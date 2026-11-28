@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 )
@@ -85,5 +86,31 @@ func TestWriteErrorHidesUnexpectedErrorDetails(t *testing.T) {
 	}
 	if p.Title != "サーバーでエラーが発生しました" || p.Detail != nil {
 		t.Errorf("problem = %+v, want only the generic message", p)
+	}
+}
+
+func TestWriteErrorUsesSpecificCodeAndRetryAfter(t *testing.T) {
+	rec := httptest.NewRecorder()
+	err := &Error{Kind: KindRateLimited, Code: CodeDailyLimitReached, Message: "明日また使えます", RetryAfter: 1500 * time.Millisecond}
+	WriteError(rec, httptest.NewRequest(http.MethodGet, "/v1/things", nil), err)
+
+	var p openapi.Problem
+	if e := json.NewDecoder(rec.Body).Decode(&p); e != nil {
+		t.Fatalf("decode: %v", e)
+	}
+	if rec.Code != http.StatusTooManyRequests || p.Code != CodeDailyLimitReached {
+		t.Errorf("got status %d code %q, want 429 %s", rec.Code, p.Code, CodeDailyLimitReached)
+	}
+	if got := rec.Header().Get("Retry-After"); got != "2" {
+		t.Errorf("Retry-After = %q, want 2 (rounded up)", got)
+	}
+}
+
+func TestWriteErrorOmitsRetryAfterWhenNotSet(t *testing.T) {
+	rec := httptest.NewRecorder()
+	WriteError(rec, httptest.NewRequest(http.MethodGet, "/v1/things", nil), &Error{Kind: KindConflict, Message: "重複"})
+
+	if got := rec.Header().Get("Retry-After"); got != "" {
+		t.Errorf("Retry-After = %q, want none", got)
 	}
 }

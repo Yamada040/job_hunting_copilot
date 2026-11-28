@@ -228,7 +228,7 @@ func analysisInput(c db.Company) string {
 }
 
 func alreadyAnalyzed() *platform.Error {
-	return &platform.Error{Kind: platform.KindConflict, Message: "この企業はすでにAI企業分析を行っています（企業ごとに1回までです）"}
+	return &platform.Error{Kind: platform.KindConflict, Code: platform.CodeAlreadyDone, Message: "この企業はすでにAI企業分析を行っています（企業ごとに1回までです）"}
 }
 
 func trimFields(f Fields) Fields {
@@ -257,6 +257,7 @@ func notFound() *platform.Error {
 func duplicated() *platform.Error {
 	return &platform.Error{
 		Kind:    platform.KindConflict,
+		Code:    platform.CodeAlreadyExists,
 		Message: "同じ名前の企業がすでに登録されています",
 		Fields:  []platform.FieldError{{Field: "name", Message: "同じ名前の企業がすでに登録されています"}},
 	}

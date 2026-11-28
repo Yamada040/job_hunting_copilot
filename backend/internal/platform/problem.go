@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/Yamada040/job_hunting_copilot/backend/internal/openapi"
 )
@@ -29,7 +31,15 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	var appErr *Error
 	if errors.As(err, &appErr) {
 		if kind, ok := problemKinds[appErr.Kind]; ok {
-			writeProblem(w, r, kind.status, kind.code, appErr.Message, appErr.Fields)
+			code := kind.code
+			if appErr.Code != "" {
+				code = appErr.Code
+			}
+			if appErr.RetryAfter > 0 {
+				// 端数は切り上げる。早すぎる再試行で、また断られるのを避けるため
+				w.Header().Set("Retry-After", strconv.Itoa(int((appErr.RetryAfter+time.Second-1)/time.Second)))
+			}
+			writeProblem(w, r, kind.status, code, appErr.Message, appErr.Fields)
 			return
 		}
 	}

@@ -925,6 +925,11 @@ components:
   responses:
     Problem:
       description: エラー（RFC 9457 Problem Details）
+      headers:
+        Retry-After:
+          description: 429 のとき、再試行できるまでの秒数
+          schema:
+            type: integer
       content:
         application/problem+json:
           schema:
@@ -991,6 +996,7 @@ components:
       properties:
         fullName:
           type: string
+          minLength: 1
           maxLength: 100
         university:
           type: string
@@ -2308,7 +2314,12 @@ components:
           description: 発生したリクエストのパス（任意）
         code:
           type: string
-          description: 機械が判定するための英語のコード
+          description: |-
+            機械が判定するための英語のコード。ステータスごとの値は次のとおり。
+            400 validation_failed / 401 unauthorized / 403 forbidden / 404 not_found / 405 method_not_allowed /
+            409 conflict（原因が分かるときは resource_limit_reached・already_exists・already_done）/
+            429 rate_limited（短時間の連打。Retry-After だけ待つ）・daily_limit_reached（1日の上限。翌日0時（日本時間）まで）/
+            500 internal_error / 503 unavailable
           example: validation_failed
         errors:
           type: array

@@ -197,7 +197,7 @@ func (l *Limiter) checkAICost(ctx context.Context, q *db.Queries) error {
 	}
 	if int(spent) >= r.Max {
 		l.notify(ctx, q, aiBudgetReached)
-		return &platform.Error{Kind: platform.KindRateLimited, Message: r.Message}
+		return limitError(r, l.now())
 	}
 	return nil
 }
@@ -249,10 +249,24 @@ func (l *Limiter) hit(ctx context.Context, q *db.Queries, userID uuid.UUID, now 
 			} else {
 				l.notifyUser(ctx, q, userID, userKeepsHittingLimits)
 			}
-			return &platform.Error{Kind: platform.KindRateLimited, Message: r.Message}
+			return limitError(r, now)
 		}
 	}
 	return nil
+}
+
+// limitError は、r の上限で断るときのエラー。1日の上限は翌日の0時（日本時間）まで、それ以外は Window だけ待てば再試行できる
+// （数え直しは窓がずれていく方式で、Window は待ち時間の上限になる）。
+func limitError(r Rule, now time.Time) *platform.Error {
+	if !r.Daily {
+		return &platform.Error{Kind: platform.KindRateLimited, Message: r.Message, RetryAfter: r.Window}
+	}
+	return &platform.Error{
+		Kind:       platform.KindRateLimited,
+		Code:       platform.CodeDailyLimitReached,
+		Message:    r.Message,
+		RetryAfter: windowStart(r, now).AddDate(0, 0, 1).Sub(now),
+	}
 }
 
 // windowStart は、now の時点で数えている期間の始まりを返す。Daily なら日本時間のその日の0時。

@@ -1232,7 +1232,11 @@ export interface components {
       /** @description 発生したリクエストのパス（任意） */
       instance?: string;
       /**
-       * @description 機械が判定するための英語のコード
+       * @description 機械が判定するための英語のコード。ステータスごとの値は次のとおり。
+       *     400 validation_failed / 401 unauthorized / 403 forbidden / 404 not_found / 405 method_not_allowed /
+       *     409 conflict（原因が分かるときは resource_limit_reached・already_exists・already_done）/
+       *     429 rate_limited（短時間の連打。Retry-After だけ待つ）・daily_limit_reached（1日の上限。翌日0時（日本時間）まで）/
+       *     500 internal_error / 503 unavailable
        * @example validation_failed
        */
       code: string;
@@ -1250,6 +1254,8 @@ export interface components {
     /** @description エラー（RFC 9457 Problem Details） */
     Problem: {
       headers: {
+        /** @description 429 のとき、再試行できるまでの秒数 */
+        "Retry-After"?: number;
         [name: string]: unknown;
       };
       content: {
